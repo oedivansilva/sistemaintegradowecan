@@ -754,7 +754,9 @@ async function carregarDashboard() {
   document.getElementById('dash-content').style.display  = 'none';
 
   const r = await api('getDashboardData');
-  if (!r || !r.totais) { toast('Erro ao carregar dashboard', 'error'); return; }
+  if (!r) { toast('Erro ao carregar dashboard', 'error'); return; }
+  // compatibilidade: getDashboard retorna {ativos,inativos,total,recentes}, getDashboardData retorna {totais,...}
+  if (!r.totais && r.ativos !== undefined) { r = { totais: {ativos:r.ativos, inativos:r.inativos, total:r.total}, trajetos:{IDA:0,VOLTA:0,'IDA E VOLTA':0}, atividade:[], topUnidades:[], topCidades:[], estadosMapa:[], ultimasInativacoes: (r.recentes||[]).map(x=>({dataHora:x.dataInat,tipo:'INATIVAÇÃO',matricula:x.matricula,motivo:x.motivo,responsavel:''})) }; }
 
   // KPIs
   document.getElementById('kpi-ativos').textContent   = r.totais.ativos;
@@ -1203,7 +1205,7 @@ async function toggleUsuario(id, ativar) {
 async function sincronizar() {
   const btn = document.getElementById('btn-sync-sidebar');
   btn.disabled = true; btn.textContent = '⏳ Sincronizando...';
-  const r = await api('sincronizarTemplate');
+  const r = await api('sincronizar');
   btn.disabled = false; btn.innerHTML = '🔄 Sincronizar Template';
   toast(r.mensagem || 'Sincronizado!', 'success');
     if (document.getElementById('page-dashboard').classList.contains('active')) carregarDashboard();
