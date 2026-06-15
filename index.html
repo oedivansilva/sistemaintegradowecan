@@ -171,6 +171,22 @@
   /* EMPTY */
   .empty { padding: 40px; text-align: center; color: var(--muted); font-size: 14px; }
 
+  /* SORTABLE */
+  th.sortable { cursor:pointer; user-select:none; }
+  th.sortable:hover { color: var(--text); }
+  th.sortable .sort-icon { opacity:.4; font-size:10px; }
+  th.sortable.asc .sort-icon::after  { content:'↑'; opacity:1; }
+  th.sortable.desc .sort-icon::after { content:'↓'; opacity:1; }
+  th.sortable.asc  .sort-icon, th.sortable.desc .sort-icon { opacity:1; }
+
+  /* LISTA INATIVAR */
+  #tb-lista-inativ tr { cursor:pointer; }
+  #tb-lista-inativ tr:hover td { background: rgba(79,142,247,.08); }
+  #tb-lista-inativ tr.selecionado td { background: rgba(239,68,68,.1); }
+  .btn-selecionar { background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);
+    color:var(--red);border-radius:6px;padding:3px 10px;font-size:11px;font-weight:600;cursor:pointer; }
+  .btn-selecionar:hover { background:rgba(239,68,68,.25); }
+
   /* FILTER ROW */
   .filter-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
   .filter-row select { min-width: 130px; }
@@ -308,9 +324,16 @@
       <div style="overflow-x:auto">
         <table>
           <thead><tr>
-            <th>Matrícula</th><th>Nome Completo</th><th>Celular</th><th>CPF</th>
-            <th>Trajeto</th><th>Data Início</th><th>Hora Início</th><th>Data Fim</th><th>Hora Fim</th>
-            <th>Status</th><th>Ações</th>
+            <th class="sortable" data-col="matricula">Matrícula <span class="sort-icon">⇅</span></th>
+            <th class="sortable" data-col="nome">Nome Completo <span class="sort-icon">⇅</span></th>
+            <th>Celular</th><th>CPF</th>
+            <th class="sortable" data-col="trajeto">Trajeto <span class="sort-icon">⇅</span></th>
+            <th class="sortable" data-col="dataInicio">Data Início <span class="sort-icon">⇅</span></th>
+            <th>Hora Início</th>
+            <th class="sortable" data-col="dataFim">Data Fim <span class="sort-icon">⇅</span></th>
+            <th>Hora Fim</th>
+            <th class="sortable" data-col="status">Status <span class="sort-icon">⇅</span></th>
+            <th>Ações</th>
           </tr></thead>
           <tbody id="tb-vouchers"><tr><td colspan="11" class="empty">Carregando…</td></tr></tbody>
         </table>
@@ -321,49 +344,65 @@
   <!-- INATIVAR -->
   <section class="page" id="page-inativar">
     <h1>Inativar Colaborador</h1>
-    <p class="subtitle">Registre o pedido de desligamento e bloqueie o voucher automaticamente</p>
-    <div class="card" style="padding:24px">
-      <div class="section">
-        <label style="margin-bottom:8px;display:block">Buscar colaborador por nome ou matrícula</label>
-        <div class="search-row">
-          <input id="inativ-busca" type="text" class="search-input" placeholder="Digite o nome ou matrícula…"/>
-          <button class="btn btn-primary" onclick="buscarParaInativar()">Buscar</button>
+    <p class="subtitle">Selecione um colaborador da lista ou pesquise pelo nome/matrícula</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start">
+
+      <!-- LISTA DE ATIVOS -->
+      <div class="card">
+        <div class="card-header" style="flex-direction:column;align-items:stretch;gap:10px">
+          <span class="card-title">Colaboradores com voucher ativo</span>
+          <input id="inativ-busca" type="text" placeholder="🔍 Filtrar por nome ou matrícula…"
+            oninput="filtrarListaInativ()" style="font-size:13px"/>
         </div>
-        <div class="search-results" id="search-results"></div>
+        <div style="max-height:460px;overflow-y:auto" id="lista-inativ-scroll">
+          <table style="font-size:13px">
+            <thead><tr><th>Matrícula</th><th>Nome</th><th>Unidade</th><th></th></tr></thead>
+            <tbody id="tb-lista-inativ">
+              <tr><td colspan="4" class="empty"><span class="spinner"></span></td></tr>
+            </tbody>
+          </table>
+        </div>
       </div>
 
-      <div id="inativ-form">
-        <div id="selected-colab">
-          <strong id="sc-nome">—</strong>
-          <span id="sc-info">—</span>
+      <!-- FORMULÁRIO DE INATIVAÇÃO -->
+      <div class="card" style="padding:24px">
+        <div id="inativ-placeholder" style="text-align:center;padding:40px 0;color:var(--muted);font-size:14px">
+          <div style="font-size:36px;margin-bottom:12px">👈</div>
+          Selecione um colaborador ao lado para inativar
         </div>
-        <div class="form-grid">
-          <div class="form-group">
-            <label>Data do Pedido de Desligamento</label>
-            <input type="date" id="inativ-data"/>
+        <div id="inativ-form" style="display:none">
+          <div id="selected-colab" style="margin-bottom:18px">
+            <strong id="sc-nome" style="font-size:16px">—</strong>
+            <span id="sc-info" style="color:var(--muted);font-size:13px;display:block;margin-top:3px">—</span>
           </div>
-          <div class="form-group">
-            <label>Motivo do Desligamento</label>
-            <select id="inativ-motivo">
-              <option value="Solicitação de desligamento">Solicitação de desligamento</option>
-              <option value="Demissão sem justa causa">Demissão sem justa causa</option>
-              <option value="Demissão por justa causa">Demissão por justa causa</option>
-              <option value="Término de contrato">Término de contrato</option>
-              <option value="Afastamento">Afastamento</option>
-              <option value="Outro">Outro</option>
-            </select>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Data do Pedido de Desligamento</label>
+              <input type="date" id="inativ-data"/>
+            </div>
+            <div class="form-group">
+              <label>Motivo do Desligamento</label>
+              <select id="inativ-motivo">
+                <option value="Solicitação de desligamento">Solicitação de desligamento</option>
+                <option value="Demissão sem justa causa">Demissão sem justa causa</option>
+                <option value="Demissão por justa causa">Demissão por justa causa</option>
+                <option value="Término de contrato">Término de contrato</option>
+                <option value="Afastamento">Afastamento</option>
+                <option value="Outro">Outro</option>
+              </select>
+            </div>
+            <div class="form-group" style="grid-column:1/-1">
+              <label>Observações (opcional)</label>
+              <textarea id="inativ-obs" placeholder="Informações adicionais…"></textarea>
+            </div>
           </div>
-          <div class="form-group" style="grid-column:1/-1">
-            <label>Observações (opcional)</label>
-            <textarea id="inativ-obs" placeholder="Informações adicionais…"></textarea>
+          <div class="gap-12" style="margin-top:18px">
+            <button class="btn btn-danger" onclick="confirmarInativacao()">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+              Confirmar Inativação
+            </button>
+            <button class="btn btn-ghost" onclick="limparInativacao()">Cancelar</button>
           </div>
-        </div>
-        <div class="gap-12" style="margin-top:18px">
-          <button class="btn btn-danger" onclick="confirmarInativacao()">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
-            Confirmar Inativação
-          </button>
-          <button class="btn btn-ghost" onclick="limparInativacao()">Cancelar</button>
         </div>
       </div>
     </div>
@@ -613,6 +652,7 @@ document.querySelectorAll('.nav-item').forEach(item => {
 function onPageEnter(page) {
   if (page === 'dashboard')  carregarDashboard();
   if (page === 'vouchers')   carregarVouchers();
+  if (page === 'inativar')   carregarListaInativ();
   if (page === 'historico')  carregarHistorico();
   if (page === 'usuarios')   carregarUsuarios();
   if (page === 'exportar')   preencherDataHoje();
@@ -643,7 +683,9 @@ document.getElementById('btn-sync').addEventListener('click', async () => {
   btn.disabled = true; btn.textContent = '⟳ Sincronizando…';
   try {
     const r = await api('sincronizar');
-    toast(r.mensagem, 'success');
+    let msg = r.mensagem;
+    if (r.autoInativados > 0) msg += ' ⚠️ ' + r.autoInativados + ' inativado(s) automaticamente por mudança no Template.';
+    toast(msg, r.autoInativados > 0 ? 'info' : 'success');
     if (document.getElementById('page-dashboard').classList.contains('active')) carregarDashboard();
     if (document.getElementById('page-vouchers').classList.contains('active'))  carregarVouchers();
   } catch(e) { toast('Erro: ' + e.message, 'error'); }
@@ -673,7 +715,11 @@ async function carregarDashboard() {
   } catch(e) { toast('Erro ao carregar dashboard: ' + e.message, 'error'); }
 }
 
-// ─── CONTROLE DE VOUCHERS ────────────────────────────────────
+// ─── CONTROLE DE VOUCHERS ─────────────────────────────────────
+let vouchersCache = [];
+let sortCol = null, sortDir = 1;
+const hoje = new Date().toISOString().split('T')[0];
+
 async function carregarVouchers() {
   const filtro = document.getElementById('filtro-busca').value;
   const status = document.getElementById('filtro-status').value;
@@ -681,46 +727,72 @@ async function carregarVouchers() {
   tbody.innerHTML = '<tr><td colspan="11" class="empty"><span class="spinner"></span> Carregando…</td></tr>';
   try {
     const d = await api('listarVouchers', { filtro, status });
-    if (!d.itens.length) {
-      tbody.innerHTML = '<tr><td colspan="11" class="empty">Nenhum colaborador encontrado.</td></tr>';
-      return;
-    }
-    // Data base = hoje (para pré-visualização das datas na tabela)
-    const hoje = new Date().toISOString().split('T')[0];
-    tbody.innerHTML = d.itens.map(r => {
+    // Enriquecer com trajeto e datas calculadas
+    vouchersCache = d.itens.map(r => {
       const traj = definirTrajetoLocal(r.horaEntrada, r.horaSaida);
       const calc = calcularDatasLocal(r.horaEntrada, r.horaSaida, hoje);
-      const corTraj = traj === 'IDA' ? 'badge-blue' : traj === 'VOLTA' ? 'badge-green' : 'badge-amber';
-      const nomeEsc = (r.nome||'').replace(/'/g,"&#39;").replace(/"/g,"&quot;");
-      const dI = traj === 'IDA' ? calc.dataInicioIda   : traj === 'VOLTA' ? calc.dataInicioVolta : '—';
-      const hI = traj === 'IDA' ? calc.horaInicioIda   : traj === 'VOLTA' ? calc.horaInicioVolta : '—';
-      const dF = traj === 'IDA' ? calc.dataFimIda       : traj === 'VOLTA' ? calc.dataFimVolta    : '—';
-      const hF = traj === 'IDA' ? calc.horaFimIda       : traj === 'VOLTA' ? calc.horaFimVolta    : '—';
-      return `<tr>
-        <td style="white-space:nowrap"><code style="font-size:12px">${r.matricula}</code></td>
-        <td style="white-space:nowrap;font-weight:500">${r.nome}</td>
-        <td style="white-space:nowrap">${r.celular}</td>
-        <td style="white-space:nowrap">${r.cpf}</td>
-        <td>${traj ? '<span class="badge '+corTraj+'">'+traj+'</span>' : '<span style="color:var(--muted)">—</span>'}</td>
-        <td style="white-space:nowrap;font-size:12px">${dI}</td>
-        <td style="white-space:nowrap;font-size:12px">${hI}</td>
-        <td style="white-space:nowrap;font-size:12px">${dF}</td>
-        <td style="white-space:nowrap;font-size:12px">${hF}</td>
-        <td><span class="badge ${r.status === 'ATIVO' ? 'badge-green' : 'badge-red'}">${r.status}</span></td>
-        <td>
-          <div class="gap-12">
-            <button class="btn btn-ghost" style="padding:5px 10px;font-size:11px"
-              title="Detalhes / Editar"
-              onclick='abrirModal(${JSON.stringify(r)})'>✏️</button>
-            ${r.status === 'ATIVO'
-              ? `<button class="btn btn-danger" style="padding:5px 10px;font-size:11px" onclick="inativarRapido('${r.matricula}','${nomeEsc}')">Inativar</button>`
-              : `<button class="btn btn-success" style="padding:5px 10px;font-size:11px" onclick="reativarColab('${r.matricula}')">Reativar</button>`}
-          </div>
-        </td>
-      </tr>`;
-    }).join('');
+      return {
+        ...r, traj,
+        dataInicio: traj === 'IDA' ? calc.dataInicioIda   : traj === 'VOLTA' ? calc.dataInicioVolta : '',
+        horaInicio: traj === 'IDA' ? calc.horaInicioIda   : traj === 'VOLTA' ? calc.horaInicioVolta : '',
+        dataFim:    traj === 'IDA' ? calc.dataFimIda       : traj === 'VOLTA' ? calc.dataFimVolta    : '',
+        horaFim:    traj === 'IDA' ? calc.horaFimIda       : traj === 'VOLTA' ? calc.horaFimVolta    : '',
+      };
+    });
+    renderVouchers();
   } catch(e) { tbody.innerHTML = '<tr><td colspan="11" class="empty">Erro ao carregar.</td></tr>'; toast(e.message, 'error'); }
 }
+
+function renderVouchers() {
+  const tbody = document.getElementById('tb-vouchers');
+  let itens = [...vouchersCache];
+  if (sortCol) {
+    itens.sort((a, b) => {
+      const va = String(a[sortCol]||'').toLowerCase();
+      const vb = String(b[sortCol]||'').toLowerCase();
+      return va < vb ? -sortDir : va > vb ? sortDir : 0;
+    });
+  }
+  if (!itens.length) { tbody.innerHTML = '<tr><td colspan="11" class="empty">Nenhum colaborador encontrado.</td></tr>'; return; }
+  tbody.innerHTML = itens.map(r => {
+    const corTraj = r.traj === 'IDA' ? 'badge-blue' : r.traj === 'VOLTA' ? 'badge-green' : 'badge-amber';
+    const nomeEsc = (r.nome||'').replace(/'/g,"&#39;").replace(/"/g,"&quot;");
+    return `<tr>
+      <td style="white-space:nowrap"><code style="font-size:12px">${r.matricula}</code></td>
+      <td style="white-space:nowrap;font-weight:500">${r.nome}</td>
+      <td style="white-space:nowrap">${r.celular}</td>
+      <td style="white-space:nowrap">${r.cpf}</td>
+      <td>${r.traj ? '<span class="badge '+corTraj+'">'+r.traj+'</span>' : '<span style="color:var(--muted)">—</span>'}</td>
+      <td style="white-space:nowrap;font-size:12px">${r.dataInicio||'—'}</td>
+      <td style="white-space:nowrap;font-size:12px">${r.horaInicio||'—'}</td>
+      <td style="white-space:nowrap;font-size:12px">${r.dataFim||'—'}</td>
+      <td style="white-space:nowrap;font-size:12px">${r.horaFim||'—'}</td>
+      <td><span class="badge ${r.status === 'ATIVO' ? 'badge-green' : 'badge-red'}">${r.status}</span></td>
+      <td>
+        <div class="gap-12">
+          <button class="btn btn-ghost" style="padding:5px 10px;font-size:11px" title="Detalhes / Editar"
+            onclick='abrirModal(${JSON.stringify(r)})'>✏️</button>
+          ${r.status === 'ATIVO'
+            ? `<button class="btn btn-danger" style="padding:5px 10px;font-size:11px" onclick="inativarRapido('${r.matricula}','${nomeEsc}')">Inativar</button>`
+            : `<button class="btn btn-success" style="padding:5px 10px;font-size:11px" onclick="reativarColab('${r.matricula}')">Reativar</button>`}
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// Sorting
+document.querySelectorAll('th.sortable').forEach(th => {
+  th.addEventListener('click', () => {
+    const col = th.dataset.col;
+    if (sortCol === col) { sortDir *= -1; th.classList.toggle('asc'); th.classList.toggle('desc'); }
+    else {
+      document.querySelectorAll('th.sortable').forEach(t => t.classList.remove('asc','desc'));
+      sortCol = col; sortDir = 1; th.classList.add('asc');
+    }
+    renderVouchers();
+  });
+});
 
 document.getElementById('filtro-busca').addEventListener('keydown', e => { if (e.key === 'Enter') carregarVouchers(); });
 
@@ -750,42 +822,62 @@ async function reativarColab(matricula) {
 }
 
 // ─── BUSCA PARA INATIVAR ─────────────────────────────────────
-let buscaTimeout;
-document.getElementById('inativ-busca').addEventListener('input', () => {
-  clearTimeout(buscaTimeout);
-  buscaTimeout = setTimeout(buscarParaInativar, 400);
-});
+// ─── LISTA DE ATIVOS PARA INATIVAR ──────────────────────────
+let listaInativCache = [];
 
-async function buscarParaInativar() {
-  const q = document.getElementById('inativ-busca').value.trim();
-  const el = document.getElementById('search-results');
-  if (!q) { el.style.display = 'none'; return; }
-  el.style.display = 'block';
-  el.innerHTML = '<div class="search-item"><small>Buscando…</small></div>';
+async function carregarListaInativ() {
+  const tbody = document.getElementById('tb-lista-inativ');
+  tbody.innerHTML = '<tr><td colspan="4" class="empty"><span class="spinner"></span></td></tr>';
   try {
-    const d = await api('buscarColaborador', { query: q });
-    if (!d.itens.length) {
-      el.innerHTML = '<div class="search-item"><small>Nenhum resultado.</small></div>';
-      return;
-    }
-    el.innerHTML = d.itens.map(c => `
-      <div class="search-item" onclick="selecionarColab(${JSON.stringify(c).replace(/"/g,'&quot;')})">
-        <strong>${c.nome}</strong>
-        <small>Matrícula: ${c.matricula} · ${c.unidade} · ${c.status}
-          ${c.beneficio.toUpperCase().includes('VOUCHER') ? ' · <span style="color:var(--green)">✓ Voucher</span>' : ''}
-        </small>
-      </div>`).join('');
-  } catch(e) { el.innerHTML = `<div class="search-item"><small>Erro: ${e.message}</small></div>`; }
+    const d = await api('listarVouchers', { filtro: '', status: 'ATIVO' });
+    listaInativCache = d.itens;
+    renderListaInativ(listaInativCache);
+  } catch(e) {
+    tbody.innerHTML = '<tr><td colspan="4" class="empty">Erro ao carregar.</td></tr>';
+    toast(e.message, 'error');
+  }
+}
+
+function renderListaInativ(itens) {
+  const tbody = document.getElementById('tb-lista-inativ');
+  if (!itens.length) {
+    tbody.innerHTML = '<tr><td colspan="4" class="empty">Nenhum colaborador ativo encontrado.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = itens.map(r => `
+    <tr id="row-inativ-${r.matricula}" onclick="selecionarColabLista('${r.matricula}')">
+      <td style="font-size:11px;color:var(--muted)">${r.matricula}</td>
+      <td style="font-weight:500;font-size:13px">${r.nome}</td>
+      <td style="font-size:11px;color:var(--muted)">${r.unidade||'—'}</td>
+      <td><button class="btn-selecionar">Selecionar</button></td>
+    </tr>`).join('');
+}
+
+function filtrarListaInativ() {
+  const q = document.getElementById('inativ-busca').value.toLowerCase();
+  const filtrados = q
+    ? listaInativCache.filter(r =>
+        r.nome.toLowerCase().includes(q) || String(r.matricula).toLowerCase().includes(q))
+    : listaInativCache;
+  renderListaInativ(filtrados);
+}
+
+function selecionarColabLista(matricula) {
+  const r = listaInativCache.find(x => String(x.matricula) === String(matricula));
+  if (!r) return;
+  // Highlight linha selecionada
+  document.querySelectorAll('#tb-lista-inativ tr').forEach(tr => tr.classList.remove('selecionado'));
+  const rowEl = document.getElementById('row-inativ-' + matricula);
+  if (rowEl) rowEl.classList.add('selecionado');
+  selecionarColab(r);
 }
 
 function selecionarColab(c) {
   colaboradorSelecionado = c;
   document.getElementById('sc-nome').textContent = c.nome;
-  document.getElementById('sc-info').textContent = `Matrícula: ${c.matricula} · ${c.unidade} · ${c.beneficio}`;
+  document.getElementById('sc-info').textContent = `Matrícula: ${c.matricula} · ${c.unidade||''} · ${c.beneficio||''}`;
+  document.getElementById('inativ-placeholder').style.display = 'none';
   document.getElementById('inativ-form').style.display = 'block';
-  document.getElementById('search-results').style.display = 'none';
-  document.getElementById('inativ-busca').value = c.nome;
-  // Data padrão: hoje
   document.getElementById('inativ-data').value = new Date().toISOString().split('T')[0];
 }
 
@@ -805,6 +897,7 @@ async function confirmarInativacao() {
     });
     toast(`${colaboradorSelecionado.nome} inativado com sucesso!`, 'success');
     limparInativacao();
+    carregarListaInativ(); // atualiza lista
   } catch(e) { toast(e.message, 'error'); }
 }
 
@@ -812,9 +905,10 @@ function limparInativacao() {
   colaboradorSelecionado = null;
   document.getElementById('inativ-busca').value = '';
   document.getElementById('inativ-form').style.display = 'none';
-  document.getElementById('search-results').style.display = 'none';
+  document.getElementById('inativ-placeholder').style.display = 'block';
   document.getElementById('inativ-data').value = '';
   document.getElementById('inativ-obs').value  = '';
+  document.querySelectorAll('#tb-lista-inativ tr').forEach(tr => tr.classList.remove('selecionado'));
 }
 
 // ─── EXPORTAR EXCEL ──────────────────────────────────────────
