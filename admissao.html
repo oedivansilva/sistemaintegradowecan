@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Seleção & Admissão — WeCan</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
   :root {
     --bg:        #150a20;
@@ -35,8 +36,9 @@
     border-right: 1px solid var(--border); display: flex; flex-direction: column;
     position: fixed; top: 0; left: 0; bottom: 0; z-index: 100;
   }
-  .sidebar-logo { padding: 20px 18px 16px; border-bottom: 1px solid var(--border); }
-  .sidebar-logo .mark { width:30px; height:30px; border-radius:8px; background: linear-gradient(135deg,var(--accent),var(--accent-dim)); display:flex; align-items:center; justify-content:center; font-weight:900; font-size:14px; color:var(--brand); margin-bottom:10px; }
+  .sidebar-logo { padding: 20px 18px 14px; border-bottom: 1px solid var(--border); }
+  .sidebar-logo .mark { width:34px; height:34px; border-radius:8px; background: linear-gradient(135deg,var(--accent),var(--accent-dim)); display:flex; align-items:center; justify-content:center; font-weight:900; font-size:14px; color:var(--brand); margin-bottom:10px; overflow:hidden; }
+  .sidebar-logo .mark img { width:100%; height:100%; object-fit:cover; border-radius:8px; }
   .sidebar-logo h2 { font-size: 13px; font-weight: 800; letter-spacing: .4px; }
   .sidebar-logo span { font-size: 11px; color: var(--muted); }
 
@@ -64,15 +66,38 @@
   nav a.active .count-badge { background: rgba(99,204,176,.20); color: var(--accent); }
   nav a .count-badge.alert { background: rgba(245,158,11,.18); color: var(--warning); }
 
-  .sidebar-user { padding: 14px 18px; border-top: 1px solid var(--border); font-size: 12px; }
-  .sidebar-user strong { display: block; color: var(--text); }
-  .sidebar-user span { color: var(--muted); font-size: 11px; }
-  .btn-logout {
-    margin-top: 8px; background: none; border: 1px solid var(--border);
-    color: var(--muted); font-size: 11px; padding: 4px 10px; border-radius: 6px;
-    cursor: pointer; transition: all .15s;
+  /* ── SIDEBAR FOOTER ── */
+  .sidebar-footer {
+    border-top: 1px solid var(--border);
+    padding: 10px 0 0;
   }
-  .btn-logout:hover { border-color: var(--danger); color: var(--danger); }
+  /* Suporte nav links */
+  .nav-suporte-item {
+    display:flex; align-items:center; gap:10px;
+    padding: 9px 18px; font-size:13px; color:var(--muted);
+    cursor:pointer; border-left:3px solid transparent; transition:all .15s;
+  }
+  .nav-suporte-item:hover { color:var(--text); background:var(--surface2); }
+  .nav-suporte-item.active { color:var(--accent); border-left-color:var(--accent); background:rgba(99,204,176,.10); font-weight:600; }
+  .nav-suporte-item .ico { width:18px; text-align:center; font-size:14px; }
+
+  .sidebar-user { padding: 12px 18px; display:flex; align-items:center; gap:10px; }
+  .user-avatar {
+    width:34px; height:34px; border-radius:50%; background:var(--surface3);
+    display:flex; align-items:center; justify-content:center; font-size:14px;
+    font-weight:700; color:var(--accent); flex-shrink:0; overflow:hidden; cursor:pointer;
+    border:2px solid var(--border); transition:border-color .15s;
+  }
+  .user-avatar:hover { border-color:var(--accent); }
+  .user-avatar img { width:100%; height:100%; object-fit:cover; border-radius:50%; }
+  .user-info { flex:1; min-width:0; }
+  .user-info strong { display:block; font-size:12px; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .user-info span { color:var(--muted); font-size:11px; }
+  .btn-logout {
+    background:none; border:1px solid var(--border); color:var(--muted);
+    font-size:11px; padding:4px 8px; border-radius:6px; cursor:pointer; transition:all .15s; flex-shrink:0;
+  }
+  .btn-logout:hover { border-color:var(--danger); color:var(--danger); }
 
   /* ── MAIN ── */
   #main { margin-left: 226px; flex: 1; padding: 26px 32px; min-height: 100vh; }
@@ -192,7 +217,7 @@
   .modal-actions { display: flex; gap: 10px; justify-content: flex-end; padding: 16px 26px 22px; border-top:1px solid var(--border); margin-top:6px; }
   .voucher-flag { display:flex; align-items:center; gap:10px; background: rgba(79,124,255,.08); border:1px solid rgba(79,124,255,.3); border-radius:8px; padding:10px 14px; font-size:12px; color:#9db4ff; margin-top:4px; }
 
-  /* ── TIMELINE (datas do processo) ── */
+  /* ── TIMELINE ── */
   .timeline { display:flex; align-items:flex-start; gap:0; margin: 6px 0 4px; overflow-x:auto; padding-bottom:6px; }
   .tl-step { display:flex; flex-direction:column; align-items:center; min-width:96px; position:relative; }
   .tl-dot { width:11px; height:11px; border-radius:50%; background: var(--border); border:2px solid var(--surface); z-index:2; }
@@ -229,17 +254,63 @@
   #toast.error   { border-color: var(--danger);  color: var(--danger); }
   #toast.info    { border-color: var(--voucher); color: var(--voucher); }
 
+  /* ── SUPORTE / CONFIGS ── */
+  .suporte-grid { display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-bottom:20px; }
+  .suporte-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:22px 24px; }
+  .suporte-card h3 { font-size:13px; font-weight:700; color:var(--text); margin-bottom:4px; }
+  .suporte-card p  { font-size:12px; color:var(--muted); margin-bottom:18px; }
+
+  .avatar-upload { display:flex; align-items:center; gap:18px; margin-bottom:20px; }
+  .avatar-preview { width:72px; height:72px; border-radius:50%; background:var(--surface3); border:2px solid var(--border); display:flex; align-items:center; justify-content:center; font-size:26px; font-weight:700; color:var(--accent); overflow:hidden; flex-shrink:0; }
+  .avatar-preview img { width:100%; height:100%; object-fit:cover; border-radius:50%; }
+
+  .logo-preview { width:120px; height:48px; border-radius:8px; background:var(--surface3); border:2px solid var(--border); display:flex; align-items:center; justify-content:center; overflow:hidden; }
+  .logo-preview img { max-width:100%; max-height:100%; object-fit:contain; }
+
+  .color-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:8px; margin-bottom:14px; }
+  .color-swatch { width:100%; aspect-ratio:1; border-radius:8px; cursor:pointer; border:3px solid transparent; transition:all .15s; }
+  .color-swatch:hover, .color-swatch.active { border-color: var(--text); transform:scale(1.08); }
+
+  .upload-zone { border:2px dashed var(--border); border-radius:10px; padding:20px; text-align:center; cursor:pointer; transition:border-color .15s; font-size:12.5px; color:var(--muted); }
+  .upload-zone:hover { border-color:var(--accent); color:var(--accent); }
+  .upload-zone input[type=file] { display:none; }
+
+  /* Importação em lote */
+  .import-steps { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:18px; }
+  .import-step { background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:14px 16px; }
+  .import-step h4 { font-size:12px; font-weight:700; color:var(--accent); margin-bottom:8px; }
+  .import-preview { background:var(--surface); border:1px solid var(--border); border-radius:8px; max-height:240px; overflow:auto; margin-bottom:14px; }
+  .import-preview table { width:100%; border-collapse:collapse; font-size:11px; }
+  .import-preview th { background:var(--surface2); padding:6px 10px; text-align:left; color:var(--muted); white-space:nowrap; position:sticky; top:0; }
+  .import-preview td { padding:5px 10px; border-top:1px solid var(--border); white-space:nowrap; }
+  .import-row-ok  { color:var(--success); }
+  .import-row-err { color:var(--danger); }
+  #import-log { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:10px 14px; font-size:11.5px; font-family:monospace; height:120px; overflow-y:auto; white-space:pre-wrap; display:none; }
+
+  /* Permissões por sistema */
+  .sistemas-grid { display:grid; gap:12px; }
+  .sistema-row { background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:14px 16px; display:flex; align-items:center; gap:14px; }
+  .sistema-row .sistema-info { flex:1; }
+  .sistema-row .sistema-info strong { font-size:13px; display:block; }
+  .sistema-row .sistema-info span   { font-size:11.5px; color:var(--muted); }
+  .toggle-switch { position:relative; width:40px; height:22px; flex-shrink:0; }
+  .toggle-switch input { opacity:0; width:0; height:0; }
+  .toggle-switch .slider { position:absolute; inset:0; background:var(--surface3); border-radius:22px; cursor:pointer; transition:.2s; }
+  .toggle-switch .slider:before { content:''; position:absolute; height:16px; width:16px; left:3px; top:3px; background:#fff; border-radius:50%; transition:.2s; }
+  .toggle-switch input:checked + .slider { background:var(--accent); }
+  .toggle-switch input:checked + .slider:before { transform:translateX(18px); }
+
   .text-muted { color: var(--muted); font-size: 12px; }
   .mt-10 { margin-top:10px; } .mt-16 { margin-top: 16px; }
+  .section-divider { border:none; border-top:1px solid var(--border); margin:20px 0; }
 </style>
 </head>
 <body>
 
-
 <!-- SIDEBAR -->
 <div id="sidebar" style="display:none">
   <div class="sidebar-logo">
-    <div class="mark">SA</div>
+    <div class="mark" id="logo-mark">SA</div>
     <h2>SELEÇÃO &amp; ADMISSÃO</h2>
     <span>WeCan BR · Consolidado</span>
   </div>
@@ -270,10 +341,25 @@
       </div>
     </div>
   </nav>
-  <div class="sidebar-user">
-    <strong id="user-nome">—</strong>
-    <span id="user-perfil">—</span><br/>
-    <button class="btn-logout" onclick="logout()">Sair</button>
+
+  <!-- SUPORTE — rodapé do menu, acima do usuário -->
+  <div class="sidebar-footer">
+    <div style="padding:8px 18px 4px; font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:.7px; font-weight:700;">Suporte</div>
+    <div class="nav-suporte-item" onclick="navTo('configuracoes')" data-page="configuracoes">
+      <span class="ico">⚙️</span> Configurações
+    </div>
+    <div class="nav-suporte-item" id="nav-suporte-usuarios" onclick="navTo('suporte-usuarios')" data-page="suporte-usuarios" style="display:none">
+      <span class="ico">🛡️</span> Gestão de Usuários
+    </div>
+    <hr class="section-divider" style="margin:8px 18px;"/>
+    <div class="sidebar-user">
+      <div class="user-avatar" id="user-avatar" onclick="navTo('configuracoes')" title="Configurações de perfil">?</div>
+      <div class="user-info">
+        <strong id="user-nome">—</strong>
+        <span id="user-perfil">—</span>
+      </div>
+      <button class="btn-logout" onclick="logout()">Sair</button>
+    </div>
   </div>
 </div>
 
@@ -289,9 +375,7 @@
         <div class="scope-banner" id="scope-banner-dash"></div>
       </div>
     </div>
-
     <div class="cards-grid" id="kpi-cards"></div>
-
     <div class="dash-grid">
       <div class="panel">
         <h3>📊 Vagas por Regional <span class="badge" id="badge-regional"></span></h3>
@@ -302,7 +386,6 @@
         <ul class="ranking-list" id="rank-consultores"></ul>
       </div>
     </div>
-
     <div class="dash-grid three">
       <div class="panel">
         <h3>📋 Status da Vaga</h3>
@@ -313,7 +396,6 @@
         <div class="chart-wrap" style="height:190px"><canvas id="chart-uniforme"></canvas></div>
       </div>
     </div>
-
     <div class="panel">
       <h3>⚠️ Admissões com No Show / Atraso</h3>
       <div class="table-wrap">
@@ -333,9 +415,11 @@
         <p>Cadastro consolidado — abas HUBs (SP) e SOC_RJ1 e RJ2</p>
         <div class="scope-banner" id="scope-banner-vagas"></div>
       </div>
-      <button class="btn btn-primary" onclick="abrirModalVaga(null)">+ Nova Vaga</button>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-ghost" onclick="abrirImportacaoLote()">📥 Importar Planilha</button>
+        <button class="btn btn-primary" onclick="abrirModalVaga(null)">+ Nova Vaga</button>
+      </div>
     </div>
-
     <div class="toolbar">
       <input type="text" id="busca-vaga" placeholder="Buscar por colaborador, matrícula, Jira..." oninput="renderVagas()"/>
       <select id="filtro-regional" onchange="renderVagas()">
@@ -357,9 +441,8 @@
       <select id="filtro-consultor" onchange="renderVagas()">
         <option value="">Todos os consultores</option>
       </select>
-      <button class="btn btn-ghost btn-sm" onclick="atualizarDados()" title="Buscar dados mais recentes da planilha">🔄 Atualizar</button>
+      <button class="btn btn-ghost btn-sm" onclick="atualizarDados()" title="Buscar dados mais recentes">🔄 Atualizar</button>
     </div>
-
     <div class="table-wrap">
       <table class="main-table">
         <thead>
@@ -383,7 +466,7 @@
       </div>
     </div>
     <div class="access-note">
-      Quando o campo <b>Transporte</b> de uma vaga é cadastrado ou editado contendo <b>Voucher</b>, o colaborador cai aqui automaticamente. Aprovar marca como <b>pré-aprovado</b> — a ativação real no sistema de Voucher só acontece quando esse colaborador aparecer de fato na planilha Template (admissão confirmada), então o benefício final na assinatura do contrato sempre prevalece.
+      Quando o campo <b>Transporte</b> de uma vaga é cadastrado ou editado contendo <b>Voucher</b>, o colaborador cai aqui automaticamente. Aprovar marca como <b>pré-aprovado</b> — a ativação real no sistema de Voucher só acontece quando esse colaborador aparecer de fato na planilha Template.
     </div>
     <div class="queue-tabs">
       <button class="qtab active" data-qf="pendente" onclick="setQueueFilter('pendente')">Pendentes</button>
@@ -393,7 +476,7 @@
     <div id="queue-list"></div>
   </div>
 
-  <!-- ══ USUÁRIOS (acessos da Admissão — somente Master) ══ -->
+  <!-- ══ USUÁRIOS (dentro de Seleção & Admissão — somente Master) ══ -->
   <div class="page" id="page-usuarios">
     <div class="page-header">
       <div>
@@ -403,7 +486,7 @@
       <button class="btn btn-primary" onclick="abrirModalUsuario(null)">+ Novo Usuário</button>
     </div>
     <div class="access-note">
-      Esses acessos valem para o login compartilhado (página inicial). Cada perfil controla o que a pessoa vê dentro do Seleção &amp; Admissão — Equipe só enxerga as próprias vagas, Gestor e Onsite veem tudo, Master também acessa o Voucher integrado.
+      Esses acessos valem para o login compartilhado. Cada perfil controla o que a pessoa vê — Equipe só enxerga as próprias vagas, Gestor e Onsite veem tudo, Master também acessa o Voucher integrado.
     </div>
     <div class="table-wrap">
       <table class="main-table">
@@ -418,14 +501,94 @@
     <div class="page-header">
       <div>
         <h1>Voucher</h1>
-        <p>Sistema de Controle de Voucher — aplicativo independente, com login compartilhado</p>
+        <p>Sistema de Controle de Voucher — aplicativo independente</p>
       </div>
       <a class="btn btn-ghost btn-sm" id="voucherapp-open-tab" href="#" target="_blank" rel="noopener">Abrir em nova aba ↗</a>
     </div>
-    <div class="access-note">
-      Esta seção carrega o sistema de Voucher publicado separadamente — o código continua independente do Seleção &amp; Admissão, só aparece aqui dentro pra você não precisar trocar de sistema. Visível apenas para o perfil Master.
-    </div>
+    <div class="access-note">Esta seção carrega o sistema de Voucher publicado separadamente. Visível apenas para o perfil Master.</div>
     <div class="iframe-wrap"><iframe id="voucherapp-iframe" src="" title="Sistema de Voucher" loading="lazy"></iframe></div>
+  </div>
+
+  <!-- ══ CONFIGURAÇÕES (todos os perfis) ══ -->
+  <div class="page" id="page-configuracoes">
+    <div class="page-header">
+      <div>
+        <h1>⚙️ Configurações</h1>
+        <p>Personalize o sistema e seu perfil de usuário</p>
+      </div>
+    </div>
+
+    <div class="suporte-grid">
+      <!-- Foto de perfil -->
+      <div class="suporte-card">
+        <h3>Foto de Perfil</h3>
+        <p>Será exibida no canto inferior esquerdo do menu</p>
+        <div class="avatar-upload">
+          <div class="avatar-preview" id="cfg-avatar-preview">?</div>
+          <div>
+            <label class="upload-zone" style="padding:10px 14px; display:inline-block;">
+              📷 Escolher foto
+              <input type="file" id="cfg-avatar-input" accept="image/*" onchange="previewAvatar(this)"/>
+            </label>
+            <p class="text-muted" style="margin-top:6px">JPG, PNG — máx. 1MB</p>
+            <button class="btn btn-danger btn-sm mt-10" onclick="removerFotoPerfil()">Remover foto</button>
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="salvarFotoPerfil()">Salvar foto</button>
+      </div>
+
+      <!-- Cor de tema -->
+      <div class="suporte-card">
+        <h3>Cor de Destaque</h3>
+        <p>Personalize a cor principal da interface</p>
+        <div class="color-grid" id="color-swatches">
+          <!-- Preenchido via JS -->
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+          <label style="font-size:12px;color:var(--muted);">Cor personalizada:</label>
+          <input type="color" id="cfg-color-custom" style="width:40px;height:32px;border:none;background:none;cursor:pointer;padding:0;" oninput="aplicarCorTema(this.value)"/>
+        </div>
+        <button class="btn btn-primary" onclick="salvarCorTema()">Salvar cor</button>
+      </div>
+    </div>
+
+    <!-- Logo da empresa — só Master -->
+    <div class="suporte-card" id="cfg-logo-card" style="display:none">
+      <h3>Logo da Empresa</h3>
+      <p>Aparece no canto superior esquerdo do menu, no lugar das iniciais "SA"</p>
+      <div style="display:flex;align-items:center;gap:18px;margin-bottom:18px;">
+        <div class="logo-preview" id="cfg-logo-preview"><span style="font-size:11px;color:var(--muted);">Sem logo</span></div>
+        <div>
+          <label class="upload-zone" style="padding:10px 14px; display:inline-block;">
+            🖼️ Escolher logo
+            <input type="file" id="cfg-logo-input" accept="image/*" onchange="previewLogo(this)"/>
+          </label>
+          <p class="text-muted" style="margin-top:6px">PNG com fundo transparente recomendado — máx. 1MB</p>
+          <button class="btn btn-danger btn-sm mt-10" onclick="removerLogo()">Remover logo</button>
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="salvarLogo()">Salvar logo</button>
+    </div>
+  </div>
+
+  <!-- ══ SUPORTE · GESTÃO DE USUÁRIOS (só Master) ══ -->
+  <div class="page" id="page-suporte-usuarios">
+    <div class="page-header">
+      <div>
+        <h1>🛡️ Gestão de Usuários</h1>
+        <p>Cadastre usuários e defina os sistemas que cada um pode acessar</p>
+      </div>
+      <button class="btn btn-primary" onclick="abrirModalUsuario(null)">+ Novo Usuário</button>
+    </div>
+    <div class="access-note">
+      Ao criar um usuário, você define o <b>perfil base</b> (Consultor, Gestor, Onsite, Master) e quais sistemas ele pode acessar. Novos sistemas adicionados ao painel aparecem automaticamente aqui para liberação.
+    </div>
+    <div class="table-wrap">
+      <table class="main-table">
+        <thead><tr><th>Nome</th><th>E-mail</th><th>Tipo de acesso</th><th>Status</th><th>Ações</th></tr></thead>
+        <tbody id="tbody-suporte-usuarios"></tbody>
+      </table>
+    </div>
   </div>
 
 </div><!-- /main -->
@@ -521,13 +684,9 @@
         <div class="form-group"><label>Data Admissão Realizada</label><input type="date" id="v-dataAdmRealizada"/></div>
         <div class="form-group"><label>Etapa do Processo Seletivo</label>
           <select id="v-etapa">
-            <option>R&amp;S</option>
-            <option>Pesquisa</option>
-            <option>Validação de Fretado</option>
-            <option>Documentação</option>
-            <option>Contrato Assinado</option>
-            <option>Exame admissional</option>
-            <option>Cancelada</option>
+            <option>R&amp;S</option><option>Pesquisa</option><option>Validação de Fretado</option>
+            <option>Documentação</option><option>Contrato Assinado</option>
+            <option>Exame admissional</option><option>Cancelada</option>
           </select>
         </div>
       </div>
@@ -535,16 +694,15 @@
         <div class="form-group"><label>Status da Vaga</label>
           <select id="v-statusVaga">
             <option value="">—</option>
-            <option>Em Andamento No Prazo</option>
-            <option>Em Andamento Atrasada</option>
-            <option>Finalizada No Prazo</option>
-            <option>Finalizada Antecipada</option>
-            <option>Finalizada Atrasada</option>
-            <option>Cancelada</option>
+            <option>Em Andamento No Prazo</option><option>Em Andamento Atrasada</option>
+            <option>Finalizada No Prazo</option><option>Finalizada Antecipada</option>
+            <option>Finalizada Atrasada</option><option>Cancelada</option>
           </select>
         </div>
         <div class="form-group"><label>Tipo de Vaga</label>
-          <select id="v-tipoVaga"><option>1 - Vaga Oficial</option><option>2 - Reposição - NO SHOW</option><option>3 - Reposição - ETO</option></select>
+          <select id="v-tipoVaga">
+            <option>1 - Vaga Oficial</option><option>2 - Reposição - NO SHOW</option><option>3 - Reposição - ETO</option>
+          </select>
         </div>
       </div>
       <div class="form-row">
@@ -559,14 +717,10 @@
         <label>Transporte</label>
         <input type="text" id="v-transporte" list="dl-transporte" oninput="checarVoucherFlag()" placeholder="VALE TRANSPORTE"/>
         <datalist id="dl-transporte">
-          <option value="VALE TRANSPORTE"/>
-          <option value="AUXILIO MOBILIDADE"/>
-          <option value="FRETADO"/>
-          <option value="FRETADO + VALE TRANSPORTE"/>
-          <option value="FRETADO + VT"/>
-          <option value="VOUCHER UBER + VT"/>
-          <option value="VOUCHER UBER / MOBILIDADE OU VT"/>
-          <option value="MOBILIDADE OU VT"/>
+          <option value="VALE TRANSPORTE"/><option value="AUXILIO MOBILIDADE"/>
+          <option value="FRETADO"/><option value="FRETADO + VALE TRANSPORTE"/>
+          <option value="FRETADO + VT"/><option value="VOUCHER UBER + VT"/>
+          <option value="VOUCHER UBER / MOBILIDADE OU VT"/><option value="MOBILIDADE OU VT"/>
           <option value="OPÇÃO DE VT OU MOBILIDADE NO SWILE (CORPORATIVO)"/>
         </datalist>
         <div class="voucher-flag" id="voucher-flag" style="display:none">
@@ -625,12 +779,12 @@
   </div>
 </div>
 
-<!-- MODAL USUÁRIO -->
+<!-- MODAL USUÁRIO (compartilhado entre Usuários e Suporte) -->
 <div class="modal-backdrop" id="modal-usuario">
-  <div class="modal" style="width:440px">
+  <div class="modal" style="width:520px">
     <div class="modal-head">
       <h2 id="mu-title">Novo Usuário</h2>
-      <p>Defina o tipo de acesso — isso controla o que essa pessoa vê no sistema</p>
+      <p>Defina o perfil e os sistemas que esse usuário pode acessar</p>
     </div>
     <div style="padding:0 26px 6px">
       <input type="hidden" id="u-id"/>
@@ -643,8 +797,13 @@
           <option value="equipe">Consultor (Equipe)</option>
           <option value="gestor">Gestor</option>
           <option value="onsite">Onsite</option>
-          <option value="master">Outro (Master)</option>
+          <option value="master">Master</option>
         </select>
+      </div>
+      <hr class="section-divider"/>
+      <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px;font-weight:700;">Acesso aos Sistemas</div>
+      <div class="sistemas-grid" id="sistemas-permissoes">
+        <!-- Preenchido via JS com sistemas cadastrados -->
       </div>
     </div>
     <div class="modal-actions">
@@ -654,20 +813,68 @@
   </div>
 </div>
 
+<!-- MODAL IMPORTAÇÃO EM LOTE -->
+<div class="modal-backdrop" id="modal-importacao">
+  <div class="modal" style="width:860px">
+    <div class="modal-head">
+      <h2>📥 Importar Vagas em Lote</h2>
+      <p>Faça o upload de uma planilha Excel com o padrão do sistema para cadastrar várias vagas de uma vez</p>
+    </div>
+    <div style="padding:0 26px 6px">
+      <div class="import-steps">
+        <div class="import-step">
+          <h4>Passo 1 — Baixe o modelo</h4>
+          <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">Preencha o arquivo Excel com as vagas e respeite as colunas do cabeçalho.</p>
+          <button class="btn btn-ghost btn-sm" onclick="baixarTemplateImportacao()">⬇️ Baixar modelo .xlsx</button>
+        </div>
+        <div class="import-step">
+          <h4>Passo 2 — Envie o arquivo</h4>
+          <label class="upload-zone">
+            📂 Selecionar planilha preenchida
+            <input type="file" id="import-file" accept=".xlsx,.xls" onchange="carregarPreviewImportacao(this)"/>
+          </label>
+        </div>
+      </div>
+
+      <div id="import-preview-wrap" style="display:none">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+          <span class="text-muted" id="import-preview-count"></span>
+          <span style="font-size:12px;color:var(--muted)">Verifique os dados antes de confirmar</span>
+        </div>
+        <div class="import-preview" id="import-preview-table"></div>
+      </div>
+
+      <div id="import-log"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modal-importacao')">Cancelar</button>
+      <button class="btn btn-primary" id="btn-confirmar-import" onclick="confirmarImportacao()" style="display:none">✅ Confirmar Importação</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="shared.js"></script>
 <script>
 // ══════════════════════════════════════════════
-//  admissao.html — JS principal (Supabase via rpc())
+//  admissao.html — JS principal
 // ══════════════════════════════════════════════
 let session = null;
 let VAGAS   = [];
 let _MAIN_HTML = '';
+let _importRows = [];
 
 const VOUCHER_APP_URL = 'voucher.html';
 const REGIONAIS       = ['SPI','RIO/ES','CO/N','SPM'];
+
+// Sistemas dinâmicos — adicione aqui novos sistemas futuros
+// { id, nome, descricao } — id será usado como chave em permissoes do usuário
+const SISTEMAS_DISPONIVEIS = [
+  { id: 'selecao_admissao', nome: 'Seleção & Admissão', descricao: 'Acesso ao módulo de vagas, admissões e fila de Voucher' },
+  { id: 'voucher_integrado', nome: 'Voucher · Sistema Integrado', descricao: 'Acesso ao sistema de controle de voucher de transporte' },
+  // Futuros sistemas serão adicionados aqui e aparecerão automaticamente no modal de usuário
+];
 
 // ── helpers de acesso ─────────────────────────
 function podeVerTudo()        { return session && ['gestor','master'].includes(session.perfil); }
@@ -693,35 +900,21 @@ function regionalPill(r) {
   return `<span class="pill ${cls}">${r||'—'}</span>`;
 }
 
-// ── Carregar vagas via RPC ────────────────────
+// ── Carregar vagas ────────────────────────────
 async function carregarVagas() {
   const resp = await rpc('wc_listar_vagas', {});
   VAGAS = (resp.vagas || []).map(v => ({
-    ...v,
-    id: v.jira,
-    codigoHub: v.codigo_hub,
-    local: v.local_trabalho,
-    statusUniforme: v.status_uniforme,
-    opsId: v.ops_id,
-    dataAdmSolicitada: v.data_adm_solicitada,
-    dataReprog: v.data_reprog,
-    novaDataETO: v.nova_data_eto,
-    dataAdmRealizada: v.data_adm_realizada,
-    statusVaga: v.status_vaga,
-    tipoVaga: v.tipo_vaga,
-    departamentoGI: v.departamento_gi,
-    cestaBasica: v.cesta_basica,
-    gestorTurno: v.gestor_turno,
-    contatoGestorTurno: v.contato_gestor_turno,
-    unidadeWecan: v.unidade_wecan,
-    email: v.email_colaborador,
-    tipoProcesso: v.tipo_processo,
-    noShow: v.no_show,
-    motivoAtraso: v.motivo_atraso,
-    tipoProcessoDesistente: v.tipo_processo_desistente,
-    filaVoucherStatus: null,
-    filaVoucherAutorizadoPor: '',
-    filaVoucherMotivo: '',
+    ...v, id:v.jira, codigoHub:v.codigo_hub, local:v.local_trabalho,
+    statusUniforme:v.status_uniforme, opsId:v.ops_id,
+    dataAdmSolicitada:v.data_adm_solicitada, dataReprog:v.data_reprog,
+    novaDataETO:v.nova_data_eto, dataAdmRealizada:v.data_adm_realizada,
+    statusVaga:v.status_vaga, tipoVaga:v.tipo_vaga, departamentoGI:v.departamento_gi,
+    cestaBasica:v.cesta_basica, gestorTurno:v.gestor_turno,
+    contatoGestorTurno:v.contato_gestor_turno, unidadeWecan:v.unidade_wecan,
+    email:v.email_colaborador, tipoProcesso:v.tipo_processo,
+    noShow:v.no_show, motivoAtraso:v.motivo_atraso,
+    tipoProcessoDesistente:v.tipo_processo_desistente,
+    filaVoucherStatus:null, filaVoucherAutorizadoPor:'', filaVoucherMotivo:'',
   }));
 }
 
@@ -732,11 +925,7 @@ async function carregarFilaVoucher() {
   (resp.fila || []).forEach(f => { if (!mapa[f.vaga_jira]) mapa[f.vaga_jira] = f; });
   VAGAS.forEach(v => {
     const f = mapa[v.jira];
-    if (f) {
-      v.filaVoucherStatus       = f.status;
-      v.filaVoucherAutorizadoPor = f.autorizado_por || '';
-      v.filaVoucherMotivo       = f.motivo_rejeicao || '';
-    }
+    if (f) { v.filaVoucherStatus=f.status; v.filaVoucherAutorizadoPor=f.autorizado_por||''; v.filaVoucherMotivo=f.motivo_rejeicao||''; }
   });
   window._filaHistorico = resp.historico || [];
 }
@@ -744,8 +933,7 @@ async function carregarFilaVoucher() {
 async function atualizarDados() {
   toast('Atualizando dados…', 'info');
   try {
-    await carregarVagas();
-    await carregarFilaVoucher();
+    await carregarVagas(); await carregarFilaVoucher();
     popularFiltroConsultor();
     const ativa = document.querySelector('.page.active');
     if (ativa) navTo(ativa.id.replace('page-',''));
@@ -754,29 +942,36 @@ async function atualizarDados() {
 }
 
 // ── SESSÃO ────────────────────────────────────
-// ── SESSÃO ────────────────────────────────────
 async function iniciarSessao(conta) {
   session = conta;
   document.getElementById('sidebar').style.display = 'flex';
   document.getElementById('user-nome').textContent  = session.nome;
   document.getElementById('user-perfil').textContent = PERFIL_LABEL[session.perfil];
-  document.getElementById('nav-voucher').style.display   = podeAutorizarVoucher() ? 'flex' : 'none';
-  document.getElementById('nav-usuarios').style.display  = ehMaster() ? 'flex' : 'none';
+
+  // Avatar inicial
+  const initials = (session.nome||'?').split(' ').map(p=>p[0]).slice(0,2).join('');
+  const avEl = document.getElementById('user-avatar');
+  avEl.textContent = initials;
+
+  document.getElementById('nav-voucher').style.display      = podeAutorizarVoucher() ? 'flex' : 'none';
+  document.getElementById('nav-usuarios').style.display     = ehMaster() ? 'flex' : 'none';
   document.getElementById('navgroup-voucherapp').style.display = ehMaster() ? 'block' : 'none';
+  document.getElementById('nav-suporte-usuarios').style.display = ehMaster() ? 'flex' : 'none';
+  if (ehMaster()) document.getElementById('cfg-logo-card').style.display = 'block';
   document.getElementById('voucherapp-open-tab').href = VOUCHER_APP_URL;
 
   const main = document.getElementById('main');
   main.style.display = 'block';
   main.innerHTML = '<div style="padding:60px;text-align:center;color:var(--muted)">⏳ Carregando vagas…</div>';
   try {
-    await carregarVagas();
-    await carregarFilaVoucher();
+    await carregarVagas(); await carregarFilaVoucher();
   } catch(e) {
     main.innerHTML = `<div style="padding:60px;text-align:center;color:var(--danger)">Erro ao carregar dados.<br/><small>${e.message}</small></div>`;
     return;
   }
   main.innerHTML = _MAIN_HTML;
   popularFiltroConsultor();
+  iniciarConfiguracoes();
   navTo('dashboard');
 }
 
@@ -797,16 +992,18 @@ async function logout() {
 // ── NAV ───────────────────────────────────────
 function navTo(id) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('nav a').forEach(a => a.classList.remove('active'));
+  document.querySelectorAll('nav a, .nav-suporte-item').forEach(a => a.classList.remove('active'));
   const page = document.getElementById('page-' + id);
   if (!page) return;
   page.classList.add('active');
-  const link = document.querySelector(`nav a[data-page="${id}"]`);
+  const link = document.querySelector(`[data-page="${id}"]`);
   if (link) link.classList.add('active');
-  if (id==='dashboard') renderDashboard();
-  if (id==='vagas')     renderVagas();
-  if (id==='voucher')   renderQueue();
-  if (id==='usuarios')  renderUsuarios();
+  if (id==='dashboard')         renderDashboard();
+  if (id==='vagas')             renderVagas();
+  if (id==='voucher')           renderQueue();
+  if (id==='usuarios')          renderUsuarios('tbody-usuarios');
+  if (id==='suporte-usuarios')  renderUsuarios('tbody-suporte-usuarios');
+  if (id==='configuracoes')     renderConfiguracoes();
   atualizarBadgeFila();
 }
 function toggleNavGroup(nome) { document.getElementById('navgroup-'+nome).classList.toggle('collapsed'); }
@@ -828,7 +1025,6 @@ function abrirVoucherEm(pagina) {
   if (vouchFrameLoaded) setTimeout(ir,50); else frame.addEventListener('load',()=>setTimeout(ir,300),{once:true});
 }
 
-// ── FILTRO DE CONSULTOR ───────────────────────
 function popularFiltroConsultor() {
   const sel = document.getElementById('filtro-consultor');
   if (!sel) return;
@@ -898,159 +1094,331 @@ function renderDashboard() {
   ]}, options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'bottom', labels:{ color:'#8891b4', font:{size:11} } } }, scales:{ x:{ ticks:{ color:'#8891b4', font:{size:11} }, grid:{ display:false } }, y:{ ticks:{ color:'#8891b4', font:{size:10} }, grid:{ color:'rgba(46,51,80,.4)' } } } } });
 
   const ns = dados.filter(v=>v.noShow);
-  document.getElementById('tb-noshow').innerHTML = ns.slice(0,50).map(v=>`
-    <tr><td>${v.colaborador||'—'}</td><td>${v.consultor||'—'}</td><td>${regionalPill(v.regional)}</td>
-    <td>${v.motivoAtraso||'—'}</td><td class="text-truncate" style="max-width:320px">${v.observacao||'—'}</td></tr>`).join('')
-    || '<tr><td colspan="5" class="text-muted" style="padding:16px">Nenhum no show no escopo atual</td></tr>';
+  document.getElementById('tb-noshow').innerHTML = ns.length
+    ? ns.map(v=>`<tr><td>${v.colaborador||'—'}</td><td>${v.consultor||'—'}</td><td>${regionalPill(v.regional)}</td><td>${v.motivoAtraso||'—'}</td><td class="text-truncate">${v.observacao||'—'}</td></tr>`).join('')
+    : `<tr><td colspan="5"><div class="empty-state">✅ Nenhum No Show registrado</div></td></tr>`;
 }
 
-// ── TABELA DE VAGAS ───────────────────────────
+// ── VAGAS ─────────────────────────────────────
 function renderVagas() {
-  const d = document.getElementById('scope-banner-vagas'); if (d) d.innerHTML = escopoLabel();
-  const busca   = (document.getElementById('busca-vaga')?.value||'').toLowerCase();
-  const fReg    = document.getElementById('filtro-regional')?.value||'';
-  const fStatus = document.getElementById('filtro-statusvaga')?.value||'';
-  const fCons   = document.getElementById('filtro-consultor')?.value||'';
+  const busca  = (document.getElementById('busca-vaga')?.value||'').toLowerCase();
+  const reg    = document.getElementById('filtro-regional')?.value||'';
+  const status = document.getElementById('filtro-statusvaga')?.value||'';
+  const cons   = document.getElementById('filtro-consultor')?.value||'';
+  const scopeLabel = document.getElementById('scope-banner-vagas');
+  if (scopeLabel) scopeLabel.innerHTML = escopoLabel();
 
-  let dados = vagasNoEscopo().filter(v => {
-    const mb = !busca || (v.colaborador||'').toLowerCase().includes(busca) || (v.matricula||'').toLowerCase().includes(busca) || (v.jira||'').toLowerCase().includes(busca) || (v.cargo||'').toLowerCase().includes(busca);
-    return mb && (!fReg||v.regional===fReg) && (!fStatus||v.statusVaga===fStatus) && (!fCons||v.consultor===fCons);
-  });
+  let lista = vagasNoEscopo();
+  if (reg)    lista = lista.filter(v=>v.regional===reg);
+  if (status) lista = lista.filter(v=>v.statusVaga===status);
+  if (cons)   lista = lista.filter(v=>v.consultor===cons);
+  if (busca)  lista = lista.filter(v =>
+    [v.colaborador,v.jira,v.matricula,v.consultor,v.cargo,v.local,v.codigoHub].some(f=>(f||'').toLowerCase().includes(busca))
+  );
 
-  document.getElementById('tbody-vagas').innerHTML = dados.map(v => {
-    const su = (v.statusUniforme||'').toUpperCase();
-    const env = su.includes('ENVIADO')||su.includes('SAÍDA')||su.includes('SAIDA')||su.includes('UNIFORME WECAN');
-    const uniPill = env
-      ? `<span class="pill uniforme-enviado" title="${v.statusUniforme||''}">${(v.statusUniforme||'ENVIADO').slice(0,14)}</span>`
-      : `<span class="pill uniforme-pendente">${v.statusUniforme||'PENDENTE'}</span>`;
-    const sCls = v.statusVaga==='Finalizada No Prazo'?'vaga-noprazo':v.statusVaga==='Finalizada Antecipada'?'vaga-antecipada':v.statusVaga==='Finalizada Atrasada'?'vaga-atrasada':(v.statusVaga||'').startsWith('Em Andamento')?'regional-co':'muted';
-    const isV = (v.transporte||'').toUpperCase().includes('VOUCHER');
-    const je = (v.jira||'').replace(/'/g,"\\'");
-    const le = (v.local||'').replace(/"/g,'&quot;');
+  const tbody = document.getElementById('tbody-vagas');
+  const count = document.getElementById('vagas-count');
+  if (!tbody) return;
+  if (!lista.length) { tbody.innerHTML=`<tr><td colspan="10"><div class="empty-state"><div class="ico">🔍</div>Nenhuma vaga encontrada</div></td></tr>`; if (count) count.textContent=''; return; }
+  if (count) count.textContent = `${lista.length} vaga(s) exibida(s)`;
+
+  const su = s => {
+    if (!s) return '<span class="pill muted">—</span>';
+    const u = s.toUpperCase();
+    if (u.includes('ENVIADO')||u.includes('SAÍDA')||u.includes('SAIDA')) return `<span class="pill uniforme-enviado">${s}</span>`;
+    return `<span class="pill uniforme-pendente">${s}</span>`;
+  };
+  const sv = s => {
+    if (!s) return '<span class="pill muted">—</span>';
+    if (s.includes('No Prazo')) return `<span class="pill vaga-noprazo">${s}</span>`;
+    if (s.includes('Antecipada')) return `<span class="pill vaga-antecipada">${s}</span>`;
+    if (s.includes('Atrasada')) return `<span class="pill vaga-atrasada">${s}</span>`;
+    return `<span class="pill muted">${s}</span>`;
+  };
+  const tr = s => s && s.toUpperCase().includes('VOUCHER') ? `<span class="pill voucher">${s}</span>` : (s||'—');
+
+  tbody.innerHTML = lista.map(v=>{
+    const je=(v.jira||'').replace(/'/g,"\\'");
     return `<tr onclick="abrirModalVaga('${je}')">
-      <td>${v.jira||'—'}</td><td>${v.consultor||'—'}</td><td>${regionalPill(v.regional)}</td>
-      <td><strong>${v.colaborador||'—'}</strong></td><td>${v.cargo||'—'}</td>
-      <td><span class="text-truncate" title="${le}">${v.local||'—'}</span></td>
-      <td>${uniPill}</td>
-      <td><span class="pill ${sCls}">${v.statusVaga||'—'}</span></td>
-      <td>${isV?`<span class="pill voucher">${v.transporte}</span>`:`<span class="text-muted">${v.transporte||'—'}</span>`}</td>
-      <td class="actions-cell"><button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();abrirModalVaga('${je}')">Editar</button></td>
+      <td><code style="font-size:11px">${v.jira||'—'}</code></td>
+      <td>${v.consultor||'—'}</td>
+      <td>${regionalPill(v.regional)}</td>
+      <td><span class="text-truncate">${v.colaborador||'—'}</span></td>
+      <td>${v.cargo||'—'}</td>
+      <td><span class="text-truncate">${v.local||'—'}</span></td>
+      <td>${su(v.statusUniforme)}</td>
+      <td>${sv(v.statusVaga)}</td>
+      <td>${tr(v.transporte)}</td>
+      <td class="actions-cell" onclick="event.stopPropagation()">
+        <button class="btn btn-ghost btn-sm" onclick="abrirModalVaga('${je}')">Editar</button>
+      </td>
     </tr>`;
-  }).join('') || `<tr><td colspan="10"><div class="empty-state"><div class="ico">📭</div>Nenhuma vaga encontrada</div></td></tr>`;
-  const ct = document.getElementById('vagas-count'); if (ct) ct.textContent = `Exibindo ${dados.length} vaga(s)`;
+  }).join('');
 }
 
 // ── MODAL VAGA ────────────────────────────────
-function switchTab(tab) {
-  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
-  document.querySelectorAll('.tab-content').forEach(c=>c.classList.toggle('active',c.dataset.tab===tab));
+function switchTab(nome) {
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active',b.dataset.tab===nome));
+  document.querySelectorAll('.tab-content').forEach(c=>c.classList.toggle('active',c.dataset.tab===nome));
 }
 function checarVoucherFlag() {
-  const val = (document.getElementById('v-transporte')?.value||'').toUpperCase();
-  const el = document.getElementById('voucher-flag'); if (el) el.style.display = val.includes('VOUCHER')?'flex':'none';
-}
-function preencherSelectConsultor() {
-  const sel = document.getElementById('v-consultor'); if (!sel) return;
-  const lista = podeVerTudo() ? consultoresConhecidos() : [session.nome];
-  sel.innerHTML = lista.map(c=>`<option ${c===session.nome?'selected':''}>${c}</option>`).join('');
-  sel.disabled = !podeVerTudo();
-}
-function renderTimelineModal(v) {
-  const wrap = document.getElementById('mv-timeline-wrap'); if (!wrap) return;
-  if (!v) { wrap.style.display='none'; return; }
-  const steps = [
-    { label:'Recebimento', date:v.recebimento }, { label:'Adm. Solicitada', date:v.dataAdmSolicitada },
-    { label:'Reprogramação', date:v.dataReprog }, { label:'Nova Data ETO', date:v.novaDataETO },
-    { label:'Adm. Realizada', date:v.dataAdmRealizada },
-  ];
-  const fmt = d=>d?String(d).slice(0,10).split('-').reverse().join('/'):'—';
-  document.getElementById('mv-timeline').innerHTML = steps.map(s=>`
-    <div class="tl-step ${s.date?'done':''}"><div class="tl-line"></div><div class="tl-dot"></div>
-      <div class="tl-label">${s.label}</div><div class="tl-date">${fmt(s.date)}</div></div>`).join('');
-  wrap.style.display='block';
+  const v = document.getElementById('v-transporte').value;
+  document.getElementById('voucher-flag').style.display = v.toUpperCase().includes('VOUCHER') ? 'flex' : 'none';
 }
 
-function abrirModalVaga(jira) {
-  switchTab('vaga'); preencherSelectConsultor();
-  const v = jira ? VAGAS.find(x=>x.jira===jira||x.id===jira) : null;
-  if (v && !podeVerTudo() && (v.consultor||'').toUpperCase()!==(session.nome||'').toUpperCase()) { toast('Sem permissão para editar esta vaga.','error'); return; }
-  document.getElementById('mv-title').textContent    = v?'Editar Vaga':'Nova Vaga';
-  document.getElementById('mv-subtitle').textContent = v?`${v.colaborador||''} · ${v.jira}`:'Preencha os dados do processo de seleção e admissão';
-  document.getElementById('v-id').value          = v?(v.jira||v.id):'';
-  document.getElementById('v-jiraOriginal').value = v?(v.jira||''):'';
-  const set = (id,val)=>{ const el=document.getElementById(id); if (el) el.value=val||''; };
-  set('v-consultor', v?v.consultor:session.nome);
-  set('v-jira',v?.jira); set('v-codigoHub',v?.codigoHub); set('v-regional',v?.regional||'SPI'); set('v-mes',v?.mes?String(v.mes).slice(0,10):'');
-  set('v-local',v?.local); set('v-modalidade',v?.modalidade||'Temporário'); set('v-tempo',v?.tempo||'180 dias'); set('v-cargo',v?.cargo);
-  set('v-turno',v?.turno); set('v-horario',v?.horario); set('v-escala',v?.escala);
-  set('v-colaborador',v?.colaborador); set('v-matricula',v?.matricula); set('v-opsId',v?.opsId);
-  set('v-statusUniforme',v?.statusUniforme); set('v-cpf',v?.cpf); set('v-genero',v?.genero||'');
-  set('v-email',v?.email); set('v-telefone',v?.telefone); set('v-indicacao',v?.indicacao||'NÃO');
-  set('v-preferencia',v?.preferencia||'Sem preferência'); set('v-tipoProcesso',v?.tipoProcesso||'ONLINE');
-  set('v-recebimento',v?.recebimento?String(v.recebimento).slice(0,10):'');
-  set('v-dataAdmSolicitada',v?.dataAdmSolicitada?String(v.dataAdmSolicitada).slice(0,10):'');
-  set('v-dataReprog',v?.dataReprog?String(v.dataReprog).slice(0,10):'');
-  set('v-novaDataETO',v?.novaDataETO?String(v.novaDataETO).slice(0,10):'');
-  set('v-dataAdmRealizada',v?.dataAdmRealizada?String(v.dataAdmRealizada).slice(0,10):'');
-  set('v-etapa',v?.etapa||'R&S'); set('v-statusVaga',v?.statusVaga||''); set('v-tipoVaga',v?.tipoVaga||'1 - Vaga Oficial');
-  set('v-salario',v?.salario); set('v-cnpj',v?.cnpj); set('v-departamentoGI',v?.departamentoGI);
-  set('v-transporte',v?.transporte||'VALE TRANSPORTE'); set('v-refeicao',v?.refeicao); set('v-cestaBasica',v?.cestaBasica);
-  set('v-colete',v?.colete); set('v-bota',String(v?.bota||'')); set('v-luva',v?.luva);
-  set('v-gestorTurno',v?.gestorTurno); set('v-contatoGestorTurno',v?.contatoGestorTurno); set('v-unidadeWecan',v?.unidadeWecan);
-  set('v-noShow',v?.noShow); set('v-motivoAtraso',v?.motivoAtraso||''); set('v-observacao',v?.observacao); set('v-tipoProcessoDesistente',v?.tipoProcessoDesistente||'');
-  checarVoucherFlag(); renderTimelineModal(v); abrirModal('modal-vaga');
+function abrirModalVaga(jiraOuNull) {
+  const v = jiraOuNull ? VAGAS.find(x=>x.jira===jiraOuNull) : null;
+  document.getElementById('mv-title').textContent    = v ? 'Editar Vaga' : 'Nova Vaga';
+  document.getElementById('mv-subtitle').textContent = v ? `Jira: ${v.jira} · ${v.colaborador||'sem colaborador'}` : 'Preencha os dados do processo de seleção e admissão';
+  switchTab('vaga');
+
+  const set = (id, val) => { const el=document.getElementById(id); if (el) el.value=val||''; };
+  set('v-id', v?.id||'');
+  set('v-jiraOriginal', v?.jira||'');
+  set('v-jira', v?.jira||'');
+  set('v-codigoHub', v?.codigoHub||'');
+  set('v-regional', v?.regional||'SPI');
+  set('v-mes', v?.mes||'');
+  set('v-local', v?.local||'');
+  set('v-modalidade', v?.modalidade||'');
+  set('v-tempo', v?.tempo||'');
+  set('v-cargo', v?.cargo||'');
+  set('v-turno', v?.turno||'');
+  set('v-horario', v?.horario||'');
+  set('v-escala', v?.escala||'');
+  set('v-colaborador', v?.colaborador||'');
+  set('v-matricula', v?.matricula||'');
+  set('v-opsId', v?.opsId||'');
+  set('v-statusUniforme', v?.statusUniforme||'');
+  set('v-cpf', v?.cpf||'');
+  set('v-genero', v?.genero||'');
+  set('v-email', v?.email||'');
+  set('v-telefone', v?.telefone||'');
+  set('v-indicacao', v?.indicacao||'NÃO');
+  set('v-preferencia', v?.preferencia||'');
+  set('v-tipoProcesso', v?.tipoProcesso||'ONLINE');
+  set('v-recebimento', v?.recebimento||'');
+  set('v-dataAdmSolicitada', v?.dataAdmSolicitada||'');
+  set('v-dataReprog', v?.dataReprog||'');
+  set('v-novaDataETO', v?.novaDataETO||'');
+  set('v-dataAdmRealizada', v?.dataAdmRealizada||'');
+  set('v-etapa', v?.etapa||'R&S');
+  set('v-statusVaga', v?.statusVaga||'');
+  set('v-tipoVaga', v?.tipoVaga||'1 - Vaga Oficial');
+  set('v-salario', v?.salario||'');
+  set('v-cnpj', v?.cnpj||'');
+  set('v-departamentoGI', v?.departamentoGI||'');
+  set('v-transporte', v?.transporte||'');
+  set('v-refeicao', v?.refeicao||'');
+  set('v-cestaBasica', v?.cestaBasica||'');
+  set('v-colete', v?.colete||'');
+  set('v-bota', v?.bota||'');
+  set('v-luva', v?.luva||'');
+  set('v-gestorTurno', v?.gestorTurno||'');
+  set('v-contatoGestorTurno', v?.contatoGestorTurno||'');
+  set('v-unidadeWecan', v?.unidadeWecan||'');
+  set('v-noShow', v?.noShow||'');
+  set('v-motivoAtraso', v?.motivoAtraso||'');
+  set('v-observacao', v?.observacao||'');
+  set('v-tipoProcessoDesistente', v?.tipoProcessoDesistente||'');
+  checarVoucherFlag();
+
+  // popular consultor
+  const selC = document.getElementById('v-consultor');
+  const lista = podeVerTudo() ? consultoresConhecidos() : [session.nome];
+  if (!lista.includes(session.nome)) lista.unshift(session.nome);
+  selC.innerHTML = lista.map(c=>`<option ${v?.consultor===c?'selected':''}>${c}</option>`).join('');
+  if (!podeVerTudo()) { selC.value=session.nome; selC.disabled=true; } else selC.disabled=false;
+
+  // timeline
+  const wrap = document.getElementById('mv-timeline-wrap');
+  if (v && (v.recebimento || v.dataAdmSolicitada || v.dataAdmRealizada)) {
+    wrap.style.display='block';
+    const steps = [
+      {label:'Recebimento', date:v.recebimento},
+      {label:'Adm. Solicitada', date:v.dataAdmSolicitada},
+      {label:'Reprogramação', date:v.dataReprog},
+      {label:'Nova Data ETO', date:v.novaDataETO},
+      {label:'Adm. Realizada', date:v.dataAdmRealizada},
+    ];
+    document.getElementById('mv-timeline').innerHTML = steps.map(s=>`
+      <div class="tl-step ${s.date?'done':''}">
+        <div class="tl-dot"></div><div class="tl-line"></div>
+        <div class="tl-label">${s.label}</div>
+        <div class="tl-date">${s.date ? new Date(s.date+'T00:00').toLocaleDateString('pt-BR') : '—'}</div>
+      </div>`).join('');
+  } else wrap.style.display='none';
+
+  abrirModal('modal-vaga');
 }
 
 async function salvarVaga() {
-  const jiraOriginal = document.getElementById('v-jiraOriginal').value;
-  const get = id => document.getElementById(id)?.value||'';
-  const transporte = get('v-transporte');
-  const isVoucher  = transporte.toUpperCase().includes('VOUCHER');
-
-  const vaga = {
-    jira: get('v-jira'), consultor: get('v-consultor'), codigo_hub: get('v-codigoHub'),
-    regional: get('v-regional'), mes: get('v-mes')||null, local_trabalho: get('v-local'),
-    modalidade: get('v-modalidade'), tempo: get('v-tempo'), cargo: get('v-cargo'),
-    turno: get('v-turno'), horario: get('v-horario'), escala: get('v-escala'),
-    colaborador: get('v-colaborador'), status_uniforme: get('v-statusUniforme'),
-    matricula: get('v-matricula'), ops_id: get('v-opsId'),
-    data_adm_solicitada: get('v-dataAdmSolicitada')||null, data_reprog: get('v-dataReprog')||null,
-    nova_data_eto: get('v-novaDataETO')||null, data_adm_realizada: get('v-dataAdmRealizada')||null,
-    etapa: get('v-etapa'), status_vaga: get('v-statusVaga'), tipo_vaga: get('v-tipoVaga'),
-    salario: get('v-salario'), cnpj: get('v-cnpj'), departamento_gi: get('v-departamentoGI'),
-    transporte, refeicao: get('v-refeicao'), cesta_basica: get('v-cestaBasica'),
-    colete: get('v-colete'), bota: get('v-bota'), luva: get('v-luva'),
-    gestor_turno: get('v-gestorTurno'), contato_gestor_turno: get('v-contatoGestorTurno'),
-    unidade_wecan: get('v-unidadeWecan'), cpf: get('v-cpf'),
-    email_colaborador: get('v-email'), telefone: get('v-telefone'), indicacao: get('v-indicacao'),
-    genero: get('v-genero'), tipo_processo: get('v-tipoProcesso'),
-    no_show: get('v-noShow'), motivo_atraso: get('v-motivoAtraso'),
-    observacao: get('v-observacao'), tipo_processo_desistente: get('v-tipoProcessoDesistente'),
-    recebimento: get('v-recebimento')||null,
-    aba: (get('v-regional')==='RIO/ES') ? 'SOC_RJ1 e RJ2' : 'HUBs',
-  };
-
-  if (!vaga.jira) { toast('Informe o Código do Jira.','error'); return; }
-  if (!vaga.colaborador) { toast('Informe o nome do colaborador.','error'); return; }
-
   const btn = document.getElementById('btn-salvar-vaga');
+  const jiraOriginal = document.getElementById('v-jiraOriginal').value;
+  const g = id => document.getElementById(id)?.value||'';
+  const vaga = {
+    consultor:g('v-consultor'), jira:g('v-jira').trim(), codigo_hub:g('v-codigoHub'),
+    regional:g('v-regional'), mes:g('v-mes'), local_trabalho:g('v-local'),
+    modalidade:g('v-modalidade'), tempo:g('v-tempo'), cargo:g('v-cargo'),
+    turno:g('v-turno'), horario:g('v-horario'), escala:g('v-escala'),
+    colaborador:g('v-colaborador'), matricula:g('v-matricula'), ops_id:g('v-opsId'),
+    status_uniforme:g('v-statusUniforme'), cpf:g('v-cpf'), genero:g('v-genero'),
+    email_colaborador:g('v-email'), telefone:g('v-telefone'), indicacao:g('v-indicacao'),
+    preferencia:g('v-preferencia'), tipo_processo:g('v-tipoProcesso'),
+    recebimento:g('v-recebimento'), data_adm_solicitada:g('v-dataAdmSolicitada'),
+    data_reprog:g('v-dataReprog'), nova_data_eto:g('v-novaDataETO'),
+    data_adm_realizada:g('v-dataAdmRealizada'), etapa:g('v-etapa'),
+    status_vaga:g('v-statusVaga'), tipo_vaga:g('v-tipoVaga'),
+    salario:g('v-salario'), cnpj:g('v-cnpj'), departamento_gi:g('v-departamentoGI'),
+    transporte:g('v-transporte'), refeicao:g('v-refeicao'), cesta_basica:g('v-cestaBasica'),
+    colete:g('v-colete'), bota:g('v-bota'), luva:g('v-luva'),
+    gestor_turno:g('v-gestorTurno'), contato_gestor_turno:g('v-contatoGestorTurno'),
+    unidade_wecan:g('v-unidadeWecan'), no_show:g('v-noShow'),
+    motivo_atraso:g('v-motivoAtraso'), observacao:g('v-observacao'),
+    tipo_processo_desistente:g('v-tipoProcessoDesistente'),
+    aba: VAGAS.find(x=>x.jira===jiraOriginal)?.aba || 'HUBs'
+  };
+  if (!vaga.jira) { toast('Informe o Código do Jira.','error'); return; }
+  const isVoucher  = vaga.transporte.toUpperCase().includes('VOUCHER');
+  const eraVoucher = VAGAS.find(x=>x.jira===jiraOriginal)?.transporte?.toUpperCase().includes('VOUCHER') || false;
   btn.disabled=true; btn.textContent='Salvando…';
   try {
-    const vagaAnterior = VAGAS.find(x=>x.jira===jiraOriginal);
-    const eraVoucher   = (vagaAnterior?.transporte||'').toUpperCase().includes('VOUCHER');
-
     const resp = await rpc('wc_salvar_vaga', { p_vaga:vaga, p_jira_original:jiraOriginal||vaga.jira });
-
-    await carregarVagas();
-    await carregarFilaVoucher();
+    await carregarVagas(); await carregarFilaVoucher();
     fecharModal('modal-vaga'); renderVagas(); atualizarBadgeFila();
-
     if (resp.criado) toast(isVoucher?'Vaga criada! Adicionado à fila de Voucher.':'Vaga criada!', isVoucher?'info':'success');
     else if (isVoucher&&!eraVoucher) toast('Salvo! Adicionado à fila de Voucher.','info');
     else if (!isVoucher&&eraVoucher) toast('Salvo! Removido da fila de Voucher.','info');
     else toast('Vaga atualizada!','success');
   } catch(e) { toast(e.message,'error'); }
   finally { btn.disabled=false; btn.textContent='Salvar Vaga'; }
+}
+
+// ── IMPORTAÇÃO EM LOTE ────────────────────────
+// Colunas aceitas no template (mesma ordem do CAMPO_MAP do migrar.html)
+const IMPORT_COLS = [
+  'consultor','jira','codigo_hub','regional','recebimento','mes','local_trabalho',
+  'modalidade','tempo','cargo','turno','horario','escala','preferencia','colaborador',
+  'status_uniforme','matricula','ops_id','data_adm_solicitada','data_reprog',
+  'nova_data_eto','data_adm_realizada','etapa','status_vaga','tipo_vaga','salario',
+  'cnpj','departamento_gi','transporte','refeicao','cesta_basica','gestor_turno',
+  'contato_gestor_turno','unidade_wecan','cpf','email_colaborador','telefone',
+  'indicacao','genero','tipo_processo','colete','bota','luva','no_show','motivo_atraso','observacao'
+];
+const IMPORT_COLS_LABEL = [
+  'Consultor','Jira*','Cód Hub','Regional','Recebimento','Mês','Local de Trabalho',
+  'Modalidade','Tempo','Cargo','Turno','Horário','Escala','Preferência','Colaborador',
+  'Status Uniforme','Matrícula','OPS ID','Data Adm Solicitada','Data Reprog',
+  'Nova Data ETO','Data Adm Realizada','Etapa','Status Vaga','Tipo Vaga','Salário',
+  'CNPJ','Departamento GI','Transporte','Refeição','Cesta Básica','Gestor Turno',
+  'Contato Gestor Turno','Unidade WeCan','CPF','E-mail Colaborador','Telefone',
+  'Indicação','Gênero','Tipo Processo','Colete','Bota','Luva','No Show','Motivo Atraso','Observação'
+];
+
+function baixarTemplateImportacao() {
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet([IMPORT_COLS_LABEL]);
+  // Estilo do cabeçalho (largura)
+  ws['!cols'] = IMPORT_COLS_LABEL.map(()=>({wch:18}));
+  XLSX.utils.book_append_sheet(wb, ws, 'Vagas');
+  XLSX.writeFile(wb, 'modelo_importacao_vagas.xlsx');
+}
+
+function abrirImportacaoLote() {
+  document.getElementById('import-file').value='';
+  document.getElementById('import-preview-wrap').style.display='none';
+  document.getElementById('import-preview-table').innerHTML='';
+  document.getElementById('import-log').style.display='none';
+  document.getElementById('btn-confirmar-import').style.display='none';
+  _importRows=[];
+  abrirModal('modal-importacao');
+}
+
+function excelDateToISO(v) {
+  if (!v) return '';
+  if (typeof v==='string') {
+    const m=v.trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (m) return `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;
+    if (/^\d{4}-\d{2}-\d{2}/.test(v)) return v.slice(0,10);
+    return '';
+  }
+  if (typeof v==='number') {
+    const d=XLSX.SSF.parse_date_code(v); if (!d) return '';
+    return `${d.y}-${String(d.m).padStart(2,'0')}-${String(d.d).padStart(2,'0')}`;
+  }
+  return '';
+}
+
+function carregarPreviewImportacao(input) {
+  const file=input.files[0]; if (!file) return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const wb=XLSX.read(e.target.result,{type:'array',cellDates:false});
+    const ws=wb.Sheets[wb.SheetNames[0]];
+    const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:null});
+    if (!rows.length) { toast('Planilha vazia.','error'); return; }
+
+    // Detectar cabeçalho
+    const cabecalho=(rows[0]||[]).map(c=>(c||'').toString().trim().toLowerCase());
+    const CAMPOS_DATA=new Set(['recebimento','mes','data_adm_solicitada','data_reprog','nova_data_eto','data_adm_realizada']);
+
+    _importRows=[];
+    const erros=[];
+    for (let i=1;i<rows.length;i++) {
+      const row=rows[i];
+      if (!row||row.every(c=>!c)) continue;
+      const obj={};
+      IMPORT_COLS.forEach((campo,idx)=>{
+        // Tentar pelo índice direto OU por nome de coluna
+        const v=row[idx];
+        if (CAMPOS_DATA.has(campo)) obj[campo]=excelDateToISO(v);
+        else obj[campo]=v!=null?String(v).trim():'';
+      });
+      if (!obj.jira) { erros.push(`Linha ${i+1}: Jira vazio — ignorada.`); continue; }
+      _importRows.push(obj);
+    }
+
+    // Preview
+    const wrap=document.getElementById('import-preview-wrap');
+    const countEl=document.getElementById('import-preview-count');
+    const tableEl=document.getElementById('import-preview-table');
+    wrap.style.display='block';
+    countEl.textContent=`${_importRows.length} vaga(s) encontradas para importar${erros.length?` · ${erros.length} ignoradas`:''}`;
+
+    const previewCols=['jira','consultor','regional','colaborador','cargo','status_vaga','transporte'];
+    tableEl.innerHTML=`<table><thead><tr>${previewCols.map(c=>`<th>${c}</th>`).join('')}</tr></thead><tbody>${
+      _importRows.slice(0,50).map(r=>`<tr>${previewCols.map(c=>`<td>${r[c]||'—'}</td>`).join('')}</tr>`).join('')
+    }${_importRows.length>50?`<tr><td colspan="${previewCols.length}" style="color:var(--muted);padding:8px;">… e mais ${_importRows.length-50} linhas</td></tr>`:''}</tbody></table>`;
+
+    document.getElementById('btn-confirmar-import').style.display=_importRows.length?'flex':'none';
+    if (erros.length) { const log=document.getElementById('import-log'); log.style.display='block'; log.textContent=erros.join('\n'); }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+async function confirmarImportacao() {
+  if (!_importRows.length) return;
+  const btn=document.getElementById('btn-confirmar-import');
+  const log=document.getElementById('import-log');
+  btn.disabled=true; btn.textContent='Importando…';
+  log.style.display='block'; log.textContent='';
+  let ok=0; let err=0;
+  const LOTE=50;
+  for (let i=0;i<_importRows.length;i+=LOTE) {
+    const lote=_importRows.slice(i,i+LOTE);
+    for (const vaga of lote) {
+      try {
+        await rpc('wc_salvar_vaga',{p_vaga:vaga,p_jira_original:vaga.jira});
+        ok++;
+      } catch(e) { err++; log.textContent+=`✗ ${vaga.jira}: ${e.message}\n`; }
+    }
+    log.textContent=`✓ ${ok} importadas${err?` · ✗ ${err} erros`:''}\n`+log.textContent.replace(/^✓.*\n/,'');
+    log.scrollTop=0;
+  }
+  log.textContent=`══ CONCLUÍDO ══\n✓ ${ok} vaga(s) importada(s)${err?`\n✗ ${err} erro(s) — veja acima`:''}\n\n`+log.textContent;
+  await carregarVagas(); renderVagas(); atualizarBadgeFila();
+  btn.disabled=false; btn.textContent='✅ Importação concluída';
+  toast(`Importação: ${ok} vagas salvas${err?`, ${err} erros`:''}`, err?'info':'success');
 }
 
 // ── FILA DE VOUCHER ───────────────────────────
@@ -1086,8 +1454,7 @@ async function autorizarVoucher(jira) {
     await rpc('wc_atualizar_fila', { p_jira:jira, p_status:'aprovado', p_motivo:'' });
     const v = VAGAS.find(x=>x.jira===jira);
     if (v) { v.filaVoucherStatus='aprovado'; v.filaVoucherAutorizadoPor=session.nome; }
-    toast('Pré-aprovado! Ativação real depende do Template.','success');
-    renderQueue(); atualizarBadgeFila();
+    toast('Pré-aprovado!','success'); renderQueue(); atualizarBadgeFila();
   } catch(e) { toast(e.message,'error'); }
 }
 async function rejeitarVoucher(jira) {
@@ -1101,8 +1468,8 @@ async function rejeitarVoucher(jira) {
 }
 
 // ── USUÁRIOS ──────────────────────────────────
-async function renderUsuarios() {
-  const tbody = document.getElementById('tbody-usuarios'); if (!tbody) return;
+async function renderUsuarios(tbodyId='tbody-usuarios') {
+  const tbody = document.getElementById(tbodyId); if (!tbody) return;
   tbody.innerHTML='<tr><td colspan="5" style="padding:20px;color:var(--muted)">Carregando…</td></tr>';
   try {
     const resp = await rpc('wc_listar_usuarios', {});
@@ -1121,12 +1488,29 @@ async function renderUsuarios() {
 }
 
 function abrirModalUsuario(u) {
-  document.getElementById('mu-title').textContent  = u?'Editar Usuário':'Novo Usuário';
-  document.getElementById('u-id').value    = u?u.id:'';
-  document.getElementById('u-nome').value  = u?u.nome:'';
-  document.getElementById('u-email').value = u?u.email:'';
+  document.getElementById('mu-title').textContent = u ? 'Editar Usuário' : 'Novo Usuário';
+  document.getElementById('u-id').value    = u ? u.id : '';
+  document.getElementById('u-nome').value  = u ? u.nome : '';
+  document.getElementById('u-email').value = u ? u.email : '';
   document.getElementById('u-senha').value = '';
-  document.getElementById('u-perfil').value= u?u.perfil:'equipe';
+  document.getElementById('u-perfil').value= u ? u.perfil : 'equipe';
+
+  // Renderizar sistemas dinâmicos
+  const container=document.getElementById('sistemas-permissoes');
+  const perms=u?.permissoes||{};
+  container.innerHTML=SISTEMAS_DISPONIVEIS.map(s=>`
+    <div class="sistema-row">
+      <div class="sistema-info">
+        <strong>${s.nome}</strong>
+        <span>${s.descricao}</span>
+      </div>
+      <label class="toggle-switch">
+        <input type="checkbox" id="perm-${s.id}" ${perms[s.id]!==false?'checked':''}>
+        <span class="slider"></span>
+      </label>
+    </div>
+  `).join('');
+
   abrirModal('modal-usuario');
 }
 
@@ -1138,11 +1522,20 @@ async function salvarUsuario() {
   const perf  = document.getElementById('u-perfil').value;
   const btn   = document.getElementById('btn-salvar-usuario');
   if (!nome||!email) { toast('Informe nome e e-mail.','error'); return; }
+
+  // Coletar permissões
+  const permissoes={};
+  SISTEMAS_DISPONIVEIS.forEach(s=>{
+    permissoes[s.id]=document.getElementById('perm-'+s.id)?.checked||false;
+  });
+
   btn.disabled=true; btn.textContent='Salvando…';
   try {
-    await rpc('wc_salvar_usuario', { p_usuario:{ id:id||undefined, nome, email, senha:senha||undefined, perfil:perf } });
+    await rpc('wc_salvar_usuario', { p_usuario:{ id:id||undefined, nome, email, senha:senha||undefined, perfil:perf, permissoes } });
     fecharModal('modal-usuario');
-    await renderUsuarios();
+    // Atualizar ambas as tabelas se visíveis
+    await renderUsuarios('tbody-usuarios');
+    await renderUsuarios('tbody-suporte-usuarios');
     toast('Usuário salvo!','success');
   } catch(e) { toast(e.message,'error'); }
   finally { btn.disabled=false; btn.textContent='Salvar'; }
@@ -1151,7 +1544,8 @@ async function salvarUsuario() {
 async function toggleUsuarioAtivo(id) {
   try {
     const resp = await rpc('wc_toggle_usuario', { p_id:id });
-    await renderUsuarios();
+    await renderUsuarios('tbody-usuarios');
+    await renderUsuarios('tbody-suporte-usuarios');
     toast(resp.ativo?'Usuário ativado.':'Usuário desativado.','success');
   } catch(e) { toast(e.message,'error'); }
 }
@@ -1160,14 +1554,157 @@ async function excluirUsuario(id, nome) {
   if (!confirm(`Excluir o acesso de ${nome}? Irreversível.`)) return;
   try {
     await rpc('wc_excluir_usuario', { p_id:id });
-    await renderUsuarios();
+    await renderUsuarios('tbody-usuarios');
+    await renderUsuarios('tbody-suporte-usuarios');
     toast('Usuário excluído.','success');
   } catch(e) { toast(e.message,'error'); }
 }
 
+// ── CONFIGURAÇÕES ─────────────────────────────
+const CFG_COLORS = [
+  '#63ccb0','#4f7cff','#a855f7','#ec4899','#f59e0b',
+  '#22c55e','#ef4444','#14b8a6','#f97316','#06b6d4'
+];
+
+function iniciarConfiguracoes() {
+  // Swatches de cor
+  const grid=document.getElementById('color-swatches');
+  if (!grid) return;
+  grid.innerHTML=CFG_COLORS.map(c=>`
+    <div class="color-swatch" style="background:${c}" data-color="${c}" onclick="selecionarCor('${c}')" title="${c}"></div>
+  `).join('');
+
+  // Carregar configurações salvas do Supabase
+  carregarConfiguracoes();
+}
+
+function renderConfiguracoes() {
+  if (ehMaster()) {
+    const card=document.getElementById('cfg-logo-card');
+    if (card) card.style.display='block';
+  }
+}
+
+async function carregarConfiguracoes() {
+  try {
+    const resp=await rpc('wc_carregar_config',{});
+    if (resp.config) {
+      const cfg=resp.config;
+      // Cor de tema
+      if (cfg.cor_tema) aplicarCorTema(cfg.cor_tema,false);
+      // Logo
+      if (cfg.logo_empresa) aplicarLogoSidebar(cfg.logo_empresa);
+      // Avatar do usuário atual
+      if (cfg.foto_perfil) aplicarAvatarSidebar(cfg.foto_perfil);
+    }
+  } catch(e) { /* silencioso — configs opcionais */ }
+}
+
+function selecionarCor(cor) {
+  document.querySelectorAll('.color-swatch').forEach(s=>s.classList.toggle('active',s.dataset.color===cor));
+  document.getElementById('cfg-color-custom').value=cor;
+  aplicarCorTema(cor);
+}
+
+function aplicarCorTema(cor, updateSwatch=true) {
+  document.documentElement.style.setProperty('--accent',cor);
+  // accent-dim: 20% mais escuro
+  document.getElementById('cfg-color-custom').value=cor;
+  if (updateSwatch) {
+    document.querySelectorAll('.color-swatch').forEach(s=>s.classList.toggle('active',s.dataset.color===cor));
+  }
+}
+
+async function salvarCorTema() {
+  const cor=document.getElementById('cfg-color-custom').value;
+  try {
+    await rpc('wc_salvar_config',{p_chave:'cor_tema',p_valor:cor});
+    toast('Cor de tema salva!','success');
+  } catch(e) { toast(e.message,'error'); }
+}
+
+function previewAvatar(input) {
+  const file=input.files[0]; if (!file) return;
+  if (file.size>1.2*1024*1024) { toast('Imagem muito grande (máx. 1MB).','error'); return; }
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const prev=document.getElementById('cfg-avatar-preview');
+    prev.innerHTML=`<img src="${e.target.result}" alt="preview"/>`;
+    window._avatarBase64=e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function aplicarAvatarSidebar(base64) {
+  const av=document.getElementById('user-avatar');
+  if (av) av.innerHTML=`<img src="${base64}" alt="foto"/>`;
+  const prev=document.getElementById('cfg-avatar-preview');
+  if (prev) prev.innerHTML=`<img src="${base64}" alt="preview"/>`;
+}
+
+async function salvarFotoPerfil() {
+  if (!window._avatarBase64) { toast('Selecione uma foto primeiro.','error'); return; }
+  try {
+    await rpc('wc_salvar_config',{p_chave:'foto_perfil',p_valor:window._avatarBase64});
+    aplicarAvatarSidebar(window._avatarBase64);
+    toast('Foto de perfil salva!','success');
+  } catch(e) { toast(e.message,'error'); }
+}
+
+async function removerFotoPerfil() {
+  if (!confirm('Remover foto de perfil?')) return;
+  try {
+    await rpc('wc_salvar_config',{p_chave:'foto_perfil',p_valor:''});
+    window._avatarBase64=null;
+    const initials=(session.nome||'?').split(' ').map(p=>p[0]).slice(0,2).join('');
+    document.getElementById('user-avatar').textContent=initials;
+    document.getElementById('cfg-avatar-preview').innerHTML='?';
+    toast('Foto removida.','success');
+  } catch(e) { toast(e.message,'error'); }
+}
+
+function previewLogo(input) {
+  const file=input.files[0]; if (!file) return;
+  if (file.size>1.2*1024*1024) { toast('Imagem muito grande (máx. 1MB).','error'); return; }
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const prev=document.getElementById('cfg-logo-preview');
+    prev.innerHTML=`<img src="${e.target.result}" alt="logo"/>`;
+    window._logoBase64=e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function aplicarLogoSidebar(base64) {
+  const mark=document.getElementById('logo-mark');
+  if (mark) mark.innerHTML=`<img src="${base64}" alt="logo"/>`;
+  const prev=document.getElementById('cfg-logo-preview');
+  if (prev) prev.innerHTML=`<img src="${base64}" alt="logo"/>`;
+}
+
+async function salvarLogo() {
+  if (!window._logoBase64) { toast('Selecione uma logo primeiro.','error'); return; }
+  try {
+    await rpc('wc_salvar_config',{p_chave:'logo_empresa',p_valor:window._logoBase64});
+    aplicarLogoSidebar(window._logoBase64);
+    toast('Logo salva!','success');
+  } catch(e) { toast(e.message,'error'); }
+}
+
+async function removerLogo() {
+  if (!confirm('Remover logo da empresa?')) return;
+  try {
+    await rpc('wc_salvar_config',{p_chave:'logo_empresa',p_valor:''});
+    window._logoBase64=null;
+    document.getElementById('logo-mark').innerHTML='SA';
+    document.getElementById('cfg-logo-preview').innerHTML='<span style="font-size:11px;color:var(--muted);">Sem logo</span>';
+    toast('Logo removida.','success');
+  } catch(e) { toast(e.message,'error'); }
+}
+
 // ── HELPERS ───────────────────────────────────
-function abrirModal(id) { document.getElementById(id)?.classList.add('open'); }
-function fecharModal(id){ document.getElementById(id)?.classList.remove('open'); }
+function abrirModal(id)  { document.getElementById(id)?.classList.add('open'); }
+function fecharModal(id) { document.getElementById(id)?.classList.remove('open'); }
 document.addEventListener('click', e=>{ if (e.target.classList.contains('modal-backdrop')) e.target.classList.remove('open'); });
 function toast(msg, tipo) {
   const el=document.getElementById('toast'); if (!el) return;
@@ -1177,7 +1714,6 @@ function toast(msg, tipo) {
 }
 
 // ── INIT ──────────────────────────────────────
-// Guarda o innerHTML do #main antes do JS sobrescrevê-lo
 _MAIN_HTML = document.getElementById('main').innerHTML;
 initApp();
 </script>
