@@ -5,169 +5,77 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>WECANBR · Sistema Integrado</title>
 <style>
-  :root {
-    --bg:        #150a20;
-    --surface:   #211132;
-    --surface2:  #2c1740;
-    --surface3:  #38204e;
-    --border:    #432a5c;
-    --accent:    #63ccb0;
-    --accent-dim:#4aa890;
-    --brand:     #4f0672;
-    --danger:    #ef4444;
-    --text:      #efe9f7;
-    --muted:     #a394bf;
-    --font:      'Segoe UI', system-ui, sans-serif;
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: var(--bg); color: var(--text); font-family: var(--font); min-height: 100vh; display:flex; align-items:center; justify-content:center; }
-
-  #login-page {
-    position: fixed; inset: 0;
-    background: radial-gradient(circle at 18% 18%, rgba(99,204,176,.10), transparent 45%),
-                radial-gradient(circle at 85% 80%, rgba(79,6,114,.35), transparent 55%),
-                var(--bg);
-    display: flex; align-items: center; justify-content: center; z-index: 9999; padding: 24px;
-  }
-  .login-box { width: 420px; max-width: 100%; }
-  .login-head { margin-bottom: 26px; }
-  .login-head h1 { font-size: 28px; font-weight: 800; letter-spacing: 1px; }
-  .login-head .subtitle-italic { color: var(--accent); font-size: 14px; font-style: italic; margin-top: 4px; }
-  .demo-note { background: var(--surface2); border:1px solid var(--border); border-radius:8px; padding:10px 14px; font-size:11.5px; color:var(--muted); margin-top:18px; line-height:1.6; }
-  .demo-note strong { color: var(--text); }
-  .demo-note code { background: var(--surface3); padding:1px 5px; border-radius:4px; font-size:11px; }
-
-  .field-label { font-size: 11px; color: var(--muted); margin-bottom: 8px; text-transform: uppercase; letter-spacing: .5px; font-weight:600; }
-  .tipo-select {
-    width: 100%; background: var(--surface2); border: 1px solid var(--border); color: var(--text);
-    border-radius: 8px; padding: 10px 12px; font-size: 13.5px; font-family: var(--font); outline: none;
-    margin-bottom: 22px; cursor: pointer;
-  }
-  .tipo-select:focus { border-color: var(--accent); }
-
-  .login-form { display:none; }
-  .login-form.show { display:block; }
-  .login-error { background: rgba(239,68,68,.1); border: 1px solid var(--danger); color: var(--danger); padding: 9px 12px; border-radius: 8px; font-size: 12.5px; margin-bottom: 14px; display: none; }
-  .selected-tipo-banner { display:flex; align-items:center; justify-content:space-between; background: var(--surface2); border:1px solid var(--border); border-radius:8px; padding:9px 13px; margin-bottom:16px; font-size:12.5px; }
-  .selected-tipo-banner b { color: var(--accent); }
-  .selected-tipo-banner button { background:none; border:none; color: var(--muted); font-size:11.5px; cursor:pointer; text-decoration:underline; font-family: var(--font); }
-
-  .form-group { margin-bottom: 14px; }
-  .form-group label { display: block; font-size: 11px; color: var(--muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: .4px; }
-  .form-group input {
-    width: 100%; background: var(--surface2); border: 1px solid var(--border); color: var(--text);
-    border-radius: 8px; padding: 9px 12px; font-size: 13px; font-family: var(--font); outline: none;
-  }
-  .form-group input:focus { border-color: var(--accent); }
-
-  .btn { padding: 9px 16px; border-radius: 8px; border: none; cursor: pointer; font-size: 13px; font-family: var(--font); font-weight: 700; }
-  .btn-primary { background: var(--accent); color: var(--brand); width:100%; margin-top:4px; }
-  .btn-primary:hover { background: #7adcc4; }
+  :root{--bg:#150a20;--surface:#211132;--surface2:#2c1740;--surface3:#38204e;
+    --border:#432a5c;--accent:#63ccb0;--brand:#4f0672;--danger:#ef4444;
+    --text:#efe9f7;--muted:#a394bf;--font:'Segoe UI',system-ui,sans-serif}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100vh;display:flex;align-items:center;justify-content:center}
+  #login-page{position:fixed;inset:0;background:
+    radial-gradient(circle at 18% 18%,rgba(99,204,176,.10),transparent 45%),
+    radial-gradient(circle at 85% 80%,rgba(79,6,114,.35),transparent 55%),
+    var(--bg);display:flex;align-items:center;justify-content:center;z-index:9999;padding:24px}
+  .login-box{width:420px;max-width:100%}
+  .login-head{margin-bottom:26px}
+  .login-head h1{font-size:28px;font-weight:800;letter-spacing:1px}
+  .login-head .sub{color:var(--accent);font-size:14px;font-style:italic;margin-top:4px}
+  .login-error{background:rgba(239,68,68,.1);border:1px solid var(--danger);color:var(--danger);
+    padding:9px 12px;border-radius:8px;font-size:12.5px;margin-bottom:14px;display:none}
+  .form-group{margin-bottom:14px}
+  .form-group label{display:block;font-size:11px;color:var(--muted);margin-bottom:6px;
+    text-transform:uppercase;letter-spacing:.4px}
+  .form-group input{width:100%;background:var(--surface2);border:1px solid var(--border);
+    color:var(--text);border-radius:8px;padding:9px 12px;font-size:13px;font-family:var(--font);outline:none}
+  .form-group input:focus{border-color:var(--accent)}
+  .btn{padding:9px 16px;border-radius:8px;border:none;cursor:pointer;font-size:13px;
+    font-family:var(--font);font-weight:700}
+  .btn-primary{background:var(--accent);color:var(--brand);width:100%;margin-top:4px}
+  .btn-primary:hover{background:#7adcc4}
+  .btn-primary:disabled{opacity:.6;cursor:not-allowed}
+  .info{background:var(--surface2);border:1px solid var(--border);border-radius:8px;
+    padding:10px 14px;font-size:11.5px;color:var(--muted);margin-top:18px;line-height:1.6}
+  .info strong{color:var(--text)}
 </style>
 </head>
 <body>
-
 <div id="login-page">
   <div class="login-box">
     <div class="login-head">
       <h1>WECANBR</h1>
-      <p class="subtitle-italic">Sistema Integrado</p>
+      <p class="sub">Sistema Integrado</p>
     </div>
-
-    <!-- Passo 1: tipo de acesso -->
-    <div id="step-tipo">
-      <div class="field-label">Tipo de acesso</div>
-      <select id="tipo-acesso-select" class="tipo-select" onchange="selecionarTipo(this.value)">
-        <option value="" disabled selected>Selecione...</option>
-        <option value="onsite">Onsite</option>
-        <option value="equipe">Consultor</option>
-        <option value="gestor">Gestor</option>
-        <option value="master">Outro</option>
-      </select>
+    <div class="login-error" id="login-error"></div>
+    <div class="form-group"><label>E-mail</label>
+      <input type="email" id="login-email" placeholder="seu@wecanbr.com.br"/>
     </div>
-
-    <!-- Passo 2: login/senha -->
-    <div class="login-form" id="step-credenciais">
-      <div class="selected-tipo-banner">
-        Entrando como <b id="tipo-selecionado-label">—</b>
-        <button onclick="voltarParaTipo()">trocar</button>
-      </div>
-      <div class="login-error" id="login-error"></div>
-      <div class="form-group"><label>E-mail</label><input type="email" id="login-email" placeholder="seu@wecanbr.com.br"/></div>
-      <div class="form-group"><label>Senha</label><input type="password" id="login-senha" placeholder="••••••"/></div>
-      <button class="btn btn-primary" id="btn-entrar" onclick="fazerLogin()">Entrar</button>
+    <div class="form-group"><label>Senha</label>
+      <input type="password" id="login-senha" placeholder="••••••"/>
     </div>
-
-    <div class="demo-note">
-      <strong>Conectado à planilha real:</strong> login validado pelo Apps Script. Conta inicial do Master: <code>edivan.costa@wecanbr.com.br</code> / <code>Edivan027@</code> (tipo "Outro"). Os demais acessos (Equipe/Gestor/Onsite) são os cadastrados na aba <code>Usuários_Sistema</code> — crie ou edite pela tela "Usuários", dentro do Seleção &amp; Admissão.
-    </div>
+    <button class="btn btn-primary" id="btn-entrar" onclick="fazerLogin()">Entrar</button>
+    <div class="info"><strong>Acesso:</strong> use o e-mail e senha cadastrados pelo administrador.</div>
   </div>
 </div>
 
 <script src="shared.js"></script>
 <script>
-let tipoSelecionado = null;
-
-function selecionarTipo(tipo) {
-  if (!tipo) return;
-  tipoSelecionado = tipo;
-  document.getElementById('tipo-selecionado-label').textContent = PERFIL_LABEL[tipo];
-  document.getElementById('step-credenciais').classList.add('show');
-  document.getElementById('login-error').style.display = 'none';
-  document.getElementById('login-email').focus();
-}
-function voltarParaTipo() {
-  tipoSelecionado = null;
-  document.getElementById('step-credenciais').classList.remove('show');
-  document.getElementById('tipo-acesso-select').value = '';
-}
-
 async function fazerLogin() {
   const email = document.getElementById('login-email').value.trim().toLowerCase();
   const senha = document.getElementById('login-senha').value;
-  const err = document.getElementById('login-error');
-  const btn = document.getElementById('btn-entrar');
+  const err   = document.getElementById('login-error');
+  const btn   = document.getElementById('btn-entrar');
   err.style.display = 'none';
-
-  if (!tipoSelecionado) {
-    err.textContent = 'Selecione o tipo de acesso antes de entrar.';
-    err.style.display = 'block';
-    return;
-  }
-  if (!email || !senha) {
-    err.textContent = 'Informe e-mail e senha.';
-    err.style.display = 'block';
-    return;
-  }
-
-  btn.disabled = true; btn.textContent = 'Entrando…';
+  if (!email || !senha) { err.textContent='Informe e-mail e senha.'; err.style.display='block'; return; }
+  btn.disabled=true; btn.textContent='Entrando…';
   try {
-    const resp = await apiCall('login', { email, senha });
-    const conta = resp.sessao;
-    if (conta.perfil !== tipoSelecionado) {
-      err.textContent = `Essa conta não corresponde ao tipo de acesso selecionado (${PERFIL_LABEL[tipoSelecionado]}). Confira e tente de novo.`;
-      err.style.display = 'block';
-      return;
-    }
-    salvarSessao(conta);
+    const resp = await rpc('wc_login', { p_email:email, p_senha:senha });
+    salvarSessao(resp.sessao);
     window.location.href = 'admissao.html';
-  } catch (e) {
+  } catch(e) {
     err.textContent = e.message || 'E-mail ou senha incorretos.';
     err.style.display = 'block';
-  } finally {
-    btn.disabled = false; btn.textContent = 'Entrar';
-  }
+  } finally { btn.disabled=false; btn.textContent='Entrar'; }
 }
-document.addEventListener('keydown', e => {
-  const step = document.getElementById('step-credenciais');
-  if (e.key === 'Enter' && step && step.classList.contains('show')) fazerLogin();
-});
-
-// Se já existe sessão válida, não mostra login de novo — manda direto pro hub.
-(function initApp() {
-  const salva = carregarSessaoSalva();
-  if (salva) window.location.href = 'admissao.html';
-})();
+document.addEventListener('keydown', e => { if (e.key==='Enter') fazerLogin(); });
+if (carregarSessaoSalva()) window.location.href = 'admissao.html';
 </script>
 </body>
 </html>

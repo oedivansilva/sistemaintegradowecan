@@ -656,580 +656,529 @@
 
 <div id="toast"></div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="shared.js"></script>
 <script>
+// ══════════════════════════════════════════════
+//  admissao.html — JS principal (Supabase via rpc())
+// ══════════════════════════════════════════════
 let session = null;
-let MAIN_HTML_ORIGINAL = '';
+let VAGAS   = [];
+let _MAIN_HTML = '';
 
-// ══════════════════════════════════════════════
-//  DADOS — agora vêm da planilha real via Apps Script (Code.gs)
-// ══════════════════════════════════════════════
-let VAGAS = [];
+const VOUCHER_APP_URL = 'voucher.html';
+const REGIONAIS       = ['SPI','RIO/ES','CO/N','SPM'];
 
+// ── helpers de acesso ─────────────────────────
+function podeVerTudo()        { return session && ['gestor','master'].includes(session.perfil); }
+function podeAutorizarVoucher(){ return session && ['gestor','master','onsite'].includes(session.perfil); }
+function ehMaster()           { return session && session.perfil === 'master'; }
+function vagasNoEscopo()      {
+  if (podeVerTudo() || (session && session.perfil === 'onsite')) return VAGAS;
+  return VAGAS.filter(v => (v.consultor||'').toUpperCase() === (session.nome||'').toUpperCase());
+}
 function consultoresConhecidos() {
   return [...new Set(VAGAS.map(v => v.consultor).filter(Boolean))].sort();
 }
+function escopoLabel() {
+  return podeVerTudo() || (session && session.perfil === 'onsite')
+    ? `Visualizando <b>todas as vagas</b> (perfil ${PERFIL_LABEL[session.perfil].toLowerCase()})`
+    : `Visualizando apenas as <b>${vagasNoEscopo().length} vagas</b> sob sua responsabilidade`;
+}
 
+// ── visual helpers ─────────────────────────────
+function regionalPill(r) {
+  const u = (r||'').toUpperCase();
+  const cls = u==='SPI'?'regional-sp':u==='RIO/ES'?'regional-rj':u.startsWith('CO')?'regional-co':'regional-spm';
+  return `<span class="pill ${cls}">${r||'—'}</span>`;
+}
+
+// ── Carregar vagas via RPC ────────────────────
 async function carregarVagas() {
-  const resp = await apiCall('vagas', {});
-  VAGAS = resp.vagas;
+  const resp = await rpc('wc_listar_vagas', {});
+  VAGAS = (resp.vagas || []).map(v => ({
+    ...v,
+    id: v.jira,
+    codigoHub: v.codigo_hub,
+    local: v.local_trabalho,
+    statusUniforme: v.status_uniforme,
+    opsId: v.ops_id,
+    dataAdmSolicitada: v.data_adm_solicitada,
+    dataReprog: v.data_reprog,
+    novaDataETO: v.nova_data_eto,
+    dataAdmRealizada: v.data_adm_realizada,
+    statusVaga: v.status_vaga,
+    tipoVaga: v.tipo_vaga,
+    departamentoGI: v.departamento_gi,
+    cestaBasica: v.cesta_basica,
+    gestorTurno: v.gestor_turno,
+    contatoGestorTurno: v.contato_gestor_turno,
+    unidadeWecan: v.unidade_wecan,
+    email: v.email_colaborador,
+    tipoProcesso: v.tipo_processo,
+    noShow: v.no_show,
+    motivoAtraso: v.motivo_atraso,
+    tipoProcessoDesistente: v.tipo_processo_desistente,
+    filaVoucherStatus: null,
+    filaVoucherAutorizadoPor: '',
+    filaVoucherMotivo: '',
+  }));
+}
+
+async function carregarFilaVoucher() {
+  if (!podeAutorizarVoucher()) return;
+  const resp = await rpc('wc_listar_fila', {});
+  const mapa = {};
+  (resp.fila || []).forEach(f => { if (!mapa[f.vaga_jira]) mapa[f.vaga_jira] = f; });
+  VAGAS.forEach(v => {
+    const f = mapa[v.jira];
+    if (f) {
+      v.filaVoucherStatus       = f.status;
+      v.filaVoucherAutorizadoPor = f.autorizado_por || '';
+      v.filaVoucherMotivo       = f.motivo_rejeicao || '';
+    }
+  });
+  window._filaHistorico = resp.historico || [];
 }
 
 async function atualizarDados() {
-  toast('Atualizando dados da planilha…', 'info');
+  toast('Atualizando dados…', 'info');
   try {
     await carregarVagas();
+    await carregarFilaVoucher();
     popularFiltroConsultor();
     const ativa = document.querySelector('.page.active');
-    if (ativa) navTo(ativa.id.replace('page-', ''));
+    if (ativa) navTo(ativa.id.replace('page-',''));
     toast('Dados atualizados!', 'success');
-  } catch (e) {
-    toast(e.message, 'error');
-  }
+  } catch(e) { toast(e.message, 'error'); }
 }
 
-// ══════════════════════════════════════════════
-//  ACESSO / ESCOPO
-// ══════════════════════════════════════════════
-function podeVerTudo() { return session && (session.perfil === 'gestor' || session.perfil === 'master'); }
-function podeAutorizarVoucher() { return session && ['gestor','master','onsite'].includes(session.perfil); }
-function ehMaster() { return session && session.perfil === 'master'; }
-
-// Caminho do sistema de Voucher (publicado separadamente). Por enquanto
-// apontando para um voucher.html de demonstração na mesma pasta, só pra
-// esse teste funcionar de ponta a ponta. Troque para a URL real (ex:
-// '../voucher/index.html' ou a URL completa do GitHub Pages dele) quando
-// for publicar de verdade.
-const VOUCHER_APP_URL = 'voucher.html';
-function vagasNoEscopo() {
-  if (podeVerTudo() || (session && session.perfil === 'onsite')) return VAGAS;
-  return VAGAS.filter(v => v.consultor === session.nome);
-}
-
-// ══════════════════════════════════════════════
-//  SESSÃO — login acontece em index.html; aqui só lemos/validamos
-//  (salvarSessao, carregarSessaoSalva, limparSessaoSalva vêm do shared.js)
-// ══════════════════════════════════════════════
-
+// ── SESSÃO ────────────────────────────────────
+// ── SESSÃO ────────────────────────────────────
 async function iniciarSessao(conta) {
   session = conta;
   document.getElementById('sidebar').style.display = 'flex';
-  document.getElementById('main').style.display = 'block';
-  document.getElementById('user-nome').textContent = session.nome;
+  document.getElementById('user-nome').textContent  = session.nome;
   document.getElementById('user-perfil').textContent = PERFIL_LABEL[session.perfil];
-  document.getElementById('nav-voucher').style.display = podeAutorizarVoucher() ? 'flex' : 'none';
-  document.getElementById('nav-usuarios').style.display = ehMaster() ? 'flex' : 'none';
+  document.getElementById('nav-voucher').style.display   = podeAutorizarVoucher() ? 'flex' : 'none';
+  document.getElementById('nav-usuarios').style.display  = ehMaster() ? 'flex' : 'none';
   document.getElementById('navgroup-voucherapp').style.display = ehMaster() ? 'block' : 'none';
   document.getElementById('voucherapp-open-tab').href = VOUCHER_APP_URL;
 
-  document.getElementById('main').innerHTML = '<div style="padding:60px;text-align:center;color:var(--muted)">Carregando vagas da planilha…</div>';
+  const main = document.getElementById('main');
+  main.style.display = 'block';
+  main.innerHTML = '<div style="padding:60px;text-align:center;color:var(--muted)">⏳ Carregando vagas…</div>';
   try {
     await carregarVagas();
-  } catch (e) {
-    document.getElementById('main').innerHTML = `<div style="padding:60px;text-align:center;color:var(--danger)">Não foi possível carregar a planilha.<br/><small>${e.message}</small></div>`;
+    await carregarFilaVoucher();
+  } catch(e) {
+    main.innerHTML = `<div style="padding:60px;text-align:center;color:var(--danger)">Erro ao carregar dados.<br/><small>${e.message}</small></div>`;
     return;
   }
-  document.getElementById('main').innerHTML = MAIN_HTML_ORIGINAL;
+  main.innerHTML = _MAIN_HTML;
   popularFiltroConsultor();
   navTo('dashboard');
 }
 
-// Sem sessão válida → volta pro login compartilhado, em vez de mostrar
-// uma tela de login própria deste sistema.
-function initApp() {
-  MAIN_HTML_ORIGINAL = document.getElementById('main').innerHTML;
-  const salva = carregarSessaoSalva();
-  if (salva) iniciarSessao(salva);
-  else window.location.href = 'index.html';
+async function initApp() {
+  _MAIN_HTML = document.getElementById('main').innerHTML;
+  const s = carregarSessaoSalva();
+  if (!s) { window.location.href = 'index.html'; return; }
+  session = s;
+  await iniciarSessao(s);
 }
 
-function logout() {
-  apiCall('logout', {}).catch(() => {});
+async function logout() {
+  rpc('wc_logout', {}).catch(()=>{});
   limparSessaoSalva();
   window.location.href = 'index.html';
 }
 
-function popularFiltroConsultor() {
-  const sel = document.getElementById('filtro-consultor');
-  const consultores = podeVerTudo() ? consultoresConhecidos() : [session.nome];
-  sel.innerHTML = '<option value="">Todos os consultores</option>' + consultores.map(c => `<option>${c}</option>`).join('');
-  sel.parentElement.style.display = podeVerTudo() ? 'block' : 'none';
-}
-
-// ══════════════════════════════════════════════
-//  USUÁRIOS — acessos ao sistema; gerenciados pelo Code.gs, aba Usuários_Sistema.
-// ══════════════════════════════════════════════
-async function renderUsuarios() {
-  const tbody = document.getElementById('tbody-usuarios');
-  tbody.innerHTML = '<tr><td colspan="5" style="padding:20px;color:var(--muted)">Carregando…</td></tr>';
-  try {
-    const resp = await apiCall('listarUsuarios', {});
-    const lista = resp.usuarios;
-    tbody.innerHTML = lista.map(u => `
-      <tr>
-        <td><strong>${u.nome}</strong></td>
-        <td>${u.email}</td>
-        <td><span class="pill muted">${PERFIL_LABEL[u.perfil] || u.perfil}</span></td>
-        <td>${u.ativo === false ? '<span class="pill vaga-atrasada">INATIVO</span>' : '<span class="pill uniforme-enviado">ATIVO</span>'}</td>
-        <td class="actions-cell">
-          <button class="btn btn-ghost btn-sm" onclick='abrirModalUsuario(${JSON.stringify(u)})'>Editar</button>
-          <button class="btn btn-ghost btn-sm" onclick="toggleUsuarioAtivo('${u.id}')">${u.ativo === false ? 'Ativar' : 'Desativar'}</button>
-          <button class="btn btn-danger btn-sm" onclick="excluirUsuario('${u.id}','${u.nome}')">Excluir</button>
-        </td>
-      </tr>`).join('') || `<tr><td colspan="5"><div class="empty-state">Nenhum usuário cadastrado</div></td></tr>`;
-  } catch (e) {
-    tbody.innerHTML = `<tr><td colspan="5" style="padding:16px;color:var(--danger)">${e.message}</td></tr>`;
-  }
-}
-
-function abrirModalUsuario(u) {
-  document.getElementById('mu-title').textContent = u ? 'Editar Usuário' : 'Novo Usuário';
-  document.getElementById('u-id').value = u ? u.id : '';
-  document.getElementById('u-nome').value = u ? u.nome : '';
-  document.getElementById('u-email').value = u ? u.email : '';
-  document.getElementById('u-senha').value = '';
-  document.getElementById('u-perfil').value = u ? u.perfil : 'equipe';
-  abrirModal('modal-usuario');
-}
-
-async function salvarUsuario() {
-  const id = document.getElementById('u-id').value;
-  const nome = document.getElementById('u-nome').value.trim();
-  const email = document.getElementById('u-email').value.trim().toLowerCase();
-  const senha = document.getElementById('u-senha').value;
-  const perfil = document.getElementById('u-perfil').value;
-  const btn = document.getElementById('btn-salvar-usuario');
-
-  if (!nome || !email) { toast('Preencha nome e e-mail.', 'error'); return; }
-  btn.disabled = true; btn.textContent = 'Salvando…';
-  try {
-    await apiCall('salvarUsuario', { usuario: { id: id || undefined, nome, email, senha: senha || undefined, perfil } });
-    fecharModal('modal-usuario');
-    await renderUsuarios();
-    toast('Usuário salvo! Já pode fazer login com esse acesso.', 'success');
-  } catch (e) {
-    toast(e.message, 'error');
-  } finally {
-    btn.disabled = false; btn.textContent = 'Salvar';
-  }
-}
-
-async function toggleUsuarioAtivo(id) {
-  try {
-    const resp = await apiCall('toggleUsuario', { id });
-    await renderUsuarios();
-    toast(resp.ativo ? 'Usuário ativado.' : 'Usuário desativado.', 'success');
-  } catch (e) { toast(e.message, 'error'); }
-}
-
-async function excluirUsuario(id, nome) {
-  if (!confirm(`Excluir o acesso de ${nome}? Essa ação não pode ser desfeita.`)) return;
-  try {
-    await apiCall('excluirUsuario', { id });
-    await renderUsuarios();
-    toast('Usuário excluído.', 'success');
-  } catch (e) { toast(e.message, 'error'); }
-}
-
-// ══════════════════════════════════════════════
-//  NAV
-// ══════════════════════════════════════════════
+// ── NAV ───────────────────────────────────────
 function navTo(id) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('nav a').forEach(a => a.classList.remove('active'));
-  document.getElementById('page-' + id).classList.add('active');
+  const page = document.getElementById('page-' + id);
+  if (!page) return;
+  page.classList.add('active');
   const link = document.querySelector(`nav a[data-page="${id}"]`);
   if (link) link.classList.add('active');
-  if (id === 'dashboard') renderDashboard();
-  if (id === 'vagas') renderVagas();
-  if (id === 'voucher') renderQueue();
-  if (id === 'usuarios') renderUsuarios();
+  if (id==='dashboard') renderDashboard();
+  if (id==='vagas')     renderVagas();
+  if (id==='voucher')   renderQueue();
+  if (id==='usuarios')  renderUsuarios();
   atualizarBadgeFila();
 }
+function toggleNavGroup(nome) { document.getElementById('navgroup-'+nome).classList.toggle('collapsed'); }
 
-function toggleNavGroup(nome) {
-  document.getElementById('navgroup-' + nome).classList.toggle('collapsed');
-}
-
-// ── Abre o sistema de Voucher embutido já direto na página pedida,
-// chamando a função navTo() interna do próprio app de Voucher (mesma
-// origem ⇒ acesso direto ao contentWindow), sem misturar os dois códigos.
 let vouchFrameLoaded = false;
 function carregarVoucherFrame() {
   const frame = document.getElementById('voucherapp-iframe');
   if (frame.getAttribute('src') !== VOUCHER_APP_URL) {
-    vouchFrameLoaded = false;
-    frame.addEventListener('load', () => { vouchFrameLoaded = true; }, { once:true });
+    frame.addEventListener('load', () => { vouchFrameLoaded=true; }, { once:true });
     frame.src = VOUCHER_APP_URL;
   }
 }
 function abrirVoucherEm(pagina) {
   navTo('voucherapp');
-  document.querySelectorAll('nav a[data-vp]').forEach(a => a.classList.toggle('active', a.dataset.vp === pagina));
+  document.querySelectorAll('nav a[data-vp]').forEach(a => a.classList.toggle('active', a.dataset.vp===pagina));
   carregarVoucherFrame();
   const frame = document.getElementById('voucherapp-iframe');
-  const tentarNavegar = () => {
-    try { if (frame.contentWindow && typeof frame.contentWindow.navTo === 'function') frame.contentWindow.navTo(pagina); }
-    catch(e) { /* outro domínio ou ainda carregando — ok, o usuário cai na tela inicial do Voucher */ }
-  };
-  if (vouchFrameLoaded) setTimeout(tentarNavegar, 50);
-  else frame.addEventListener('load', () => setTimeout(tentarNavegar, 300), { once:true });
+  const ir = () => { try { if (frame.contentWindow?.navTo) frame.contentWindow.navTo(pagina); } catch(e){} };
+  if (vouchFrameLoaded) setTimeout(ir,50); else frame.addEventListener('load',()=>setTimeout(ir,300),{once:true});
 }
 
-function escopoLabel() {
-  return podeVerTudo() || session.perfil==='onsite'
-    ? `Visualizando <b>todas as vagas</b> (perfil ${PERFIL_LABEL[session.perfil].toLowerCase()})`
-    : `Visualizando apenas as <b>${vagasNoEscopo().length} vagas</b> sob sua responsabilidade`;
+// ── FILTRO DE CONSULTOR ───────────────────────
+function popularFiltroConsultor() {
+  const sel = document.getElementById('filtro-consultor');
+  if (!sel) return;
+  const lista = podeVerTudo() ? consultoresConhecidos() : [session.nome];
+  sel.innerHTML = '<option value="">Todos os consultores</option>' + lista.map(c=>`<option>${c}</option>`).join('');
+  sel.parentElement.style.display = podeVerTudo() ? 'block' : 'none';
 }
 
-// ══════════════════════════════════════════════
-//  DASHBOARD
-// ══════════════════════════════════════════════
+// ── DASHBOARD ─────────────────────────────────
 let chartRegional=null, chartStatus=null, chartUniforme=null;
-
-function regionalPill(regional) {
-  const r = (regional || '').toUpperCase();
-  const cls = r === 'SPI' ? 'regional-sp' : r === 'RIO/ES' ? 'regional-rj' : r.startsWith('CO') ? 'regional-co' : 'regional-spm';
-  return `<span class="pill ${cls}">${regional || '—'}</span>`;
-}
-
 function renderDashboard() {
-  document.getElementById('scope-banner-dash').innerHTML = escopoLabel();
+  const d = document.getElementById('scope-banner-dash');
+  if (d) d.innerHTML = escopoLabel();
   const dados = vagasNoEscopo();
-
-  const REGIONAIS = ['SPI','RIO/ES','CO/N','SPM'];
-
   const total = dados.length;
-  const finalizadas = dados.filter(v => (v.statusVaga||'').startsWith('Finalizada')).length;
-  const emAndamento = dados.filter(v => (v.statusVaga||'').startsWith('Em Andamento')).length;
-  const pendentesVoucher = VAGAS.filter(v => v.filaVoucherStatus === 'pendente').length;
+  const finalizadas = dados.filter(v=>(v.statusVaga||'').startsWith('Finalizada')).length;
+  const emAndamento = dados.filter(v=>(v.statusVaga||'').startsWith('Em Andamento')).length;
+  const pendentes   = VAGAS.filter(v=>v.filaVoucherStatus==='pendente').length;
 
   const kpis = [
-    { label:'Total de Vagas', value: total, cls:'teal', sub:'no escopo atual' },
-    { label:'Finalizadas', value: finalizadas, cls:'green', sub:'processo concluído' },
-    { label:'Em Andamento', value: emAndamento, cls:'blue', sub:'em processo' },
+    { label:'Total de Vagas', value:total, cls:'teal', sub:'no escopo atual' },
+    { label:'Finalizadas', value:finalizadas, cls:'green', sub:'processo concluído' },
+    { label:'Em Andamento', value:emAndamento, cls:'blue', sub:'em processo' },
   ];
-  if (podeAutorizarVoucher()) kpis.push({ label:'Pendentes de Voucher', value: pendentesVoucher, cls:'red', sub:'aguardando autorização' });
-  document.getElementById('kpi-cards').innerHTML = kpis.map(k => `
+  if (podeAutorizarVoucher()) kpis.push({ label:'Pendentes de Voucher', value:pendentes, cls:'red', sub:'aguardando autorização' });
+  document.getElementById('kpi-cards').innerHTML = kpis.map(k=>`
     <div class="card"><div class="card-label">${k.label}</div><div class="card-value ${k.cls}">${k.value}</div><div class="card-sub">${k.sub}</div></div>`).join('');
 
-  // Regional donut — 4 regionais
-  const porRegional = {};
-  REGIONAIS.forEach(r => porRegional[r] = 0);
-  dados.forEach(v => { if (v.regional) porRegional[v.regional] = (porRegional[v.regional]||0)+1; });
-  const regLabels = REGIONAIS.filter(r => porRegional[r] > 0);
-  const regData   = regLabels.map(r => porRegional[r]);
-  const regColors = { 'SPI':'#63ccb0','RIO/ES':'#c084fc','CO/N':'#f59e0b','SPM':'#60a5fa' };
-  document.getElementById('badge-regional').textContent = total + ' vagas';
+  const porRegional = {}; REGIONAIS.forEach(r=>porRegional[r]=0);
+  dados.forEach(v => { if (v.regional) porRegional[v.regional]=(porRegional[v.regional]||0)+1; });
+  const regLabels = REGIONAIS.filter(r=>porRegional[r]>0);
+  const regColors = {'SPI':'#63ccb0','RIO/ES':'#c084fc','CO/N':'#f59e0b','SPM':'#60a5fa'};
+  document.getElementById('badge-regional').textContent = total+' vagas';
   const ctxR = document.getElementById('chart-regional').getContext('2d');
   if (chartRegional) chartRegional.destroy();
-  chartRegional = new Chart(ctxR, { type:'doughnut', data:{ labels:regLabels, datasets:[{ data:regData, backgroundColor:regLabels.map(r=>regColors[r]||'#8891b4'), borderWidth:0, hoverOffset:6 }] },
+  chartRegional = new Chart(ctxR, { type:'doughnut', data:{ labels:regLabels, datasets:[{ data:regLabels.map(r=>porRegional[r]), backgroundColor:regLabels.map(r=>regColors[r]||'#8891b4'), borderWidth:0, hoverOffset:6 }] },
     options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'bottom', labels:{ color:'#8891b4', font:{size:11}, padding:12 } } } } });
 
-  // Ranking consultores
   const porConsultor = {};
-  dados.forEach(v => { if (v.consultor) porConsultor[v.consultor] = (porConsultor[v.consultor]||0)+1; });
-  const rank = Object.entries(porConsultor).sort((a,b)=>b[1]-a[1]).map(([nome,count])=>({nome,count}));
-  const max = rank[0]?.count || 1;
-  document.getElementById('rank-consultores').innerHTML = rank.slice(0,10).map((r,i) => {
-    const posClass = i===0?'gold':i===1?'silver':i===2?'bronze':'';
-    return `<li><span class="rank-pos ${posClass}">${i+1}</span><span class="rank-name">${r.nome}</span>
-      <div class="rank-bar-wrap"><div class="rank-bar" style="width:${Math.round(r.count/max*100)}%"></div></div>
-      <span class="rank-count">${r.count}</span></li>`;
+  dados.forEach(v=>{ if (v.consultor) porConsultor[v.consultor]=(porConsultor[v.consultor]||0)+1; });
+  const rank = Object.entries(porConsultor).sort((a,b)=>b[1]-a[1]);
+  const max = rank[0]?.[1]||1;
+  document.getElementById('rank-consultores').innerHTML = rank.slice(0,10).map(([nome,count],i)=>{
+    const pos = i===0?'gold':i===1?'silver':i===2?'bronze':'';
+    return `<li><span class="rank-pos ${pos}">${i+1}</span><span class="rank-name">${nome}</span><div class="rank-bar-wrap"><div class="rank-bar" style="width:${Math.round(count/max*100)}%"></div></div><span class="rank-count">${count}</span></li>`;
   }).join('') || '<li style="color:var(--muted);padding:8px 0">Sem dados</li>';
 
-  // Status da vaga
   const statusCount = {};
-  dados.forEach(v => { const s = v.statusVaga || 'Sem status'; statusCount[s] = (statusCount[s]||0)+1; });
+  dados.forEach(v=>{ const s=v.statusVaga||'Sem status'; statusCount[s]=(statusCount[s]||0)+1; });
   const ctxS = document.getElementById('chart-status').getContext('2d');
   if (chartStatus) chartStatus.destroy();
   chartStatus = new Chart(ctxS, { type:'bar', data:{ labels:Object.keys(statusCount), datasets:[{ data:Object.values(statusCount), backgroundColor:'rgba(99,204,176,.55)', borderColor:'#63ccb0', borderWidth:1, borderRadius:4 }] },
-    options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false } },
-      scales:{ x:{ ticks:{ color:'#8891b4', font:{size:10}, stepSize:1 }, grid:{ color:'rgba(46,51,80,.4)' } }, y:{ ticks:{ color:'#8891b4', font:{size:10} }, grid:{ display:false } } } } });
+    options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false } }, scales:{ x:{ ticks:{ color:'#8891b4', font:{size:10} }, grid:{ color:'rgba(46,51,80,.4)' } }, y:{ ticks:{ color:'#8891b4', font:{size:10} }, grid:{ display:false } } } } });
 
-  // Status do Uniforme por regional — "enviado" = texto contém ENVIADO ou SAÍDA (lote enviado)
-  const uniGroups = {};
-  REGIONAIS.forEach(r => uniGroups[r] = {ENVIADO:0,PENDENTE:0});
+  const uniGroups = {}; REGIONAIS.forEach(r=>uniGroups[r]={E:0,P:0});
   dados.forEach(v => {
-    const rg = v.regional;
-    if (!uniGroups[rg]) return;
-    const su = (v.statusUniforme || '').toUpperCase();
-    const enviado = su.includes('ENVIADO') || su.includes('SAÍDA') || su.includes('SAIDA') || su.includes('UNIFORME WECAN');
-    uniGroups[rg][enviado ? 'ENVIADO' : 'PENDENTE']++;
+    const rg=v.regional; if (!uniGroups[rg]) return;
+    const su=(v.statusUniforme||'').toUpperCase();
+    const ok=su.includes('ENVIADO')||su.includes('SAÍDA')||su.includes('SAIDA')||su.includes('UNIFORME WECAN');
+    uniGroups[rg][ok?'E':'P']++;
   });
   const ctxU = document.getElementById('chart-uniforme').getContext('2d');
   if (chartUniforme) chartUniforme.destroy();
-  chartUniforme = new Chart(ctxU, { type:'bar', data:{ labels: REGIONAIS, datasets:[
-      { label:'Enviado', data: REGIONAIS.map(r=>uniGroups[r].ENVIADO), backgroundColor:'rgba(34,197,94,.6)', borderRadius:4 },
-      { label:'Pendente', data: REGIONAIS.map(r=>uniGroups[r].PENDENTE), backgroundColor:'rgba(245,158,11,.6)', borderRadius:4 },
-    ]}, options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'bottom', labels:{ color:'#8891b4', font:{size:11} } } },
-      scales:{ x:{ ticks:{ color:'#8891b4', font:{size:11} }, grid:{ display:false } }, y:{ ticks:{ color:'#8891b4', font:{size:10}, stepSize:1 }, grid:{ color:'rgba(46,51,80,.4)' } } } } });
+  chartUniforme = new Chart(ctxU, { type:'bar', data:{ labels:REGIONAIS, datasets:[
+    { label:'Enviado', data:REGIONAIS.map(r=>uniGroups[r].E), backgroundColor:'rgba(34,197,94,.6)', borderRadius:4 },
+    { label:'Pendente', data:REGIONAIS.map(r=>uniGroups[r].P), backgroundColor:'rgba(245,158,11,.6)', borderRadius:4 },
+  ]}, options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'bottom', labels:{ color:'#8891b4', font:{size:11} } } }, scales:{ x:{ ticks:{ color:'#8891b4', font:{size:11} }, grid:{ display:false } }, y:{ ticks:{ color:'#8891b4', font:{size:10} }, grid:{ color:'rgba(46,51,80,.4)' } } } } });
 
-  // No show table
-  const ns = dados.filter(v => v.noShow);
-  document.getElementById('tb-noshow').innerHTML = ns.slice(0,50).map(v => `
+  const ns = dados.filter(v=>v.noShow);
+  document.getElementById('tb-noshow').innerHTML = ns.slice(0,50).map(v=>`
     <tr><td>${v.colaborador||'—'}</td><td>${v.consultor||'—'}</td><td>${regionalPill(v.regional)}</td>
     <td>${v.motivoAtraso||'—'}</td><td class="text-truncate" style="max-width:320px">${v.observacao||'—'}</td></tr>`).join('')
-    || '<tr><td colspan="5" class="text-muted" style="padding:16px">Nenhum registro de no show no escopo atual</td></tr>';
+    || '<tr><td colspan="5" class="text-muted" style="padding:16px">Nenhum no show no escopo atual</td></tr>';
 }
 
-// ══════════════════════════════════════════════
-//  VAGAS — TABELA
-// ══════════════════════════════════════════════
+// ── TABELA DE VAGAS ───────────────────────────
 function renderVagas() {
-  document.getElementById('scope-banner-vagas').innerHTML = escopoLabel();
-  const busca = (document.getElementById('busca-vaga').value || '').toLowerCase();
-  const fRegional = document.getElementById('filtro-regional').value;
-  const fStatus = document.getElementById('filtro-statusvaga').value;
-  const fConsultor = document.getElementById('filtro-consultor').value;
+  const d = document.getElementById('scope-banner-vagas'); if (d) d.innerHTML = escopoLabel();
+  const busca   = (document.getElementById('busca-vaga')?.value||'').toLowerCase();
+  const fReg    = document.getElementById('filtro-regional')?.value||'';
+  const fStatus = document.getElementById('filtro-statusvaga')?.value||'';
+  const fCons   = document.getElementById('filtro-consultor')?.value||'';
 
-  let dados = vagasNoEscopo();
-  dados = dados.filter(v => {
-    const matchBusca = !busca || v.colaborador.toLowerCase().includes(busca) || v.matricula.toLowerCase().includes(busca) || v.jira.toLowerCase().includes(busca);
-    const matchRegional = !fRegional || v.regional === fRegional;
-    const matchStatus = !fStatus || v.statusVaga === fStatus;
-    const matchConsultor = !fConsultor || v.consultor === fConsultor;
-    return matchBusca && matchRegional && matchStatus && matchConsultor;
+  let dados = vagasNoEscopo().filter(v => {
+    const mb = !busca || (v.colaborador||'').toLowerCase().includes(busca) || (v.matricula||'').toLowerCase().includes(busca) || (v.jira||'').toLowerCase().includes(busca) || (v.cargo||'').toLowerCase().includes(busca);
+    return mb && (!fReg||v.regional===fReg) && (!fStatus||v.statusVaga===fStatus) && (!fCons||v.consultor===fCons);
   });
 
   document.getElementById('tbody-vagas').innerHTML = dados.map(v => {
-    const su = (v.statusUniforme || '').toUpperCase();
-    const uniEnviado = su.includes('ENVIADO') || su.includes('SAÍDA') || su.includes('SAIDA') || su.includes('UNIFORME WECAN');
-    const uniPill = uniEnviado
-      ? `<span class="pill uniforme-enviado" title="${v.statusUniforme||''}">${v.statusUniforme ? v.statusUniforme.slice(0,12) + (v.statusUniforme.length>12?'…':'') : 'ENVIADO'}</span>`
-      : `<span class="pill uniforme-pendente">${v.statusUniforme || 'PENDENTE'}</span>`;
-    const statusCls = v.statusVaga === 'Finalizada No Prazo' ? 'vaga-noprazo'
-      : v.statusVaga === 'Finalizada Antecipada' ? 'vaga-antecipada'
-      : v.statusVaga === 'Finalizada Atrasada' ? 'vaga-atrasada'
-      : (v.statusVaga||'').startsWith('Em Andamento') ? 'regional-co'
-      : v.statusVaga === 'Cancelada' ? 'muted'
-      : 'muted';
-    const isVoucher = (v.transporte||'').toUpperCase().includes('VOUCHER');
-    const jiraEsc = (v.jira||'').replace(/'/g,"\\'");
-    const localEsc = (v.local||'').replace(/"/g,'&quot;');
-    return `<tr onclick="abrirModalVaga('${jiraEsc}')">
-      <td>${v.jira||'—'}</td>
-      <td>${v.consultor||'—'}</td>
-      <td>${regionalPill(v.regional)}</td>
-      <td><strong>${v.colaborador||'—'}</strong></td>
-      <td>${v.cargo||'—'}</td>
-      <td><span class="text-truncate" title="${localEsc}">${v.local||'—'}</span></td>
+    const su = (v.statusUniforme||'').toUpperCase();
+    const env = su.includes('ENVIADO')||su.includes('SAÍDA')||su.includes('SAIDA')||su.includes('UNIFORME WECAN');
+    const uniPill = env
+      ? `<span class="pill uniforme-enviado" title="${v.statusUniforme||''}">${(v.statusUniforme||'ENVIADO').slice(0,14)}</span>`
+      : `<span class="pill uniforme-pendente">${v.statusUniforme||'PENDENTE'}</span>`;
+    const sCls = v.statusVaga==='Finalizada No Prazo'?'vaga-noprazo':v.statusVaga==='Finalizada Antecipada'?'vaga-antecipada':v.statusVaga==='Finalizada Atrasada'?'vaga-atrasada':(v.statusVaga||'').startsWith('Em Andamento')?'regional-co':'muted';
+    const isV = (v.transporte||'').toUpperCase().includes('VOUCHER');
+    const je = (v.jira||'').replace(/'/g,"\\'");
+    const le = (v.local||'').replace(/"/g,'&quot;');
+    return `<tr onclick="abrirModalVaga('${je}')">
+      <td>${v.jira||'—'}</td><td>${v.consultor||'—'}</td><td>${regionalPill(v.regional)}</td>
+      <td><strong>${v.colaborador||'—'}</strong></td><td>${v.cargo||'—'}</td>
+      <td><span class="text-truncate" title="${le}">${v.local||'—'}</span></td>
       <td>${uniPill}</td>
-      <td><span class="pill ${statusCls}">${v.statusVaga||'—'}</span></td>
-      <td>${isVoucher ? `<span class="pill voucher">${v.transporte}</span>` : `<span class="text-muted">${v.transporte||'—'}</span>`}</td>
-      <td class="actions-cell"><button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();abrirModalVaga('${jiraEsc}')">Editar</button></td>
+      <td><span class="pill ${sCls}">${v.statusVaga||'—'}</span></td>
+      <td>${isV?`<span class="pill voucher">${v.transporte}</span>`:`<span class="text-muted">${v.transporte||'—'}</span>`}</td>
+      <td class="actions-cell"><button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();abrirModalVaga('${je}')">Editar</button></td>
     </tr>`;
-  }).join('') || `<tr><td colspan="10"><div class="empty-state"><div class="ico">📭</div>Nenhuma vaga encontrada com esses filtros</div></td></tr>`;
-
-  document.getElementById('vagas-count').textContent = `Exibindo ${dados.length} vaga(s)`;
+  }).join('') || `<tr><td colspan="10"><div class="empty-state"><div class="ico">📭</div>Nenhuma vaga encontrada</div></td></tr>`;
+  const ct = document.getElementById('vagas-count'); if (ct) ct.textContent = `Exibindo ${dados.length} vaga(s)`;
 }
 
-// ══════════════════════════════════════════════
-//  MODAL VAGA — abrir / preencher / salvar
-// ══════════════════════════════════════════════
+// ── MODAL VAGA ────────────────────────────────
 function switchTab(tab) {
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab===tab));
-  document.querySelectorAll('.tab-content').forEach(c => c.classList.toggle('active', c.dataset.tab===tab));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
+  document.querySelectorAll('.tab-content').forEach(c=>c.classList.toggle('active',c.dataset.tab===tab));
 }
-
+function checarVoucherFlag() {
+  const val = (document.getElementById('v-transporte')?.value||'').toUpperCase();
+  const el = document.getElementById('voucher-flag'); if (el) el.style.display = val.includes('VOUCHER')?'flex':'none';
+}
 function preencherSelectConsultor() {
-  const sel = document.getElementById('v-consultor');
+  const sel = document.getElementById('v-consultor'); if (!sel) return;
   const lista = podeVerTudo() ? consultoresConhecidos() : [session.nome];
-  sel.innerHTML = lista.map(c => `<option ${c===session.nome?'selected':''}>${c}</option>`).join('');
+  sel.innerHTML = lista.map(c=>`<option ${c===session.nome?'selected':''}>${c}</option>`).join('');
   sel.disabled = !podeVerTudo();
+}
+function renderTimelineModal(v) {
+  const wrap = document.getElementById('mv-timeline-wrap'); if (!wrap) return;
+  if (!v) { wrap.style.display='none'; return; }
+  const steps = [
+    { label:'Recebimento', date:v.recebimento }, { label:'Adm. Solicitada', date:v.dataAdmSolicitada },
+    { label:'Reprogramação', date:v.dataReprog }, { label:'Nova Data ETO', date:v.novaDataETO },
+    { label:'Adm. Realizada', date:v.dataAdmRealizada },
+  ];
+  const fmt = d=>d?String(d).slice(0,10).split('-').reverse().join('/'):'—';
+  document.getElementById('mv-timeline').innerHTML = steps.map(s=>`
+    <div class="tl-step ${s.date?'done':''}"><div class="tl-line"></div><div class="tl-dot"></div>
+      <div class="tl-label">${s.label}</div><div class="tl-date">${fmt(s.date)}</div></div>`).join('');
+  wrap.style.display='block';
 }
 
 function abrirModalVaga(jira) {
-  switchTab('vaga');
-  preencherSelectConsultor();
-  const v = jira ? VAGAS.find(x => x.jira === jira || x.id === jira) : null;
-
-  if (v && !podeVerTudo() && (v.consultor||'').toUpperCase() !== session.nome.toUpperCase()) { toast('Você não tem permissão para editar esta vaga.', 'error'); return; }
-
-  document.getElementById('mv-title').textContent = v ? 'Editar Vaga' : 'Nova Vaga';
-  document.getElementById('mv-subtitle').textContent = v ? `${v.colaborador} · ${v.jira}` : 'Preencha os dados do processo de seleção e admissão';
-  document.getElementById('v-id').value = v ? (v.jira || v.id) : '';
-  document.getElementById('v-jiraOriginal').value = v ? (v.jira || '') : ''; // chave para localizar a linha na planilha
-
-  const set = (elId, val) => { const el = document.getElementById(elId); if (el) el.value = val || ''; };
-  set('v-consultor', v ? v.consultor : session.nome);
-  if (v && podeVerTudo()) document.getElementById('v-consultor').value = v.consultor;
-  set('v-jira', v?.jira); set('v-codigoHub', v?.codigoHub); set('v-regional', v?.regional || 'SPI'); set('v-mes', v?.mes);
-  set('v-local', v?.local); set('v-modalidade', v?.modalidade || 'Temporário'); set('v-tempo', v?.tempo || '180 dias'); set('v-cargo', v?.cargo);
-  set('v-turno', v?.turno); set('v-horario', v?.horario); set('v-escala', v?.escala);
-
-  set('v-colaborador', v?.colaborador); set('v-matricula', v?.matricula); set('v-opsId', v?.opsId);
-  set('v-statusUniforme', v?.statusUniforme); set('v-cpf', v?.cpf); set('v-genero', v?.genero);
-  set('v-email', v?.email); set('v-telefone', v?.telefone); set('v-indicacao', v?.indicacao || 'NÃO');
-  set('v-preferencia', v?.preferencia || 'Sem preferência'); set('v-tipoProcesso', v?.tipoProcesso || 'ONLINE');
-
-  set('v-recebimento', v?.recebimento); set('v-dataAdmSolicitada', v?.dataAdmSolicitada); set('v-dataReprog', v?.dataReprog);
-  set('v-novaDataETO', v?.novaDataETO); set('v-dataAdmRealizada', v?.dataAdmRealizada);
-  set('v-etapa', v?.etapa || 'R&S'); set('v-statusVaga', v?.statusVaga); set('v-tipoVaga', v?.tipoVaga || '1 - Vaga Oficial');
-  set('v-salario', v?.salario); set('v-cnpj', v?.cnpj); set('v-departamentoGI', v?.departamentoGI);
-
-  set('v-transporte', v?.transporte || 'VALE TRANSPORTE'); set('v-refeicao', v?.refeicao); set('v-cestaBasica', v?.cestaBasica);
-  set('v-colete', v?.colete); set('v-bota', String(v?.bota||'')); set('v-luva', v?.luva);
-  set('v-gestorTurno', v?.gestorTurno); set('v-contatoGestorTurno', v?.contatoGestorTurno); set('v-unidadeWecan', v?.unidadeWecan);
-
-  set('v-noShow', v?.noShow); set('v-motivoAtraso', v?.motivoAtraso); set('v-observacao', v?.observacao); set('v-tipoProcessoDesistente', v?.tipoProcessoDesistente);
-
-  checarVoucherFlag();
-  renderTimelineModal(v);
-  abrirModal('modal-vaga');
-}
-
-function checarVoucherFlag() {
-  const val = (document.getElementById('v-transporte').value || '').toUpperCase();
-  document.getElementById('voucher-flag').style.display = val.includes('VOUCHER') ? 'flex' : 'none';
-}
-
-function renderTimelineModal(v) {
-  const wrap = document.getElementById('mv-timeline-wrap');
-  if (!v) { wrap.style.display = 'none'; return; }
-  const steps = [
-    { label:'Recebimento', date:v.recebimento },
-    { label:'Adm. Solicitada', date:v.dataAdmSolicitada },
-    { label:'Reprogramação', date:v.dataReprog },
-    { label:'Nova Data ETO', date:v.novaDataETO },
-    { label:'Adm. Realizada', date:v.dataAdmRealizada },
-  ];
-  const fmt = d => d ? d.split('-').reverse().join('/') : '—';
-  document.getElementById('mv-timeline').innerHTML = steps.map(s => `
-    <div class="tl-step ${s.date ? 'done':''}"><div class="tl-line"></div><div class="tl-dot"></div>
-      <div class="tl-label">${s.label}</div><div class="tl-date">${fmt(s.date)}</div></div>`).join('');
-  wrap.style.display = 'block';
+  switchTab('vaga'); preencherSelectConsultor();
+  const v = jira ? VAGAS.find(x=>x.jira===jira||x.id===jira) : null;
+  if (v && !podeVerTudo() && (v.consultor||'').toUpperCase()!==(session.nome||'').toUpperCase()) { toast('Sem permissão para editar esta vaga.','error'); return; }
+  document.getElementById('mv-title').textContent    = v?'Editar Vaga':'Nova Vaga';
+  document.getElementById('mv-subtitle').textContent = v?`${v.colaborador||''} · ${v.jira}`:'Preencha os dados do processo de seleção e admissão';
+  document.getElementById('v-id').value          = v?(v.jira||v.id):'';
+  document.getElementById('v-jiraOriginal').value = v?(v.jira||''):'';
+  const set = (id,val)=>{ const el=document.getElementById(id); if (el) el.value=val||''; };
+  set('v-consultor', v?v.consultor:session.nome);
+  set('v-jira',v?.jira); set('v-codigoHub',v?.codigoHub); set('v-regional',v?.regional||'SPI'); set('v-mes',v?.mes?String(v.mes).slice(0,10):'');
+  set('v-local',v?.local); set('v-modalidade',v?.modalidade||'Temporário'); set('v-tempo',v?.tempo||'180 dias'); set('v-cargo',v?.cargo);
+  set('v-turno',v?.turno); set('v-horario',v?.horario); set('v-escala',v?.escala);
+  set('v-colaborador',v?.colaborador); set('v-matricula',v?.matricula); set('v-opsId',v?.opsId);
+  set('v-statusUniforme',v?.statusUniforme); set('v-cpf',v?.cpf); set('v-genero',v?.genero||'');
+  set('v-email',v?.email); set('v-telefone',v?.telefone); set('v-indicacao',v?.indicacao||'NÃO');
+  set('v-preferencia',v?.preferencia||'Sem preferência'); set('v-tipoProcesso',v?.tipoProcesso||'ONLINE');
+  set('v-recebimento',v?.recebimento?String(v.recebimento).slice(0,10):'');
+  set('v-dataAdmSolicitada',v?.dataAdmSolicitada?String(v.dataAdmSolicitada).slice(0,10):'');
+  set('v-dataReprog',v?.dataReprog?String(v.dataReprog).slice(0,10):'');
+  set('v-novaDataETO',v?.novaDataETO?String(v.novaDataETO).slice(0,10):'');
+  set('v-dataAdmRealizada',v?.dataAdmRealizada?String(v.dataAdmRealizada).slice(0,10):'');
+  set('v-etapa',v?.etapa||'R&S'); set('v-statusVaga',v?.statusVaga||''); set('v-tipoVaga',v?.tipoVaga||'1 - Vaga Oficial');
+  set('v-salario',v?.salario); set('v-cnpj',v?.cnpj); set('v-departamentoGI',v?.departamentoGI);
+  set('v-transporte',v?.transporte||'VALE TRANSPORTE'); set('v-refeicao',v?.refeicao); set('v-cestaBasica',v?.cestaBasica);
+  set('v-colete',v?.colete); set('v-bota',String(v?.bota||'')); set('v-luva',v?.luva);
+  set('v-gestorTurno',v?.gestorTurno); set('v-contatoGestorTurno',v?.contatoGestorTurno); set('v-unidadeWecan',v?.unidadeWecan);
+  set('v-noShow',v?.noShow); set('v-motivoAtraso',v?.motivoAtraso||''); set('v-observacao',v?.observacao); set('v-tipoProcessoDesistente',v?.tipoProcessoDesistente||'');
+  checarVoucherFlag(); renderTimelineModal(v); abrirModal('modal-vaga');
 }
 
 async function salvarVaga() {
-  const jiraOriginal = document.getElementById('v-jiraOriginal').value; // Jira antes de qualquer edição
-  const get = elId => document.getElementById(elId).value;
+  const jiraOriginal = document.getElementById('v-jiraOriginal').value;
+  const get = id => document.getElementById(id)?.value||'';
   const transporte = get('v-transporte');
-  const isVoucher = transporte.toUpperCase().includes('VOUCHER');
+  const isVoucher  = transporte.toUpperCase().includes('VOUCHER');
 
-  const dadosForm = {
-    consultor:get('v-consultor'), jira:get('v-jira'), codigoHub:get('v-codigoHub'), regional:get('v-regional'), mes:get('v-mes'),
-    local:get('v-local'), modalidade:get('v-modalidade'), tempo:get('v-tempo'), cargo:get('v-cargo'),
-    turno:get('v-turno'), horario:get('v-horario'), escala:get('v-escala'),
-    colaborador:get('v-colaborador'), matricula:get('v-matricula'), opsId:get('v-opsId'), statusUniforme:get('v-statusUniforme'),
-    cpf:get('v-cpf'), genero:get('v-genero'), email:get('v-email'), telefone:get('v-telefone'), indicacao:get('v-indicacao'),
-    preferencia:get('v-preferencia'), tipoProcesso:get('v-tipoProcesso'),
-    recebimento:get('v-recebimento'), dataAdmSolicitada:get('v-dataAdmSolicitada'), dataReprog:get('v-dataReprog'),
-    novaDataETO:get('v-novaDataETO'), dataAdmRealizada:get('v-dataAdmRealizada'), etapa:get('v-etapa'),
-    statusVaga:get('v-statusVaga'), tipoVaga:get('v-tipoVaga'), salario:get('v-salario'), cnpj:get('v-cnpj'), departamentoGI:get('v-departamentoGI'),
-    transporte, refeicao:get('v-refeicao'), cestaBasica:get('v-cestaBasica'), colete:get('v-colete'), bota:get('v-bota'), luva:get('v-luva'),
-    gestorTurno:get('v-gestorTurno'), contatoGestorTurno:get('v-contatoGestorTurno'), unidadeWecan:get('v-unidadeWecan'),
-    noShow:get('v-noShow'), motivoAtraso:get('v-motivoAtraso'), observacao:get('v-observacao'), tipoProcessoDesistente:get('v-tipoProcessoDesistente'),
+  const vaga = {
+    jira: get('v-jira'), consultor: get('v-consultor'), codigo_hub: get('v-codigoHub'),
+    regional: get('v-regional'), mes: get('v-mes')||null, local_trabalho: get('v-local'),
+    modalidade: get('v-modalidade'), tempo: get('v-tempo'), cargo: get('v-cargo'),
+    turno: get('v-turno'), horario: get('v-horario'), escala: get('v-escala'),
+    colaborador: get('v-colaborador'), status_uniforme: get('v-statusUniforme'),
+    matricula: get('v-matricula'), ops_id: get('v-opsId'),
+    data_adm_solicitada: get('v-dataAdmSolicitada')||null, data_reprog: get('v-dataReprog')||null,
+    nova_data_eto: get('v-novaDataETO')||null, data_adm_realizada: get('v-dataAdmRealizada')||null,
+    etapa: get('v-etapa'), status_vaga: get('v-statusVaga'), tipo_vaga: get('v-tipoVaga'),
+    salario: get('v-salario'), cnpj: get('v-cnpj'), departamento_gi: get('v-departamentoGI'),
+    transporte, refeicao: get('v-refeicao'), cesta_basica: get('v-cestaBasica'),
+    colete: get('v-colete'), bota: get('v-bota'), luva: get('v-luva'),
+    gestor_turno: get('v-gestorTurno'), contato_gestor_turno: get('v-contatoGestorTurno'),
+    unidade_wecan: get('v-unidadeWecan'), cpf: get('v-cpf'),
+    email_colaborador: get('v-email'), telefone: get('v-telefone'), indicacao: get('v-indicacao'),
+    genero: get('v-genero'), tipo_processo: get('v-tipoProcesso'),
+    no_show: get('v-noShow'), motivo_atraso: get('v-motivoAtraso'),
+    observacao: get('v-observacao'), tipo_processo_desistente: get('v-tipoProcessoDesistente'),
+    recebimento: get('v-recebimento')||null,
+    aba: (get('v-regional')==='RIO/ES') ? 'SOC_RJ1 e RJ2' : 'HUBs',
   };
 
-  if (!dadosForm.jira) { toast('Informe o Código do Jira.', 'error'); return; }
-  if (!dadosForm.colaborador) { toast('Informe o nome do colaborador.', 'error'); return; }
+  if (!vaga.jira) { toast('Informe o Código do Jira.','error'); return; }
+  if (!vaga.colaborador) { toast('Informe o nome do colaborador.','error'); return; }
 
   const btn = document.getElementById('btn-salvar-vaga');
-  btn.disabled = true; btn.textContent = 'Salvando…';
+  btn.disabled=true; btn.textContent='Salvando…';
   try {
-    const resp = await apiCall('salvarVaga', { vaga: dadosForm, idOriginalJira: jiraOriginal || dadosForm.jira });
-    const vagaSalva = resp.vaga;
-    vagaSalva.id = vagaSalva.jira;
+    const vagaAnterior = VAGAS.find(x=>x.jira===jiraOriginal);
+    const eraVoucher   = (vagaAnterior?.transporte||'').toUpperCase().includes('VOUCHER');
 
-    // Detectar se era voucher antes (pra avisar sobre a fila)
-    const vagaAnterior = VAGAS.find(x => x.jira === jiraOriginal);
-    const eraVoucher = vagaAnterior ? (vagaAnterior.transporte||'').toUpperCase().includes('VOUCHER') : false;
+    const resp = await rpc('wc_salvar_vaga', { p_vaga:vaga, p_jira_original:jiraOriginal||vaga.jira });
 
-    // Preservar status da fila de voucher (gerenciado só localmente)
-    vagaSalva.filaVoucherStatus = vagaAnterior?.filaVoucherStatus ?? (isVoucher ? 'pendente' : null);
-    vagaSalva.filaVoucherMotivo = vagaAnterior?.filaVoucherMotivo ?? '';
-    vagaSalva.filaVoucherAutorizadoPor = vagaAnterior?.filaVoucherAutorizadoPor ?? '';
-    if (isVoucher && !eraVoucher) vagaSalva.filaVoucherStatus = 'pendente';
-    if (!isVoucher && eraVoucher) vagaSalva.filaVoucherStatus = null;
+    await carregarVagas();
+    await carregarFilaVoucher();
+    fecharModal('modal-vaga'); renderVagas(); atualizarBadgeFila();
 
-    if (resp.criado) {
-      VAGAS.push(vagaSalva);
-    } else {
-      const idx = VAGAS.findIndex(x => x.jira === (jiraOriginal || dadosForm.jira));
-      if (idx !== -1) VAGAS[idx] = vagaSalva; else VAGAS.push(vagaSalva);
-    }
-
-    fecharModal('modal-vaga');
-    renderVagas();
-    atualizarBadgeFila();
-
-    if (resp.criado) toast(isVoucher ? 'Vaga criada! Colaborador adicionado à fila de Voucher.' : 'Vaga criada com sucesso!', isVoucher ? 'info' : 'success');
-    else if (isVoucher && !eraVoucher) toast('Salvo! Colaborador adicionado à fila de autorização de Voucher.', 'info');
-    else if (!isVoucher && eraVoucher) toast('Salvo! Transporte deixou de ser Voucher — removido da fila.', 'info');
-    else toast('Vaga atualizada com sucesso!', 'success');
-  } catch (e) {
-    toast(e.message, 'error');
-  } finally {
-    btn.disabled = false; btn.textContent = 'Salvar Vaga';
-  }
+    if (resp.criado) toast(isVoucher?'Vaga criada! Adicionado à fila de Voucher.':'Vaga criada!', isVoucher?'info':'success');
+    else if (isVoucher&&!eraVoucher) toast('Salvo! Adicionado à fila de Voucher.','info');
+    else if (!isVoucher&&eraVoucher) toast('Salvo! Removido da fila de Voucher.','info');
+    else toast('Vaga atualizada!','success');
+  } catch(e) { toast(e.message,'error'); }
+  finally { btn.disabled=false; btn.textContent='Salvar Vaga'; }
 }
 
-// ══════════════════════════════════════════════
-//  FILA DE AUTORIZAÇÃO — VOUCHER
-// ══════════════════════════════════════════════
+// ── FILA DE VOUCHER ───────────────────────────
 let queueFilter = 'pendente';
 function setQueueFilter(f) {
-  queueFilter = f;
-  document.querySelectorAll('.qtab').forEach(b => b.classList.toggle('active', b.dataset.qf===f));
+  queueFilter=f;
+  document.querySelectorAll('.qtab').forEach(b=>b.classList.toggle('active',b.dataset.qf===f));
   renderQueue();
 }
 function atualizarBadgeFila() {
-  const n = VAGAS.filter(v => v.filaVoucherStatus === 'pendente').length;
-  document.getElementById('nav-voucher-count').textContent = n;
+  const n = VAGAS.filter(v=>v.filaVoucherStatus==='pendente').length;
+  const el = document.getElementById('nav-voucher-count'); if (el) el.textContent=n;
 }
 function renderQueue() {
-  const lista = VAGAS.filter(v => v.filaVoucherStatus === queueFilter);
-  const list = document.getElementById('queue-list');
-  if (!lista.length) { list.innerHTML = `<div class="empty-state"><div class="ico">📬</div>Nenhum colaborador nesta categoria</div>`; return; }
-  list.innerHTML = lista.map(v => {
-    const jiraEsc = (v.jira||'').replace(/'/g,"\\'");
-    return `
-    <div class="queue-card">
+  const lista = VAGAS.filter(v=>v.filaVoucherStatus===queueFilter);
+  const el    = document.getElementById('queue-list'); if (!el) return;
+  if (!lista.length) { el.innerHTML=`<div class="empty-state"><div class="ico">📬</div>Nenhum colaborador nesta categoria</div>`; return; }
+  el.innerHTML = lista.map(v=>{
+    const je=(v.jira||'').replace(/'/g,"\\'");
+    return `<div class="queue-card">
       <div class="qc-main"><strong>${v.colaborador||'—'}</strong><span>${v.consultor||'—'} · ${v.regional||'—'} · ${v.cargo||'—'} · Matrícula ${v.matricula||'—'}</span></div>
       <span class="qc-transp">${v.transporte||'—'}</span>
-      ${queueFilter === 'pendente' ? `
-        <div class="qc-actions">
-          <button class="btn btn-success btn-sm" onclick="autorizarVoucher('${jiraEsc}')">Aprovar</button>
-          <button class="btn btn-danger btn-sm" onclick="rejeitarVoucher('${jiraEsc}')">Rejeitar</button>
-        </div>` : queueFilter === 'aprovado' ? `<span class="pill uniforme-enviado">Pré-aprovado por ${v.filaVoucherAutorizadoPor||'—'}</span>`
-        : `<span class="pill noshow">${v.filaVoucherMotivo || 'Rejeitado'}</span>`}
+      ${queueFilter==='pendente'?`<div class="qc-actions">
+        <button class="btn btn-success btn-sm" onclick="autorizarVoucher('${je}')">Aprovar</button>
+        <button class="btn btn-danger btn-sm"  onclick="rejeitarVoucher('${je}')">Rejeitar</button>
+      </div>`:queueFilter==='aprovado'?`<span class="pill uniforme-enviado">Pré-aprovado por ${v.filaVoucherAutorizadoPor||'—'}</span>`
+        :`<span class="pill noshow">${v.filaVoucherMotivo||'Rejeitado'}</span>`}
     </div>`;
   }).join('');
 }
-function autorizarVoucher(jira) {
-  const v = VAGAS.find(x => x.jira === jira);
-  if (!v) return;
-  v.filaVoucherStatus = 'aprovado';
-  v.filaVoucherAutorizadoPor = session.nome;
-  toast('Pré-aprovado! Vai ativar de verdade quando aparecer no Template (admissão confirmada).', 'success');
-  renderQueue(); atualizarBadgeFila();
+async function autorizarVoucher(jira) {
+  try {
+    await rpc('wc_atualizar_fila', { p_jira:jira, p_status:'aprovado', p_motivo:'' });
+    const v = VAGAS.find(x=>x.jira===jira);
+    if (v) { v.filaVoucherStatus='aprovado'; v.filaVoucherAutorizadoPor=session.nome; }
+    toast('Pré-aprovado! Ativação real depende do Template.','success');
+    renderQueue(); atualizarBadgeFila();
+  } catch(e) { toast(e.message,'error'); }
 }
-function rejeitarVoucher(jira) {
-  const motivo = prompt('Motivo da rejeição (ex: colaborador trocou de benefício):') || 'Rejeitado';
-  const v = VAGAS.find(x => x.jira === jira);
-  if (!v) return;
-  v.filaVoucherStatus = 'rejeitado';
-  v.filaVoucherMotivo = motivo;
-  toast('Pendente rejeitado.', 'error');
-  renderQueue(); atualizarBadgeFila();
+async function rejeitarVoucher(jira) {
+  const motivo = prompt('Motivo da rejeição:')||'Rejeitado';
+  try {
+    await rpc('wc_atualizar_fila', { p_jira:jira, p_status:'rejeitado', p_motivo:motivo });
+    const v = VAGAS.find(x=>x.jira===jira);
+    if (v) { v.filaVoucherStatus='rejeitado'; v.filaVoucherMotivo=motivo; }
+    toast('Rejeitado.','error'); renderQueue(); atualizarBadgeFila();
+  } catch(e) { toast(e.message,'error'); }
 }
 
-// ══════════════════════════════════════════════
-//  HELPERS
-// ══════════════════════════════════════════════
-function abrirModal(id) { document.getElementById(id).classList.add('open'); }
-function fecharModal(id) { document.getElementById(id).classList.remove('open'); }
-document.addEventListener('click', e => { if (e.target.classList.contains('modal-backdrop')) e.target.classList.remove('open'); });
+// ── USUÁRIOS ──────────────────────────────────
+async function renderUsuarios() {
+  const tbody = document.getElementById('tbody-usuarios'); if (!tbody) return;
+  tbody.innerHTML='<tr><td colspan="5" style="padding:20px;color:var(--muted)">Carregando…</td></tr>';
+  try {
+    const resp = await rpc('wc_listar_usuarios', {});
+    tbody.innerHTML = (resp.usuarios||[]).map(u=>`
+      <tr>
+        <td><strong>${u.nome}</strong></td><td>${u.email}</td>
+        <td><span class="pill muted">${PERFIL_LABEL[u.perfil]||u.perfil}</span></td>
+        <td>${u.ativo===false?'<span class="pill noshow">INATIVO</span>':'<span class="pill vaga-noprazo">ATIVO</span>'}</td>
+        <td class="actions-cell">
+          <button class="btn btn-ghost btn-sm" onclick='abrirModalUsuario(${JSON.stringify(u)})'>Editar</button>
+          <button class="btn btn-ghost btn-sm" onclick="toggleUsuarioAtivo('${u.id}')">${u.ativo===false?'Ativar':'Desativar'}</button>
+          <button class="btn btn-danger btn-sm" onclick="excluirUsuario('${u.id}','${(u.nome||'').replace(/'/g,"\\'")}')">Excluir</button>
+        </td>
+      </tr>`).join('') || `<tr><td colspan="5"><div class="empty-state">Nenhum usuário</div></td></tr>`;
+  } catch(e) { tbody.innerHTML=`<tr><td colspan="5" style="color:var(--danger);padding:16px">${e.message}</td></tr>`; }
+}
 
+function abrirModalUsuario(u) {
+  document.getElementById('mu-title').textContent  = u?'Editar Usuário':'Novo Usuário';
+  document.getElementById('u-id').value    = u?u.id:'';
+  document.getElementById('u-nome').value  = u?u.nome:'';
+  document.getElementById('u-email').value = u?u.email:'';
+  document.getElementById('u-senha').value = '';
+  document.getElementById('u-perfil').value= u?u.perfil:'equipe';
+  abrirModal('modal-usuario');
+}
+
+async function salvarUsuario() {
+  const id    = document.getElementById('u-id').value;
+  const nome  = document.getElementById('u-nome').value.trim();
+  const email = document.getElementById('u-email').value.trim().toLowerCase();
+  const senha = document.getElementById('u-senha').value;
+  const perf  = document.getElementById('u-perfil').value;
+  const btn   = document.getElementById('btn-salvar-usuario');
+  if (!nome||!email) { toast('Informe nome e e-mail.','error'); return; }
+  btn.disabled=true; btn.textContent='Salvando…';
+  try {
+    await rpc('wc_salvar_usuario', { p_usuario:{ id:id||undefined, nome, email, senha:senha||undefined, perfil:perf } });
+    fecharModal('modal-usuario');
+    await renderUsuarios();
+    toast('Usuário salvo!','success');
+  } catch(e) { toast(e.message,'error'); }
+  finally { btn.disabled=false; btn.textContent='Salvar'; }
+}
+
+async function toggleUsuarioAtivo(id) {
+  try {
+    const resp = await rpc('wc_toggle_usuario', { p_id:id });
+    await renderUsuarios();
+    toast(resp.ativo?'Usuário ativado.':'Usuário desativado.','success');
+  } catch(e) { toast(e.message,'error'); }
+}
+
+async function excluirUsuario(id, nome) {
+  if (!confirm(`Excluir o acesso de ${nome}? Irreversível.`)) return;
+  try {
+    await rpc('wc_excluir_usuario', { p_id:id });
+    await renderUsuarios();
+    toast('Usuário excluído.','success');
+  } catch(e) { toast(e.message,'error'); }
+}
+
+// ── HELPERS ───────────────────────────────────
+function abrirModal(id) { document.getElementById(id)?.classList.add('open'); }
+function fecharModal(id){ document.getElementById(id)?.classList.remove('open'); }
+document.addEventListener('click', e=>{ if (e.target.classList.contains('modal-backdrop')) e.target.classList.remove('open'); });
 function toast(msg, tipo) {
-  const el = document.getElementById('toast');
-  el.textContent = msg;
-  el.className = 'show' + (tipo ? ' ' + tipo : '');
+  const el=document.getElementById('toast'); if (!el) return;
+  el.textContent=msg; el.className='show'+(tipo?' '+tipo:'');
   clearTimeout(window._toastTimer);
-  window._toastTimer = setTimeout(() => el.className = '', 4000);
+  window._toastTimer=setTimeout(()=>el.className='',4500);
 }
 
+// ── INIT ──────────────────────────────────────
+// Guarda o innerHTML do #main antes do JS sobrescrevê-lo
+_MAIN_HTML = document.getElementById('main').innerHTML;
 initApp();
 </script>
 </body>
