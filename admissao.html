@@ -304,6 +304,23 @@
   .mt-10 { margin-top:10px; } .mt-16 { margin-top: 16px; }
   .section-divider { border:none; border-top:1px solid var(--border); margin:20px 0; }
 
+  /* ── PAINEL DE COLUNAS ── */
+  #col-picker-panel {
+    display:none; position:absolute; top:calc(100% + 6px); right:0;
+    background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
+    padding:14px 16px; width:340px; z-index:500;
+    box-shadow:0 8px 30px rgba(0,0,0,.35);
+  }
+  #col-picker-panel.open { display:block; }
+  #col-picker-panel h4 { font-size:11.5px; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; margin-bottom:12px; }
+  .col-picker-grid { display:grid; grid-template-columns:1fr 1fr; gap:6px; max-height:320px; overflow-y:auto; }
+  .col-check-item { display:flex; align-items:center; gap:7px; padding:5px 8px; border-radius:6px; cursor:pointer; font-size:12.5px; color:var(--muted); transition:background .12s; }
+  .col-check-item:hover { background:var(--surface2); color:var(--text); }
+  .col-check-item input[type=checkbox] { accent-color:var(--accent); width:14px; height:14px; cursor:pointer; }
+  .col-check-item.checked { color:var(--text); }
+  .col-picker-actions { display:flex; gap:8px; margin-top:12px; padding-top:10px; border-top:1px solid var(--border); }
+  .toolbar-right { position:relative; }
+
   /* ── TEMAS ── */
   body.tema-claro {
     --bg:#f0f2f5; --surface:#ffffff; --surface2:#f5f7fa; --surface3:#eaedf1;
@@ -598,15 +615,21 @@
         <option value="">Todos os consultores</option>
       </select>
       <button class="btn btn-ghost btn-sm" onclick="atualizarDados()" title="Buscar dados mais recentes">🔄 Atualizar</button>
+      <div class="toolbar-right">
+        <button class="btn btn-ghost btn-sm" onclick="toggleColPicker()" id="btn-col-picker" title="Configurar colunas visíveis">⚙️ Colunas</button>
+        <div id="col-picker-panel">
+          <h4>Colunas visíveis</h4>
+          <div class="col-picker-grid" id="col-picker-grid"></div>
+          <div class="col-picker-actions">
+            <button class="btn btn-ghost btn-sm" onclick="resetColunas()">Padrão</button>
+            <button class="btn btn-primary btn-sm" style="margin-left:auto" onclick="aplicarColunas()">Aplicar</button>
+          </div>
+        </div>
+      </div>
     </div>
     <div class="table-wrap">
       <table class="main-table">
-        <thead>
-          <tr>
-            <th>Jira</th><th>Consultor</th><th>Reg.</th><th>Colaborador</th><th>Cargo</th>
-            <th>Local</th><th>Uniforme</th><th>Status Vaga</th><th>Transporte</th><th>Ações</th>
-          </tr>
-        </thead>
+        <thead><tr></tr></thead>
         <tbody id="tbody-vagas"></tbody>
       </table>
     </div>
@@ -1083,9 +1106,87 @@ let session = null;
 let VAGAS   = [];
 let OPERACOES = [];
 let INDICACOES = [];
+let USUARIOS_SISTEMA = []; // lista de usuários cadastrados pelo Master
 let _MAIN_HTML = '';
 let _importRows = [];
 let _TEMA_ATUAL = 'escuro';
+
+// ── Colunas disponíveis na tabela de vagas ─────
+const COLUNAS_DISPONIVEIS = [
+  { id:'jira',           label:'Jira',            default:true,  render: v => `<code style="font-size:11px">${v.jira||'—'}</code>` },
+  { id:'consultor',      label:'Consultor',        default:true,  render: v => v.consultor||'—' },
+  { id:'regional',       label:'Regional',         default:true,  render: v => regionalPill(v.regional) },
+  { id:'colaborador',    label:'Colaborador',      default:true,  render: v => `<span class="text-truncate">${v.colaborador||'—'}</span>` },
+  { id:'cargo',          label:'Cargo',            default:true,  render: v => v.cargo||'—' },
+  { id:'local',          label:'Local',            default:true,  render: v => `<span class="text-truncate">${v.local||'—'}</span>` },
+  { id:'statusUniforme', label:'Uniforme',         default:true,  render: v => suPill(v.statusUniforme) },
+  { id:'statusVaga',     label:'Status Vaga',      default:true,  render: v => svPill(v.statusVaga) },
+  { id:'transporte',     label:'Transporte',       default:true,  render: v => trPill(v.transporte) },
+  { id:'matricula',      label:'Matrícula',        default:false, render: v => v.matricula||'—' },
+  { id:'opsId',          label:'OPS ID',           default:false, render: v => v.opsId||'—' },
+  { id:'codigoHub',      label:'Cód. Hub',         default:false, render: v => v.codigoHub||'—' },
+  { id:'mes',            label:'Mês',              default:false, render: v => v.mes ? new Date(v.mes+'T00:00').toLocaleDateString('pt-BR',{month:'short',year:'numeric'}) : '—' },
+  { id:'modalidade',     label:'Modalidade',       default:false, render: v => v.modalidade||'—' },
+  { id:'turno',          label:'Turno',            default:false, render: v => v.turno||'—' },
+  { id:'horario',        label:'Horário',          default:false, render: v => v.horario||'—' },
+  { id:'escala',         label:'Escala',           default:false, render: v => v.escala||'—' },
+  { id:'cpf',            label:'CPF',              default:false, render: v => v.cpf||'—' },
+  { id:'email',          label:'E-mail',           default:false, render: v => v.email||'—' },
+  { id:'telefone',       label:'Telefone',         default:false, render: v => v.telefone||'—' },
+  { id:'genero',         label:'Gênero',           default:false, render: v => v.genero||'—' },
+  { id:'etapa',          label:'Etapa',            default:false, render: v => v.etapa||'—' },
+  { id:'recebimento',    label:'Recebimento',      default:false, render: v => v.recebimento ? new Date(v.recebimento+'T00:00').toLocaleDateString('pt-BR') : '—' },
+  { id:'dataAdmSolicitada', label:'Adm. Solicitada', default:false, render: v => v.dataAdmSolicitada ? new Date(v.dataAdmSolicitada+'T00:00').toLocaleDateString('pt-BR') : '—' },
+  { id:'dataAdmRealizada',  label:'Adm. Realizada',  default:false, render: v => v.dataAdmRealizada  ? new Date(v.dataAdmRealizada +'T00:00').toLocaleDateString('pt-BR') : '—' },
+  { id:'salario',        label:'Salário',          default:false, render: v => v.salario||'—' },
+  { id:'refeicao',       label:'Refeição',         default:false, render: v => v.refeicao||'—' },
+  { id:'cestaBasica',    label:'Cesta Básica',     default:false, render: v => v.cestaBasica||'—' },
+  { id:'colete',         label:'Colete',           default:false, render: v => v.colete||'—' },
+  { id:'bota',           label:'Bota',             default:false, render: v => v.bota||'—' },
+  { id:'luva',           label:'Luva',             default:false, render: v => v.luva||'—' },
+  { id:'unidadeWecan',   label:'Unidade WeCan',    default:false, render: v => v.unidadeWecan||'—' },
+  { id:'tipoVaga',       label:'Tipo de Vaga',     default:false, render: v => v.tipoVaga||'—' },
+  { id:'noShow',         label:'No Show',          default:false, render: v => v.noShow ? `<span class="pill noshow">Sim</span>` : '—' },
+  { id:'indicacao',      label:'Indicação Shopee', default:false, render: v => v.indicacao||'—' },
+];
+
+const COL_PREF_KEY = 'wecan_colunas_v1';
+let _colunasAtivas = new Set();
+
+function carregarPreferenciaColunas() {
+  try {
+    const raw = localStorage.getItem(COL_PREF_KEY);
+    if (raw) {
+      _colunasAtivas = new Set(JSON.parse(raw));
+    } else {
+      _colunasAtivas = new Set(COLUNAS_DISPONIVEIS.filter(c=>c.default).map(c=>c.id));
+    }
+  } catch(e) {
+    _colunasAtivas = new Set(COLUNAS_DISPONIVEIS.filter(c=>c.default).map(c=>c.id));
+  }
+}
+
+function salvarPreferenciaColunas() {
+  try { localStorage.setItem(COL_PREF_KEY, JSON.stringify([..._colunasAtivas])); } catch(e) {}
+}
+
+// helpers de pill usados pelas colunas
+function suPill(s) {
+  if (!s) return '<span class="pill muted">—</span>';
+  const u = s.toUpperCase();
+  if (u.includes('ENVIADO')||u.includes('SAÍDA')||u.includes('SAIDA')) return `<span class="pill uniforme-enviado">${s}</span>`;
+  return `<span class="pill uniforme-pendente">${s}</span>`;
+}
+function svPill(s) {
+  if (!s) return '<span class="pill muted">—</span>';
+  if (s.includes('No Prazo'))   return `<span class="pill vaga-noprazo">${s}</span>`;
+  if (s.includes('Antecipada')) return `<span class="pill vaga-antecipada">${s}</span>`;
+  if (s.includes('Atrasada'))   return `<span class="pill vaga-atrasada">${s}</span>`;
+  return `<span class="pill muted">${s}</span>`;
+}
+function trPill(s) {
+  return s && s.toUpperCase().includes('VOUCHER') ? `<span class="pill voucher">${s}</span>` : (s||'—');
+}
 
 const VOUCHER_APP_URL = 'voucher.html';
 const REGIONAIS       = ['SPI','RIO/ES','CO/N','SPM'];
@@ -1182,6 +1283,19 @@ async function carregarOperacoes() {
   } catch(e) {}
 }
 
+async function carregarUsuariosSistema() {
+  try {
+    // wc_listar_consultores retorna apenas id+nome+perfil, seguro para todos os perfis
+    const resp = await rpc('wc_listar_consultores', {});
+    USUARIOS_SISTEMA = (resp.usuarios || [])
+      .map(u => ({ id: u.id, nome: u.nome, perfil: u.perfil }))
+      .sort((a,b) => a.nome.localeCompare(b.nome));
+  } catch(e) {
+    // Fallback: se a RPC ainda não existe no banco, usa nomes das vagas carregadas
+    USUARIOS_SISTEMA = [];
+  }
+}
+
 async function carregarIndicacoes() {
   try {
     const r = await rpc('wc_listar_indicacoes', {});
@@ -1192,7 +1306,7 @@ async function carregarIndicacoes() {
 async function atualizarDados() {
   toast('Atualizando dados…', 'info');
   try {
-    await Promise.all([carregarVagas(), carregarFilaVoucher(), carregarIndicacoes()]);
+    await Promise.all([carregarVagas(), carregarFilaVoucher(), carregarIndicacoes(), carregarUsuariosSistema()]);
     popularFiltroConsultor();
     const ativa = document.querySelector('.page.active');
     if (ativa) navTo(ativa.id.replace('page-',''));
@@ -1221,12 +1335,13 @@ async function iniciarSessao(conta) {
   main.style.display = 'block';
   main.innerHTML = '<div style="padding:60px;text-align:center;color:var(--muted)">⏳ Carregando dados…</div>';
   try {
-    await Promise.all([carregarVagas(), carregarFilaVoucher(), carregarOperacoes(), carregarIndicacoes()]);
+    await Promise.all([carregarVagas(), carregarFilaVoucher(), carregarOperacoes(), carregarIndicacoes(), carregarUsuariosSistema()]);
   } catch(e) {
     main.innerHTML = `<div style="padding:60px;text-align:center;color:var(--danger)">Erro ao carregar.<br/><small>${e.message}</small></div>`;
     return;
   }
   main.innerHTML = _MAIN_HTML;
+  carregarPreferenciaColunas();
   popularFiltroConsultor();
   iniciarConfiguracoes();
   navTo('home');
@@ -1288,7 +1403,10 @@ function abrirVoucherEm(pagina) {
 function popularFiltroConsultor() {
   const sel = document.getElementById('filtro-consultor');
   if (!sel) return;
-  const lista = podeVerTudo() ? consultoresConhecidos() : [session.nome];
+  // Usa usuários do sistema se disponíveis, senão cai para nomes das vagas
+  const lista = podeVerTudo()
+    ? (USUARIOS_SISTEMA.length ? USUARIOS_SISTEMA.map(u=>u.nome) : consultoresConhecidos())
+    : [session.nome];
   sel.innerHTML = '<option value="">Todos os consultores</option>' + lista.map(c=>`<option>${c}</option>`).join('');
   sel.parentElement.style.display = podeVerTudo() ? 'block' : 'none';
 }
@@ -1557,44 +1675,84 @@ function renderVagas() {
   );
 
   const tbody = document.getElementById('tbody-vagas');
+  const thead = document.querySelector('#page-vagas .main-table thead tr');
   const count = document.getElementById('vagas-count');
   if (!tbody) return;
-  if (!lista.length) { tbody.innerHTML=`<tr><td colspan="10"><div class="empty-state"><div class="ico">🔍</div>Nenhuma vaga encontrada</div></td></tr>`; if (count) count.textContent=''; return; }
-  if (count) count.textContent = `${lista.length} vaga(s) exibida(s)`;
 
-  const su = s => {
-    if (!s) return '<span class="pill muted">—</span>';
-    const u = s.toUpperCase();
-    if (u.includes('ENVIADO')||u.includes('SAÍDA')||u.includes('SAIDA')) return `<span class="pill uniforme-enviado">${s}</span>`;
-    return `<span class="pill uniforme-pendente">${s}</span>`;
-  };
-  const sv = s => {
-    if (!s) return '<span class="pill muted">—</span>';
-    if (s.includes('No Prazo')) return `<span class="pill vaga-noprazo">${s}</span>`;
-    if (s.includes('Antecipada')) return `<span class="pill vaga-antecipada">${s}</span>`;
-    if (s.includes('Atrasada')) return `<span class="pill vaga-atrasada">${s}</span>`;
-    return `<span class="pill muted">${s}</span>`;
-  };
-  const tr = s => s && s.toUpperCase().includes('VOUCHER') ? `<span class="pill voucher">${s}</span>` : (s||'—');
+  // Colunas ativas nesta renderização
+  const cols = COLUNAS_DISPONIVEIS.filter(c => _colunasAtivas.has(c.id));
+  const nCols = cols.length + 1; // +1 para coluna de ações
+
+  // Reconstruir cabeçalho
+  if (thead) {
+    thead.innerHTML = cols.map(c=>`<th>${c.label}</th>`).join('') + '<th>Ações</th>';
+  }
+
+  if (!lista.length) {
+    tbody.innerHTML=`<tr><td colspan="${nCols}"><div class="empty-state"><div class="ico">🔍</div>Nenhuma vaga encontrada</div></td></tr>`;
+    if (count) count.textContent=''; return;
+  }
+  if (count) count.textContent = `${lista.length} vaga(s) exibida(s)`;
 
   tbody.innerHTML = lista.map(v=>{
     const je=(v.jira||'').replace(/'/g,"\\'");
+    const cells = cols.map(c=>`<td>${c.render(v)}</td>`).join('');
     return `<tr onclick="abrirModalVaga('${je}')">
-      <td><code style="font-size:11px">${v.jira||'—'}</code></td>
-      <td>${v.consultor||'—'}</td>
-      <td>${regionalPill(v.regional)}</td>
-      <td><span class="text-truncate">${v.colaborador||'—'}</span></td>
-      <td>${v.cargo||'—'}</td>
-      <td><span class="text-truncate">${v.local||'—'}</span></td>
-      <td>${su(v.statusUniforme)}</td>
-      <td>${sv(v.statusVaga)}</td>
-      <td>${tr(v.transporte)}</td>
+      ${cells}
       <td class="actions-cell" onclick="event.stopPropagation()">
         <button class="btn btn-ghost btn-sm" onclick="abrirModalVaga('${je}')">Editar</button>
       </td>
     </tr>`;
   }).join('');
 }
+
+// ── SELETOR DE COLUNAS ────────────────────────
+function toggleColPicker() {
+  const panel = document.getElementById('col-picker-panel');
+  if (!panel) return;
+  const isOpen = panel.classList.toggle('open');
+  if (isOpen) renderColPicker();
+}
+
+function renderColPicker() {
+  const grid = document.getElementById('col-picker-grid');
+  if (!grid) return;
+  grid.innerHTML = COLUNAS_DISPONIVEIS.map(c => `
+    <label class="col-check-item ${_colunasAtivas.has(c.id)?'checked':''}">
+      <input type="checkbox" data-col="${c.id}" ${_colunasAtivas.has(c.id)?'checked':''}
+        onchange="toggleColuna(this)"/>
+      ${c.label}
+    </label>`).join('');
+}
+
+function toggleColuna(input) {
+  const id = input.dataset.col;
+  if (input.checked) _colunasAtivas.add(id);
+  else _colunasAtivas.delete(id);
+  input.closest('.col-check-item').classList.toggle('checked', input.checked);
+}
+
+function aplicarColunas() {
+  salvarPreferenciaColunas();
+  document.getElementById('col-picker-panel').classList.remove('open');
+  renderVagas();
+}
+
+function resetColunas() {
+  _colunasAtivas = new Set(COLUNAS_DISPONIVEIS.filter(c=>c.default).map(c=>c.id));
+  salvarPreferenciaColunas();
+  renderColPicker();
+  renderVagas();
+}
+
+// Fechar painel ao clicar fora
+document.addEventListener('click', e => {
+  const panel = document.getElementById('col-picker-panel');
+  const btn   = document.getElementById('btn-col-picker');
+  if (panel && btn && !panel.contains(e.target) && !btn.contains(e.target)) {
+    panel.classList.remove('open');
+  }
+});
 
 // ── MODAL VAGA ────────────────────────────────
 function switchTab(nome) {
@@ -1663,11 +1821,20 @@ function abrirModalVaga(jiraOuNull) {
   set('v-tipoProcessoDesistente', v?.tipoProcessoDesistente||'');
   checarVoucherFlag();
 
-  // popular consultor
+  // popular consultor com usuários cadastrados no sistema
   const selC = document.getElementById('v-consultor');
-  const lista = podeVerTudo() ? consultoresConhecidos() : [session.nome];
-  if (!lista.includes(session.nome)) lista.unshift(session.nome);
-  selC.innerHTML = lista.map(c=>`<option ${v?.consultor===c?'selected':''}>${c}</option>`).join('');
+  let listaC;
+  if (USUARIOS_SISTEMA.length) {
+    // Usa a lista real de usuários. Garante que o nome do usuário atual sempre aparece.
+    const nomes = USUARIOS_SISTEMA.map(u => u.nome);
+    if (!nomes.includes(session.nome)) nomes.unshift(session.nome);
+    listaC = nomes;
+  } else {
+    // Fallback: nomes que já aparecem nas vagas
+    listaC = consultoresConhecidos();
+    if (!listaC.includes(session.nome)) listaC.unshift(session.nome);
+  }
+  selC.innerHTML = listaC.map(c=>`<option ${(v?.consultor||session.nome)===c?'selected':''}>${c}</option>`).join('');
   if (!podeVerTudo()) { selC.value=session.nome; selC.disabled=true; } else selC.disabled=false;
 
   // timeline
@@ -2182,7 +2349,6 @@ function toast(msg, tipo) {
 }
 
 // ── INIT ──────────────────────────────────────
-_MAIN_HTML = document.getElementById('main').innerHTML;
 initApp();
 </script>
 </body>
