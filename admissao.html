@@ -1662,32 +1662,36 @@ function carregarTema() {
 
 // ── Carregar dados ────────────────────────────
 async function carregarVagas() {
-  const resp = await rpc('wc_listar_vagas', {});
-  VAGAS = (resp.vagas || []).map(v => ({
-    ...v, id:v.jira, codigoHub:v.codigo_hub, local:v.local_trabalho,
-    statusUniforme:v.status_uniforme, opsId:v.ops_id,
-    dataAdmSolicitada:v.data_adm_solicitada, dataReprog:v.data_reprog,
-    novaDataETO:v.nova_data_eto, dataAdmRealizada:v.data_adm_realizada,
-    statusVaga:v.status_vaga, tipoVaga:v.tipo_vaga, departamentoGI:v.departamento_gi,
-    cestaBasica:v.cesta_basica, gestorTurno:v.gestor_turno,
-    contatoGestorTurno:v.contato_gestor_turno, unidadeWecan:v.unidade_wecan,
-    email:v.email_colaborador, tipoProcesso:v.tipo_processo,
-    noShow:v.no_show, motivoAtraso:v.motivo_atraso,
-    tipoProcessoDesistente:v.tipo_processo_desistente,
-    filaVoucherStatus:null, filaVoucherAutorizadoPor:'', filaVoucherMotivo:'',
-  }));
+  try {
+    const resp = await rpc('wc_listar_vagas', {});
+    VAGAS = (resp.vagas || []).map(v => ({
+      ...v, id:v.jira, codigoHub:v.codigo_hub, local:v.local_trabalho,
+      statusUniforme:v.status_uniforme, opsId:v.ops_id,
+      dataAdmSolicitada:v.data_adm_solicitada, dataReprog:v.data_reprog,
+      novaDataETO:v.nova_data_eto, dataAdmRealizada:v.data_adm_realizada,
+      statusVaga:v.status_vaga, tipoVaga:v.tipo_vaga, departamentoGI:v.departamento_gi,
+      cestaBasica:v.cesta_basica, gestorTurno:v.gestor_turno,
+      contatoGestorTurno:v.contato_gestor_turno, unidadeWecan:v.unidade_wecan,
+      email:v.email_colaborador, tipoProcesso:v.tipo_processo,
+      noShow:v.no_show, motivoAtraso:v.motivo_atraso,
+      tipoProcessoDesistente:v.tipo_processo_desistente,
+      filaVoucherStatus:null, filaVoucherAutorizadoPor:'', filaVoucherMotivo:'',
+    }));
+  } catch(e) { VAGAS = []; }
 }
 
 async function carregarFilaVoucher() {
   if (!podeAutorizarVoucher()) return;
-  const resp = await rpc('wc_listar_fila', {});
-  const mapa = {};
-  (resp.fila || []).forEach(f => { if (!mapa[f.vaga_jira]) mapa[f.vaga_jira] = f; });
-  VAGAS.forEach(v => {
-    const f = mapa[v.jira];
-    if (f) { v.filaVoucherStatus=f.status; v.filaVoucherAutorizadoPor=f.autorizado_por||''; v.filaVoucherMotivo=f.motivo_rejeicao||''; }
-  });
-  window._filaHistorico = resp.historico || [];
+  try {
+    const resp = await rpc('wc_listar_fila', {});
+    const mapa = {};
+    (resp.fila || []).forEach(f => { if (!mapa[f.vaga_jira]) mapa[f.vaga_jira] = f; });
+    VAGAS.forEach(v => {
+      const f = mapa[v.jira];
+      if (f) { v.filaVoucherStatus=f.status; v.filaVoucherAutorizadoPor=f.autorizado_por||''; v.filaVoucherMotivo=f.motivo_rejeicao||''; }
+    });
+    window._filaHistorico = resp.historico || [];
+  } catch(e) { /* sem permissão ou erro — ignora silenciosamente */ }
 }
 
 async function carregarOperacoes() {
@@ -1752,7 +1756,14 @@ async function iniciarSessao(conta) {
   if (overlay) overlay.style.display = 'flex';
   main.style.display = 'block';
   try {
-    await Promise.all([carregarVagas(), carregarFilaVoucher(), carregarOperacoes(), carregarIndicacoes(), carregarUsuariosSistema()]);
+    // allSettled: mesmo que uma RPC falhe, as outras continuam e o sistema carrega
+    await Promise.allSettled([
+      carregarVagas(),
+      carregarFilaVoucher(),
+      carregarOperacoes(),
+      carregarIndicacoes(),
+      carregarUsuariosSistema()
+    ]);
   } catch(e) {
     if (overlay) overlay.style.display = 'none';
     main.innerHTML = `<div style="padding:60px;text-align:center;color:var(--danger)">Erro ao carregar.<br/><small>${e.message}</small></div>`;
