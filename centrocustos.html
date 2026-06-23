@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Centro de Custos — WeCan BR</title>
+<style>
+:root{
+  --bg:#150a20;--surface:#211132;--surface2:#2c1740;--surface3:#38204e;
+  --border:#432a5c;--accent:#63ccb0;--accent-dim:#4aa890;--brand:#4f0672;
+  --success:#22c55e;--danger:#ef4444;--warning:#f59e0b;--voucher:#4f7cff;
+  --text:#efe9f7;--muted:#a394bf;--radius:10px;--font:'Segoe UI',system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100vh;display:flex}
+::-webkit-scrollbar{width:8px}::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+
+/* SIDEBAR */
+#sidebar{width:220px;min-height:100vh;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:100}
+.sidebar-logo{padding:18px 16px 14px;border-bottom:1px solid var(--border)}
+.sidebar-logo .mark{width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,var(--accent),var(--accent-dim));display:flex;align-items:center;justify-content:center;font-weight:900;font-size:14px;color:var(--brand);margin-bottom:8px}
+.sidebar-logo h2{font-size:12.5px;font-weight:800}.sidebar-logo span{font-size:11px;color:var(--muted)}
+nav{flex:1;padding:10px 0;overflow-y:auto}
+nav a{display:flex;align-items:center;gap:10px;padding:9px 16px;font-size:13px;color:var(--muted);cursor:pointer;border-left:3px solid transparent;transition:all .15s;text-decoration:none}
+nav a:hover{color:var(--text);background:var(--surface2)}
+nav a.active{color:var(--accent);border-left-color:var(--accent);background:rgba(99,204,176,.10);font-weight:600}
+.ico{width:18px;text-align:center;font-size:14px}
+.sidebar-user{padding:12px 16px;border-top:1px solid var(--border);display:flex;align-items:center;gap:10px}
+.user-avatar{width:32px;height:32px;border-radius:50%;background:var(--surface3);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:var(--accent);flex-shrink:0}
+.user-info{flex:1;min-width:0}.user-info strong{display:block;font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.user-info span{color:var(--muted);font-size:10.5px}
+.btn-logout{background:none;border:1px solid var(--border);color:var(--muted);font-size:11px;padding:3px 8px;border-radius:6px;cursor:pointer}
+.btn-logout:hover{border-color:var(--danger);color:var(--danger)}
+
+/* MAIN */
+#main{margin-left:220px;flex:1;padding:26px 32px;min-height:100vh}
+.page{display:none}.page.active{display:block}
+.page-header{margin-bottom:22px;display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.page-header h1{font-size:21px;font-weight:800}.page-header p{color:var(--muted);font-size:12.5px;margin-top:4px}
+
+/* CARDS KPI */
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:22px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px}
+.card-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.7px}
+.card-value{font-size:28px;font-weight:800;margin-top:6px;color:var(--accent)}
+.card-value.green{color:var(--success)}.card-value.red{color:var(--danger)}.card-value.amber{color:var(--warning)}
+.card-sub{font-size:11px;color:var(--muted);margin-top:4px}
+
+/* TOOLBAR */
+.toolbar{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center}
+.toolbar input,.toolbar select{background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:8px 12px;font-size:13px;font-family:var(--font);outline:none}
+.toolbar input{flex:1;min-width:200px}.toolbar input::placeholder{color:var(--muted)}
+.toolbar input:focus,.toolbar select:focus{border-color:var(--accent)}
+
+/* BUTTONS */
+.btn{padding:8px 16px;border-radius:8px;border:none;cursor:pointer;font-size:13px;font-family:var(--font);font-weight:600;transition:all .15s;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.btn-primary{background:var(--accent);color:var(--brand)}.btn-primary:hover{background:#7adcc4}
+.btn-danger{background:rgba(239,68,68,.13);color:var(--danger);border:1px solid rgba(239,68,68,.3)}.btn-danger:hover{background:var(--danger);color:#fff}
+.btn-success{background:rgba(34,197,94,.13);color:var(--success);border:1px solid rgba(34,197,94,.3)}.btn-success:hover{background:var(--success);color:#fff}
+.btn-ghost{background:var(--surface2);color:var(--text);border:1px solid var(--border)}.btn-ghost:hover{border-color:var(--accent);color:var(--accent)}
+.btn-sm{padding:5px 11px;font-size:12px}.btn-primary:disabled{opacity:.5;cursor:not-allowed}
+
+/* TABLE */
+.table-wrap{overflow-x:auto;border-radius:8px;border:1px solid var(--border)}
+table.main-table{width:100%;border-collapse:collapse;font-size:12.5px}
+table.main-table thead th{background:var(--surface2);color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.5px;padding:10px 12px;text-align:left;white-space:nowrap;border-bottom:1px solid var(--border);position:sticky;top:0}
+table.main-table tbody tr{border-bottom:1px solid rgba(46,51,80,.4)}
+table.main-table tbody tr:hover td{background:rgba(99,204,176,.06)}
+table.main-table td{padding:9px 12px;vertical-align:middle}
+.actions-cell{display:flex;gap:6px;align-items:center}
+.pill{display:inline-block;padding:2px 10px;border-radius:20px;font-size:10.5px;font-weight:700;white-space:nowrap}
+.pill-ativo{background:rgba(34,197,94,.14);color:var(--success)}
+.pill-inativo{background:rgba(239,68,68,.14);color:var(--danger)}
+.pill-muted{background:var(--surface3);color:var(--muted)}
+.empty-state{text-align:center;padding:50px 20px;color:var(--muted)}
+.empty-state .ico{font-size:32px;margin-bottom:10px}
+
+/* MODAL */
+.modal-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:999;align-items:center;justify-content:center;padding:20px}
+.modal-backdrop.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:14px;width:620px;max-width:95vw;max-height:92vh;overflow-y:auto}
+.modal-head{padding:22px 26px 16px;border-bottom:1px solid var(--border)}
+.modal-head h2{font-size:16.5px;font-weight:800;margin-bottom:4px}
+.modal-head p{font-size:12px;color:var(--muted)}
+.modal-body{padding:20px 26px}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;padding:16px 26px 22px;border-top:1px solid var(--border)}
+
+/* FORM */
+.form-group{margin-bottom:14px}
+.form-group label{display:block;font-size:10.5px;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.4px;font-weight:700}
+.form-group input,.form-group select{width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:9px 12px;font-size:13px;font-family:var(--font);outline:none;transition:border-color .15s}
+.form-group input::placeholder{color:var(--muted)}
+.form-group input:focus,.form-group select:focus{border-color:var(--accent)}
+.form-group input:disabled{opacity:.5;cursor:not-allowed}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-row.three{grid-template-columns:1fr 1fr 1fr}
+.form-row.four{grid-template-columns:1fr 1fr 1fr 1fr}
+.form-section{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;font-weight:700;margin:18px 0 12px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+.form-cod-row{display:flex;align-items:flex-end;gap:10px}
+.form-cod-row .form-group{flex:1;margin-bottom:0}
+.form-cod-row small{font-size:11px;color:var(--muted);padding-bottom:9px;white-space:nowrap}
+
+/* BADGE ATIVO */
+.status-toggle{display:flex;align-items:center;gap:10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin-bottom:14px}
+.status-toggle label{flex:1;font-size:13px;font-weight:600;cursor:pointer}
+.status-toggle small{font-size:11.5px;color:var(--muted)}
+.toggle-switch{position:relative;width:40px;height:22px;flex-shrink:0}
+.toggle-switch input{opacity:0;width:0;height:0}
+.toggle-switch .slider{position:absolute;inset:0;background:var(--surface3);border-radius:22px;cursor:pointer;transition:.2s}
+.toggle-switch .slider:before{content:'';position:absolute;height:16px;width:16px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s}
+.toggle-switch input:checked+.slider{background:var(--success)}
+.toggle-switch input:checked+.slider:before{transform:translateX(18px)}
+
+/* CEP loader */
+.cep-wrap{position:relative}
+.cep-wrap input{padding-right:36px}
+.cep-spinner{position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:14px;display:none}
+.cep-spinner.visible{display:block;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:translateY(-50%) rotate(360deg)}}
+
+/* DETAIL VIEW */
+.detail-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px 24px;margin-bottom:16px}
+.detail-card h3{font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px}
+.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.detail-item label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:3px}
+.detail-item span{font-size:13.5px;font-weight:600}
+
+/* TOAST */
+#toast{position:fixed;bottom:24px;right:24px;z-index:9999;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:12px 20px;border-radius:10px;font-size:13px;opacity:0;pointer-events:none;transition:opacity .3s;max-width:320px}
+#toast.show{opacity:1}#toast.success{border-color:var(--success);color:var(--success)}
+#toast.error{border-color:var(--danger);color:var(--danger)}
+</style>
+</head>
+<body>
+
+<div id="sidebar">
+  <div class="sidebar-logo">
+    <div class="mark">CC</div>
+    <h2>CENTRO DE CUSTOS</h2>
+    <span>WeCan BR</span>
+  </div>
+  <nav>
+    <a class="active" onclick="navTo('lista')" data-page="lista"><span class="ico">☰</span> Centros de Custo</a>
+    <a onclick="navTo('dashboard')" data-page="dashboard"><span class="ico">◆</span> Dashboard</a>
+  </nav>
+  <div class="sidebar-user">
+    <div class="user-avatar" id="user-avatar">?</div>
+    <div class="user-info">
+      <strong id="user-nome">—</strong>
+      <span id="user-perfil">—</span>
+    </div>
+    <button class="btn-logout" onclick="logout()">Sair</button>
+  </div>
+</div>
+
+<div id="main">
+
+  <!-- LISTA -->
+  <div class="page active" id="page-lista">
+    <div class="page-header">
+      <div>
+        <h1>🏢 Centro de Custos</h1>
+        <p>Gerencie os centros de custo da empresa</p>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-ghost btn-sm" onclick="atualizarDados()">🔄 Atualizar</button>
+        <button class="btn btn-primary" id="btn-novo" onclick="abrirModal(null)">+ Novo Centro de Custo</button>
+      </div>
+    </div>
+
+    <div class="cards-grid" id="kpi-cards">
+      <div class="card"><div class="card-label">Total</div><div class="card-value" id="kpi-total">—</div><div class="card-sub">centros cadastrados</div></div>
+      <div class="card"><div class="card-label">Ativos</div><div class="card-value green" id="kpi-ativos">—</div><div class="card-sub">em operação</div></div>
+      <div class="card"><div class="card-label">Inativos</div><div class="card-value red" id="kpi-inativos">—</div><div class="card-sub">desativados</div></div>
+    </div>
+
+    <div class="toolbar">
+      <input type="text" id="busca" placeholder="Buscar por código, cliente, cidade…" oninput="renderLista()"/>
+      <select id="filtro-status" onchange="renderLista()">
+        <option value="">Todos os status</option>
+        <option value="ativo">Ativos</option>
+        <option value="inativo">Inativos</option>
+      </select>
+    </div>
+
+    <div class="table-wrap">
+      <table class="main-table">
+        <thead>
+          <tr>
+            <th>Código</th>
+            <th>Cliente</th>
+            <th>Descrição</th>
+            <th>Endereço</th>
+            <th>Cidade / UF</th>
+            <th>Status</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody id="tbody-lista"></tbody>
+      </table>
+    </div>
+    <p id="lista-count" style="color:var(--muted);font-size:12px;margin-top:12px"></p>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div class="page" id="page-dashboard">
+    <div class="page-header">
+      <div><h1>◆ Dashboard</h1><p>Visão geral dos centros de custo</p></div>
+    </div>
+    <div class="cards-grid">
+      <div class="card"><div class="card-label">Total</div><div class="card-value" id="d-total">—</div><div class="card-sub">centros cadastrados</div></div>
+      <div class="card"><div class="card-label">Ativos</div><div class="card-value green" id="d-ativos">—</div><div class="card-sub">em operação</div></div>
+      <div class="card"><div class="card-label">Inativos</div><div class="card-value red" id="d-inativos">—</div><div class="card-sub">desativados</div></div>
+      <div class="card"><div class="card-label">Clientes</div><div class="card-value" style="color:var(--voucher)" id="d-clientes">—</div><div class="card-sub">distintos</div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px">
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px">
+        <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px">Por Cliente</div>
+        <div id="dash-clientes"></div>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px">
+        <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px">Por Estado (UF)</div>
+        <div id="dash-ufs"></div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /main -->
+
+<!-- MODAL CENTRO DE CUSTO -->
+<div class="modal-backdrop" id="modal-cc">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 id="modal-title">Novo Centro de Custo</h2>
+      <p id="modal-sub">Preencha os dados do centro de custo</p>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="cc-id"/>
+
+      <!-- Código + Cliente -->
+      <div class="form-section">Identificação</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Código (COD)</label>
+          <div class="form-cod-row" style="flex-direction:column;gap:4px">
+            <input type="text" id="cc-cod" placeholder="Gerado automaticamente"/>
+            <small style="color:var(--muted);font-size:11px">Gerado automaticamente. Pode ser editado.</small>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Cliente</label>
+          <input type="text" id="cc-cliente" placeholder="SPX LOGISTICA LTDA" value="SPX LOGISTICA LTDA"/>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Descrição</label>
+        <input type="text" id="cc-descricao" placeholder="Descrição do centro de custo"/>
+      </div>
+
+      <!-- Status -->
+      <div class="status-toggle">
+        <div>
+          <label for="cc-ativo" style="font-size:13px;font-weight:600;cursor:pointer">Status</label>
+          <div><small>Centro de custo ativo e disponível para uso</small></div>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" id="cc-ativo" checked/>
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <!-- Endereço -->
+      <div class="form-section">Endereço</div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>CEP</label>
+          <div class="cep-wrap">
+            <input type="text" id="cc-cep" placeholder="00000-000" maxlength="9" oninput="formatarCEP(this)" onblur="buscarCEP()"/>
+            <span class="cep-spinner" id="cep-spinner">⟳</span>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>UF</label>
+          <select id="cc-uf">
+            <option value="">—</option>
+            <option>AC</option><option>AL</option><option>AP</option><option>AM</option>
+            <option>BA</option><option>CE</option><option>DF</option><option>ES</option>
+            <option>GO</option><option>MA</option><option>MT</option><option>MS</option>
+            <option>MG</option><option>PA</option><option>PB</option><option>PR</option>
+            <option>PE</option><option>PI</option><option>RJ</option><option>RN</option>
+            <option>RS</option><option>RO</option><option>RR</option><option>SC</option>
+            <option>SP</option><option>SE</option><option>TO</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Logradouro</label>
+        <input type="text" id="cc-logradouro" placeholder="Rua, Avenida, etc."/>
+      </div>
+
+      <div class="form-row three">
+        <div class="form-group">
+          <label>Número</label>
+          <input type="text" id="cc-numero" placeholder="123"/>
+        </div>
+        <div class="form-group" style="grid-column:span 2">
+          <label>Complemento</label>
+          <input type="text" id="cc-complemento" placeholder="Sala, Bloco, Andar…"/>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Bairro</label>
+          <input type="text" id="cc-bairro"/>
+        </div>
+        <div class="form-group">
+          <label>Cidade</label>
+          <input type="text" id="cc-cidade"/>
+        </div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal()">Cancelar</button>
+      <button class="btn btn-primary" id="btn-salvar" onclick="salvarCC()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+<script src="shared.js"></script>
+<script>
+let session = null;
+let CENTROS = [];
+const PERFIL_LABEL_CC = { equipe:'Equipe', gestor:'Gestor', master:'Master', onsite:'Onsite', estoque:'Estoque' };
+
+// ── Init ──────────────────────────────────────
+async function initApp() {
+  const s = carregarSessaoSalva();
+  if (!s) { window.location.href = 'index.html'; return; }
+  session = s;
+  document.getElementById('user-nome').textContent   = s.nome;
+  document.getElementById('user-perfil').textContent = PERFIL_LABEL_CC[s.perfil] || s.perfil;
+  const initials = (s.nome||'?').split(' ').map(p=>p[0]).slice(0,2).join('');
+  document.getElementById('user-avatar').textContent = initials;
+
+  // Só master e gestor podem criar/editar
+  const podeCriar = ['master','gestor'].includes(s.perfil);
+  document.getElementById('btn-novo').style.display = podeCriar ? 'flex' : 'none';
+
+  await atualizarDados();
+}
+
+async function atualizarDados() {
+  try {
+    const r = await rpc('wc_listar_cc', {});
+    CENTROS = r.centros || [];
+    renderLista();
+    renderDashboard();
+    atualizarKPIs();
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+function navTo(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('nav a').forEach(a => a.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  document.querySelector(`nav a[data-page="${id}"]`)?.classList.add('active');
+}
+
+async function logout() {
+  rpc('wc_logout', {}).catch(()=>{});
+  limparSessaoSalva();
+  window.location.href = 'index.html';
+}
+
+// ── KPIs ──────────────────────────────────────
+function atualizarKPIs() {
+  const total   = CENTROS.length;
+  const ativos  = CENTROS.filter(c=>c.ativo).length;
+  const inativos = total - ativos;
+  ['total','ativos','inativos'].forEach((k,i) => {
+    const v = [total,ativos,inativos][i];
+    ['kpi-','d-'].forEach(p => { const el=document.getElementById(p+k); if(el) el.textContent=v; });
+  });
+  const clientes = new Set(CENTROS.map(c=>c.cliente).filter(Boolean)).size;
+  const dc = document.getElementById('d-clientes'); if(dc) dc.textContent=clientes;
+}
+
+// ── LISTA ─────────────────────────────────────
+function renderLista() {
+  const busca  = (document.getElementById('busca')?.value||'').toLowerCase();
+  const filtro = document.getElementById('filtro-status')?.value||'';
+  let lista = [...CENTROS];
+  if (busca) lista = lista.filter(c => [c.cod,c.cliente,c.descricao,c.cidade,c.uf,c.bairro].some(f=>(f||'').toLowerCase().includes(busca)));
+  if (filtro==='ativo')   lista = lista.filter(c => c.ativo);
+  if (filtro==='inativo') lista = lista.filter(c => !c.ativo);
+  const tbody = document.getElementById('tbody-lista');
+  const count = document.getElementById('lista-count');
+  if (!tbody) return;
+  if (!lista.length) {
+    tbody.innerHTML=`<tr><td colspan="7"><div class="empty-state"><div class="ico">🏢</div>Nenhum centro de custo encontrado</div></td></tr>`;
+    if (count) count.textContent='';
+    return;
+  }
+  if (count) count.textContent=`${lista.length} centro(s) exibido(s)`;
+  const podeCriar = ['master','gestor'].includes(session?.perfil);
+  const podExcluir = session?.perfil==='master';
+  tbody.innerHTML = lista.map(c => {
+    const end = [c.logradouro, c.numero, c.complemento].filter(Boolean).join(', ') || '—';
+    const cidade = [c.cidade, c.uf].filter(Boolean).join(' / ') || '—';
+    return `<tr>
+      <td><code style="font-size:11.5px;font-weight:700">${c.cod}</code></td>
+      <td>${c.cliente||'—'}</td>
+      <td>${c.descricao||'—'}</td>
+      <td style="max-width:200px;white-space:normal">${end}</td>
+      <td>${cidade}</td>
+      <td><span class="pill ${c.ativo?'pill-ativo':'pill-inativo'}">${c.ativo?'ATIVO':'INATIVO'}</span></td>
+      <td class="actions-cell">
+        ${podeCriar ? `<button class="btn btn-ghost btn-sm" onclick='abrirModal(${JSON.stringify(c)})'>Editar</button>` : ''}
+        ${podeCriar ? `<button class="btn btn-ghost btn-sm" onclick="toggleCC('${c.id}')">${c.ativo?'Desativar':'Ativar'}</button>` : ''}
+        ${podExcluir ? `<button class="btn btn-danger btn-sm" onclick="excluirCC('${c.id}','${(c.cod||'').replace(/'/g,"\\'")}')">Excluir</button>` : ''}
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// ── DASHBOARD ─────────────────────────────────
+function renderDashboard() {
+  atualizarKPIs();
+  // Por cliente
+  const porCliente = {};
+  CENTROS.forEach(c => { const k=c.cliente||'Sem cliente'; porCliente[k]=(porCliente[k]||0)+1; });
+  const clEl = document.getElementById('dash-clientes');
+  if (clEl) {
+    const max = Math.max(...Object.values(porCliente),1);
+    clEl.innerHTML = Object.entries(porCliente).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`
+      <div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--border);font-size:12.5px">
+        <span style="flex:1">${k}</span>
+        <div style="width:80px;height:6px;background:var(--surface2);border-radius:3px">
+          <div style="width:${Math.round(v/max*100)}%;height:6px;background:var(--accent);border-radius:3px"></div>
+        </div>
+        <span style="color:var(--muted);min-width:20px;text-align:right">${v}</span>
+      </div>`).join('') || '<p style="color:var(--muted);font-size:12.5px">Sem dados</p>';
+  }
+  // Por UF
+  const porUF = {};
+  CENTROS.forEach(c => { if(c.uf){porUF[c.uf]=(porUF[c.uf]||0)+1;} });
+  const ufEl = document.getElementById('dash-ufs');
+  if (ufEl) {
+    const maxU = Math.max(...Object.values(porUF),1);
+    ufEl.innerHTML = Object.entries(porUF).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`
+      <div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--border);font-size:12.5px">
+        <span style="width:28px;font-weight:700">${k}</span>
+        <div style="flex:1;height:6px;background:var(--surface2);border-radius:3px">
+          <div style="width:${Math.round(v/maxU*100)}%;height:6px;background:var(--voucher);border-radius:3px"></div>
+        </div>
+        <span style="color:var(--muted);min-width:20px;text-align:right">${v}</span>
+      </div>`).join('') || '<p style="color:var(--muted);font-size:12.5px">Sem dados</p>';
+  }
+}
+
+// ── MODAL ─────────────────────────────────────
+function abrirModal(c) {
+  const modal = document.getElementById('modal-cc');
+  document.getElementById('modal-title').textContent = c ? 'Editar Centro de Custo' : 'Novo Centro de Custo';
+  document.getElementById('modal-sub').textContent   = c ? `Código: ${c.cod}` : 'Preencha os dados do centro de custo';
+  document.getElementById('cc-id').value          = c?.id || '';
+  document.getElementById('cc-cod').value         = c?.cod || '';
+  document.getElementById('cc-cliente').value     = c?.cliente || 'SPX LOGISTICA LTDA';
+  document.getElementById('cc-descricao').value   = c?.descricao || '';
+  document.getElementById('cc-ativo').checked     = c ? c.ativo : true;
+  document.getElementById('cc-cep').value         = c?.cep || '';
+  document.getElementById('cc-logradouro').value  = c?.logradouro || '';
+  document.getElementById('cc-numero').value      = c?.numero || '';
+  document.getElementById('cc-complemento').value = c?.complemento || '';
+  document.getElementById('cc-bairro').value      = c?.bairro || '';
+  document.getElementById('cc-cidade').value      = c?.cidade || '';
+  document.getElementById('cc-uf').value          = c?.uf || '';
+  modal.classList.add('open');
+}
+
+function fecharModal() {
+  document.getElementById('modal-cc').classList.remove('open');
+}
+
+document.addEventListener('click', e => {
+  if (e.target.classList.contains('modal-backdrop')) fecharModal();
+});
+
+async function salvarCC() {
+  const btn = document.getElementById('btn-salvar');
+  const cc = {
+    id:          document.getElementById('cc-id').value || undefined,
+    cod:         document.getElementById('cc-cod').value.trim(),
+    cliente:     document.getElementById('cc-cliente').value.trim(),
+    descricao:   document.getElementById('cc-descricao').value.trim(),
+    ativo:       document.getElementById('cc-ativo').checked,
+    cep:         document.getElementById('cc-cep').value.trim(),
+    logradouro:  document.getElementById('cc-logradouro').value.trim(),
+    numero:      document.getElementById('cc-numero').value.trim(),
+    complemento: document.getElementById('cc-complemento').value.trim(),
+    bairro:      document.getElementById('cc-bairro').value.trim(),
+    cidade:      document.getElementById('cc-cidade').value.trim(),
+    uf:          document.getElementById('cc-uf').value,
+  };
+  if (!cc.cliente) { toast('Informe o cliente.','error'); return; }
+  btn.disabled=true; btn.textContent='Salvando…';
+  try {
+    const r = await rpc('wc_salvar_cc', { p_cc: cc });
+    fecharModal();
+    await atualizarDados();
+    toast(`Centro de Custo ${r.cod} salvo!`, 'success');
+  } catch(e) { toast(e.message,'error'); }
+  finally { btn.disabled=false; btn.textContent='Salvar'; }
+}
+
+async function toggleCC(id) {
+  try {
+    const r = await rpc('wc_toggle_cc', { p_id: id });
+    await atualizarDados();
+    toast(r.ativo ? 'Centro ativado.' : 'Centro desativado.', 'success');
+  } catch(e) { toast(e.message,'error'); }
+}
+
+async function excluirCC(id, cod) {
+  if (!confirm(`Excluir o Centro de Custo ${cod}? Esta ação é irreversível.`)) return;
+  try {
+    await rpc('wc_excluir_cc', { p_id: id });
+    await atualizarDados();
+    toast('Centro de Custo excluído.', 'success');
+  } catch(e) { toast(e.message,'error'); }
+}
+
+// ── CEP ───────────────────────────────────────
+function formatarCEP(input) {
+  let v = input.value.replace(/\D/g,'').slice(0,8);
+  if (v.length > 5) v = v.slice(0,5)+'-'+v.slice(5);
+  input.value = v;
+}
+
+async function buscarCEP() {
+  const cep = document.getElementById('cc-cep').value.replace(/\D/g,'');
+  if (cep.length !== 8) return;
+  const spinner = document.getElementById('cep-spinner');
+  spinner.classList.add('visible');
+  try {
+    const r = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+    const d = await r.json();
+    if (d.erro) { toast('CEP não encontrado.','error'); return; }
+    document.getElementById('cc-logradouro').value = d.logradouro || '';
+    document.getElementById('cc-bairro').value     = d.bairro     || '';
+    document.getElementById('cc-cidade').value     = d.localidade || '';
+    document.getElementById('cc-uf').value         = d.uf         || '';
+    document.getElementById('cc-numero').focus();
+  } catch(e) { toast('Erro ao buscar CEP.','error'); }
+  finally { spinner.classList.remove('visible'); }
+}
+
+// ── Toast ─────────────────────────────────────
+function toast(msg, tipo) {
+  const el = document.getElementById('toast'); if(!el) return;
+  el.textContent=msg; el.className='show'+(tipo?' '+tipo:'');
+  clearTimeout(window._tt); window._tt=setTimeout(()=>el.className='',4500);
+}
+
+initApp();
+</script>
+</body>
+</html>
