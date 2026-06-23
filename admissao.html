@@ -2472,6 +2472,12 @@ function abrirModalUsuario(u) {
   document.getElementById('u-perfil').value= u ? u.perfil : 'equipe';
   switchMuTab('dados');
 
+  // Sempre recarregar operações ao abrir o modal — garante lista atualizada com novos CCs
+  try {
+    const r = await rpc('wc_listar_operacoes', {});
+    OPERACOES = r.operacoes || [];
+  } catch(e) {}
+
   // Renderizar operações com checkboxes
   const opsGrid = document.getElementById('ops-grid');
   const userOps = new Set((u?.operacoes||[]).map(o=>o.id));
@@ -2814,16 +2820,29 @@ async function salvarCC() {
   btn.disabled=true; btn.textContent='Salvando…';
   try {
     const r = await rpc('wc_salvar_cc', { p_cc: cc });
-    fecharModalCC(); await carregarCentrosCusto(); toast(`Centro ${r.cod} salvo!`,'success');
+    fecharModalCC();
+    await carregarCentrosCusto();
+    await carregarOperacoes(); // mantém OPERACOES sincronizadas com CCs
+    toast(`Centro ${r.cod} salvo!`,'success');
   } catch(e) { toast(e.message,'error'); }
   finally { btn.disabled=false; btn.textContent='Salvar'; }
 }
 async function toggleCC_cad(id) {
-  try { const r=await rpc('wc_toggle_cc',{p_id:id}); await carregarCentrosCusto(); toast(r.ativo?'Ativado.':'Desativado.','success'); } catch(e){toast(e.message,'error');}
+  try {
+    const r = await rpc('wc_toggle_cc',{p_id:id});
+    await carregarCentrosCusto();
+    await carregarOperacoes();
+    toast(r.ativo?'Ativado.':'Desativado.','success');
+  } catch(e) { toast(e.message,'error'); }
 }
 async function excluirCC_cad(id,cod) {
   if(!confirm(`Excluir Centro de Custo ${cod}?`)) return;
-  try { await rpc('wc_excluir_cc',{p_id:id}); await carregarCentrosCusto(); toast('Excluído.','success'); } catch(e){toast(e.message,'error');}
+  try {
+    await rpc('wc_excluir_cc',{p_id:id});
+    await carregarCentrosCusto();
+    await carregarOperacoes();
+    toast('Excluído.','success');
+  } catch(e){toast(e.message,'error');}
 }
 
 // ── CLIENTES ──────────────────────────────────
