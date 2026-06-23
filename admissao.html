@@ -466,13 +466,14 @@
       </div>
     </div>
 
-    <div class="nav-group" id="navgroup-ferramentas" style="display:none">
-      <button class="nav-group-header" onclick="toggleNavGroup('ferramentas')">
-        <span>Ferramentas</span><span class="chevron">▾</span>
+    <div class="nav-group" id="navgroup-cadastros" style="display:none">
+      <button class="nav-group-header" onclick="toggleNavGroup('cadastros')">
+        <span>Cadastros</span><span class="chevron">▾</span>
       </button>
       <div class="nav-group-items">
-        <a onclick="window.open('centrocustos.html')" id="nav-centro-custos"><span class="ico">🏢</span> Centro de Custos</a>
-        <a onclick="window.open('estoque.html')" id="nav-estoque-sidebar"><span class="ico">📦</span> Estoque de EPIs</a>
+        <a onclick="window.open('centrocustos.html#clientes')" id="nav-cad-clientes"><span class="ico">🏭</span> Clientes</a>
+        <a onclick="window.open('centrocustos.html')" id="nav-cad-cc"><span class="ico">🏢</span> Centro de Custo</a>
+        <a onclick="window.open('centrocustos.html#departamentos')" id="nav-cad-deptos"><span class="ico">🗂️</span> Departamentos</a>
       </div>
     </div>
   </nav>
@@ -1341,7 +1342,7 @@ async function iniciarSessao(conta) {
   document.getElementById('nav-indicacoes').style.display   = 'flex';
   document.getElementById('nav-usuarios').style.display     = ehMaster() ? 'flex' : 'none';
   document.getElementById('navgroup-voucherapp').style.display  = ehMaster() ? 'block' : 'none';
-  document.getElementById('navgroup-ferramentas').style.display = podeVerTudo() ? 'block' : 'none';
+  document.getElementById('navgroup-cadastros').style.display = podeVerTudo() ? 'block' : 'none';
   document.getElementById('nav-suporte-usuarios').style.display = ehMaster() ? 'flex' : 'none';
   if (ehMaster()) document.getElementById('cfg-logo-card').style.display = 'block';
   document.getElementById('voucherapp-open-tab').href = VOUCHER_APP_URL;
