@@ -465,6 +465,16 @@
         <a onclick="abrirVoucherEm('usuarios')" data-vp="usuarios"><span class="ico">👤</span> Usuários</a>
       </div>
     </div>
+
+    <div class="nav-group" id="navgroup-ferramentas" style="display:none">
+      <button class="nav-group-header" onclick="toggleNavGroup('ferramentas')">
+        <span>Ferramentas</span><span class="chevron">▾</span>
+      </button>
+      <div class="nav-group-items">
+        <a onclick="window.open('centrocustos.html')" id="nav-centro-custos"><span class="ico">🏢</span> Centro de Custos</a>
+        <a onclick="window.open('estoque.html')" id="nav-estoque-sidebar"><span class="ico">📦</span> Estoque de EPIs</a>
+      </div>
+    </div>
   </nav>
 
   <!-- SUPORTE — rodapé do menu, acima do usuário -->
@@ -1330,7 +1340,8 @@ async function iniciarSessao(conta) {
   document.getElementById('nav-voucher').style.display      = podeAutorizarVoucher() ? 'flex' : 'none';
   document.getElementById('nav-indicacoes').style.display   = 'flex';
   document.getElementById('nav-usuarios').style.display     = ehMaster() ? 'flex' : 'none';
-  document.getElementById('navgroup-voucherapp').style.display = ehMaster() ? 'block' : 'none';
+  document.getElementById('navgroup-voucherapp').style.display  = ehMaster() ? 'block' : 'none';
+  document.getElementById('navgroup-ferramentas').style.display = podeVerTudo() ? 'block' : 'none';
   document.getElementById('nav-suporte-usuarios').style.display = ehMaster() ? 'flex' : 'none';
   if (ehMaster()) document.getElementById('cfg-logo-card').style.display = 'block';
   document.getElementById('voucherapp-open-tab').href = VOUCHER_APP_URL;
@@ -1487,6 +1498,12 @@ async function renderHome() {
       icon:'📦', label:'Estoque de EPIs', value:'',
       sub:'colete, bota e luva', color:'#ec4899', page:'estoque',
       external:'estoque.html',
+    },
+    {
+      icon:'🏢', label:'Centro de Custos', value:'',
+      sub:'clientes, CC e departamentos', color:'#06b6d4', page:'cc',
+      external:'centrocustos.html',
+      hidden: !podeVerTudo(),
     },
     {
       icon:'⚙️', label:'Configurações', value:'',
