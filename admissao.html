@@ -1935,14 +1935,24 @@ async function carregarFilaVoucher() {
   if (!podeAutorizarVoucher()) return;
   try {
     const resp = await rpc('wc_listar_fila', {});
+    const fila = resp.fila || [];
+
+    // Guardar fila bruta para renderQueue usar diretamente
+    window._filaItens = fila;
+    window._filaHistorico = resp.historico || [];
+
+    // Também popula filaVoucherStatus nas vagas em memória (para o badge)
     const mapa = {};
-    (resp.fila || []).forEach(f => { if (!mapa[f.vaga_jira]) mapa[f.vaga_jira] = f; });
+    fila.forEach(f => { if (!mapa[f.vaga_jira]) mapa[f.vaga_jira] = f; });
     VAGAS.forEach(v => {
       const f = mapa[v.jira];
-      if (f) { v.filaVoucherStatus=f.status; v.filaVoucherAutorizadoPor=f.autorizado_por||''; v.filaVoucherMotivo=f.motivo_rejeicao||''; }
+      if (f) {
+        v.filaVoucherStatus      = f.status;
+        v.filaVoucherAutorizadoPor = f.autorizado_por||'';
+        v.filaVoucherMotivo      = f.motivo_rejeicao||'';
+      }
     });
-    window._filaHistorico = resp.historico || [];
-  } catch(e) { /* sem permissão ou erro — ignora silenciosamente */ }
+  } catch(e) { /* sem permissão — ignora */ }
 }
 
 async function carregarOperacoes() {
@@ -2062,7 +2072,11 @@ function navTo(id) {
   if (id==='home')             renderHome();
   if (id==='dashboard')        renderDashboard();
   if (id==='vagas')            renderVagas();
-  if (id==='voucher')          renderQueue();
+  if (id==='voucher') {
+    // Recarrega fila sempre ao abrir — garante dados frescos
+    carregarFilaVoucher().then(() => renderQueue());
+    return;
+  }
   if (id==='indicacoes')       renderIndicacoes();
   if (id==='usuarios')         renderUsuarios('tbody-usuarios');
   if (id==='suporte-usuarios') renderUsuarios('tbody-suporte-usuarios');
@@ -3169,23 +3183,53 @@ function setQueueFilter(f) {
   renderQueue();
 }
 function atualizarBadgeFila() {
-  const n = VAGAS.filter(v=>v.filaVoucherStatus==='pendente').length;
-  const el = document.getElementById('nav-voucher-count'); if (el) el.textContent=n;
+  const fila = window._filaItens || [];
+  const n = fila.filter(f => f.status === 'pendente').length
+          || VAGAS.filter(v => v.filaVoucherStatus === 'pendente').length;
+  const el = document.getElementById('nav-voucher-count');
+  if (el) el.textContent = n;
 }
 function renderQueue() {
-  const lista = VAGAS.filter(v=>v.filaVoucherStatus===queueFilter);
-  const el    = document.getElementById('queue-list'); if (!el) return;
-  if (!lista.length) { el.innerHTML=`<div class="empty-state"><div class="ico">📬</div>Nenhum colaborador nesta categoria</div>`; return; }
-  el.innerHTML = lista.map(v=>{
-    const je=(v.jira||'').replace(/'/g,"\\'");
+  const el = document.getElementById('queue-list'); if (!el) return;
+
+  // Usa _filaItens (dados diretos do banco) em vez de filtrar VAGAS
+  const fila = window._filaItens || [];
+  const lista = fila.filter(f => f.status === queueFilter);
+
+  if (!lista.length) {
+    el.innerHTML = `<div class="empty-state"><div class="ico">📬</div>Nenhum colaborador nesta categoria</div>`;
+    return;
+  }
+
+  el.innerHTML = lista.map(f => {
+    const jira = (f.vaga_jira||'').replace(/'/g,"\\'");
+    // Enriquecer com dados da vaga em memória se disponível
+    const vaga = VAGAS.find(v => v.jira === f.vaga_jira) || {};
+    const colaborador  = f.colaborador  || vaga.colaborador  || '—';
+    const consultor    = f.consultor    || vaga.consultor    || '—';
+    const regional     = vaga.regional  || '—';
+    const cargo        = vaga.cargo     || '—';
+    const matricula    = vaga.matricula || '—';
+    const transporte   = vaga.transporte || f.transporte || '—';
+    const autorizadoPor = f.autorizado_por || '—';
+    const motivo       = f.motivo_rejeicao || 'Rejeitado';
+
     return `<div class="queue-card">
-      <div class="qc-main"><strong>${v.colaborador||'—'}</strong><span>${v.consultor||'—'} · ${v.regional||'—'} · ${v.cargo||'—'} · Matrícula ${v.matricula||'—'}</span></div>
-      <span class="qc-transp">${v.transporte||'—'}</span>
-      ${queueFilter==='pendente'?`<div class="qc-actions">
-        <button class="btn btn-success btn-sm" onclick="autorizarVoucher('${je}')">Aprovar</button>
-        <button class="btn btn-danger btn-sm"  onclick="rejeitarVoucher('${je}')">Rejeitar</button>
-      </div>`:queueFilter==='aprovado'?`<span class="pill uniforme-enviado">Pré-aprovado por ${v.filaVoucherAutorizadoPor||'—'}</span>`
-        :`<span class="pill noshow">${v.filaVoucherMotivo||'Rejeitado'}</span>`}
+      <div class="qc-main">
+        <strong>${colaborador}</strong>
+        <span>${consultor} · ${regional} · ${cargo} · Matrícula ${matricula}</span>
+        <small style="color:var(--muted);font-size:11px">Jira: ${f.vaga_jira||'—'}</small>
+      </div>
+      <span class="qc-transp">${transporte}</span>
+      ${queueFilter==='pendente'
+        ? `<div class="qc-actions">
+            <button class="btn btn-success btn-sm" onclick="autorizarVoucher('${jira}')">Aprovar</button>
+            <button class="btn btn-danger btn-sm"  onclick="rejeitarVoucher('${jira}')">Rejeitar</button>
+           </div>`
+        : queueFilter==='aprovado'
+          ? `<span class="pill uniforme-enviado">Pré-aprovado por ${autorizadoPor}</span>`
+          : `<span class="pill noshow">${motivo}</span>`
+      }
     </div>`;
   }).join('');
 }
