@@ -1961,9 +1961,15 @@ function abrirVoucherEm(pagina) {
 function popularFiltroCC() {
   const sel = document.getElementById('filtro-cc');
   if (!sel) return;
-  const ccs = [...new Set(VAGAS.map(v => v.codigoHub).filter(Boolean))].sort();
+  // Pega CCs únicos das vagas, mostra descrição mas filtra pelo cod
+  const codsNasVagas = [...new Set(VAGAS.map(v => v.codigoHub).filter(Boolean))];
+  const itens = codsNasVagas.map(cod => {
+    const cc = CENTROS_CUSTO.find(c => c.cod === cod);
+    return { cod, label: cc?.descricao || cod };
+  }).sort((a,b) => a.label.localeCompare(b.label));
+
   sel.innerHTML = '<option value="">Todos os CCs</option>' +
-    ccs.map(c => `<option>${c}</option>`).join('');
+    itens.map(c => `<option value="${c.cod}">${c.label}</option>`).join('');
 }
 
 function popularFiltroConsultor() {
