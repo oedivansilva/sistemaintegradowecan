@@ -936,7 +936,9 @@
         <div class="form-group"><label>Regional</label>
           <select id="v-regional"><option value="SPI">SPI</option><option value="CO/N">CO/N</option><option value="SPM">SPM</option><option value="RIO/ES">RIO/ES</option></select>
         </div>
-        <div class="form-group"><label>Mês</label><input type="date" id="v-mes"/></div>
+        <div class="form-group"><label>Mês</label>
+          <select id="v-mes"></select>
+        </div>
       </div>
       <div class="form-group"><label>Local de Trabalho</label><input type="text" id="v-local" placeholder="Preenchido automaticamente pelo Hub/Soc"/></div>
       <div class="form-row three">
@@ -2169,7 +2171,24 @@ function renderDashboard() {
 }
 
 // ── SELECTS DINÂMICOS DO MODAL DE VAGA ────────
-function popularSelectCC() {
+function popularSelectMes() {
+  const sel = document.getElementById('v-mes');
+  if (!sel) return;
+  const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho',
+                 'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  const anoAtual = new Date().getFullYear();
+  const anos = [anoAtual - 1, anoAtual, anoAtual + 1];
+  const opts = ['<option value="">— selecione —</option>'];
+  anos.forEach(ano => {
+    MESES.forEach((mes, i) => {
+      const val = `${ano}-${String(i+1).padStart(2,'0')}-01`;
+      opts.push(`<option value="${val}">${mes} / ${ano}</option>`);
+    });
+  });
+  const atual = sel.value;
+  sel.innerHTML = opts.join('');
+  if (atual) sel.value = atual;
+}
   const sel = document.getElementById('v-codigoHub');
   if (!sel) return;
   const atual = sel.value;
@@ -2355,6 +2374,7 @@ async function abrirModalVaga(jiraOuNull) {
 
   // Garantir que CC e Deptos estão carregados antes de popular os selects
   await garantirCadastrosCarregados();
+  popularSelectMes();
   popularSelectCC();
   popularSelectDeptos();
 
