@@ -1646,7 +1646,10 @@ const COLUNAS_DISPONIVEIS = [
   { id:'transporte',     label:'Transporte',       default:true,  render: v => trPill(v.transporte) },
   { id:'matricula',      label:'Matrícula',        default:false, render: v => v.matricula||'—' },
   { id:'opsId',          label:'OPS ID',           default:false, render: v => v.opsId||'—' },
-  { id:'codigoHub',      label:'Cód. Hub / CC',    default:true,  render: v => v.codigoHub||'—' },
+  { id:'codigoHub',      label:'Cód. Hub / CC',    default:true,  render: v => {
+    const cc = CENTROS_CUSTO.find(c => c.cod === v.codigoHub);
+    return cc?.descricao || v.codigoHub || '—';
+  }},
   { id:'mes',            label:'Mês',              default:false, render: v => v.mes ? new Date(v.mes+'T00:00').toLocaleDateString('pt-BR',{month:'short',year:'numeric'}) : '—' },
   { id:'modalidade',     label:'Modalidade',       default:false, render: v => v.modalidade||'—' },
   { id:'turno',          label:'Turno',            default:false, render: v => v.turno||'—' },
@@ -1958,16 +1961,16 @@ function abrirVoucherEm(pagina) {
   if (vouchFrameLoaded) setTimeout(ir,50); else frame.addEventListener('load',()=>setTimeout(ir,300),{once:true});
 }
 
-function popularFiltroCC() {
+async function popularFiltroCC() {
   const sel = document.getElementById('filtro-cc');
   if (!sel) return;
-  // Pega CCs únicos das vagas, mostra descrição mas filtra pelo cod
+  // Garantir que CCs estão carregados
+  if (!CENTROS_CUSTO.length) await carregarCentrosCusto();
   const codsNasVagas = [...new Set(VAGAS.map(v => v.codigoHub).filter(Boolean))];
   const itens = codsNasVagas.map(cod => {
     const cc = CENTROS_CUSTO.find(c => c.cod === cod);
-    return { cod, label: cc?.descricao || cod };
+    return { cod, label: cc?.descricao || cc?.cod || cod };
   }).sort((a,b) => a.label.localeCompare(b.label));
-
   sel.innerHTML = '<option value="">Todos os CCs</option>' +
     itens.map(c => `<option value="${c.cod}">${c.label}</option>`).join('');
 }
