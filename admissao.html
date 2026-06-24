@@ -2021,7 +2021,7 @@ async function iniciarSessao(conta) {
   show('nav-voucher',    podeAutorizarVoucher());
   show('nav-indicacoes', !ehOnsite);
   show('nav-usuarios',   ehMaster());
-  showBlock('navgroup-voucherapp',   ehMaster());
+  showBlock('navgroup-voucherapp',   ehMaster() || session?.permissoes?.voucher_integrado === true);
   showBlock('nav-suporte-cadastros', podeVerTudo());
   show('nav-suporte-usuarios',       ehMaster());
   if (ehMaster() && el('cfg-logo-card')) el('cfg-logo-card').style.display = 'block';
