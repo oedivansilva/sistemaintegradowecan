@@ -27,6 +27,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:1
 .form-group label{display:block;font-size:10.5px;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px;font-weight:700}
 .form-group input,.form-group select{width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:10px 13px;font-size:13.5px;font-family:var(--font);outline:none;transition:border-color .15s}
 .form-group input::placeholder{color:var(--muted)}
+.form-group select option{background:var(--surface2);color:var(--text)}
+.form-group select:disabled{opacity:.6;cursor:not-allowed}
 .form-group input:focus,.form-group select:focus{border-color:var(--accent)}
 .form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 @media(max-width:480px){.form-row{grid-template-columns:1fr}}
@@ -124,7 +126,9 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:1
     <div class="form-row">
       <div class="form-group">
         <label>Operação *</label>
-        <input type="text" id="f-operacao" placeholder="Ex: HUB Campinas, SOC Manaus"/>
+        <select id="f-operacao" disabled>
+          <option value="">Carregando operações…</option>
+        </select>
       </div>
       <div class="form-group">
         <label>Cargo Indicado *</label>
@@ -182,6 +186,7 @@ const SUPABASE_URL  = 'https://omwilcuzcvgzyzqqrbkh.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9td2lsY3V6Y3Znenl6cXFyYmtoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIxMzI1MTIsImV4cCI6MjA5NzcwODUxMn0.S1pbFqZ4B5_TWMBq_r8BeQ9OOFzkj73aOoI6g3Y987Q';
 const BUCKET = 'curriculos';
 let _arquivo = null;
+let _deptoId  = null;
 
 async function rpcPublico(fn, args) {
   const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`, {
@@ -195,7 +200,36 @@ async function rpcPublico(fn, args) {
   return data;
 }
 
-async function uploadArquivo(file) {
+async function carregarDepartamentos() {
+  const sel = document.getElementById('f-operacao');
+  try {
+    const dados = await rpcPublico('wc_listar_deptos_publico', {});
+    const lista = Array.isArray(dados) ? dados : (dados.deptos || []);
+    sel.innerHTML = '<option value="">Selecione a operação…</option>';
+    lista.forEach(d => {
+      const opt = document.createElement('option');
+      opt.value = d.id;
+      opt.textContent = d.nome;
+      sel.appendChild(opt);
+    });
+    sel.disabled = false;
+  } catch(e) {
+    sel.innerHTML = '<option value="">Erro ao carregar — digite abaixo</option>';
+    sel.disabled = false;
+    // fallback: transforma em input de texto
+    const parent = sel.parentElement;
+    const input = document.createElement('input');
+    input.type = 'text'; input.id = 'f-operacao'; input.placeholder = 'Ex: HUB Campinas, SOC Manaus';
+    input.style.cssText = sel.style.cssText;
+    input.className = sel.className;
+    parent.replaceChild(input, sel);
+  }
+  document.getElementById('f-operacao')?.addEventListener('change', function() {
+    _deptoId = this.value || null;
+  });
+}
+
+
   const ext  = file.name.split('.').pop().toLowerCase();
   const nome = `${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
   const resp = await fetch(`${SUPABASE_URL}/storage/v1/object/${BUCKET}/${nome}`, {
@@ -254,7 +288,11 @@ function limparErro() { document.getElementById('form-erro').style.display = 'no
 async function enviarIndicacao() {
   limparErro();
   const candidato  = document.getElementById('f-candidato').value.trim();
-  const operacao   = document.getElementById('f-operacao').value.trim();
+  const selOp      = document.getElementById('f-operacao');
+  const operacao   = selOp.tagName === 'SELECT'
+    ? (selOp.options[selOp.selectedIndex]?.text || '').trim()
+    : selOp.value.trim();
+  _deptoId = selOp.tagName === 'SELECT' ? (selOp.value || null) : null;
   const cargo      = document.getElementById('f-cargo').value.trim();
   const liderNome  = document.getElementById('f-lider-nome').value.trim();
   const liderEmail = document.getElementById('f-lider-email').value.trim().toLowerCase();
@@ -276,7 +314,8 @@ async function enviarIndicacao() {
     await rpcPublico('wc_criar_indicacao', {
       p_nome_candidato: candidato, p_operacao: operacao, p_cargo: cargo,
       p_nome_lider: liderNome, p_email_lider: liderEmail,
-      p_anexo_url: upload.url, p_anexo_nome: upload.nome
+      p_anexo_url: upload.url, p_anexo_nome: upload.nome,
+      p_depto_id: _deptoId
     });
     document.getElementById('sucesso-nome').textContent = candidato;
     document.getElementById('form-wrap').style.display   = 'none';
@@ -290,7 +329,11 @@ async function enviarIndicacao() {
 }
 
 function novaIndicacao() {
-  ['f-candidato','f-operacao','f-cargo','f-lider-nome'].forEach(id => document.getElementById(id).value = '');
+  ['f-candidato','f-cargo','f-lider-nome'].forEach(id => document.getElementById(id).value = '');
+  const selOp = document.getElementById('f-operacao');
+  if (selOp.tagName === 'SELECT') selOp.selectedIndex = 0;
+  else selOp.value = '';
+  _deptoId = null;
   removerArquivo(); limparErro();
   document.getElementById('form-sucesso').style.display = 'none';
   document.getElementById('form-wrap').style.display    = 'block';
@@ -375,6 +418,7 @@ async function buscarIndicacoes() {
 
 // Init
 (function() {
+  carregarDepartamentos();
   try {
     const email = localStorage.getItem('wecan_lider_email');
     if (email) { document.getElementById('f-lider-email').value = email; document.getElementById('c-email').value = email; }
