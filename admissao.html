@@ -1223,10 +1223,12 @@
         </div>
         <div class="import-step">
           <h4>Passo 2 — Envie a planilha preenchida</h4>
-          <label class="upload-zone">
-            📂 Selecionar planilha
-            <input type="file" id="import-file" accept=".xlsx,.xls,.csv" onchange="carregarPreviewImportacao(this)"/>
-          </label>
+          <button class="btn btn-ghost btn-sm" onclick="document.getElementById('import-file').click()">
+            📂 Selecionar planilha (.xlsx ou .csv)
+          </button>
+          <input type="file" id="import-file" accept=".xlsx,.xls,.csv"
+            style="display:none" onchange="carregarPreviewImportacao(this)"/>
+          <p id="import-file-nome" style="font-size:11.5px;color:var(--muted);margin-top:6px"></p>
         </div>
       </div>
 
@@ -2615,6 +2617,16 @@ function baixarTemplateImportacao() {
 function carregarPreviewImportacao(input) {
   const file = input.files[0]; if (!file) return;
 
+  // Mostrar nome do arquivo selecionado
+  const nomeEl = document.getElementById('import-file-nome');
+  if (nomeEl) nomeEl.textContent = `📄 ${file.name} (${(file.size/1024).toFixed(1)} KB)`;
+
+  // Limpar estado anterior
+  document.getElementById('import-preview-wrap').style.display = 'none';
+  document.getElementById('btn-confirmar-import').style.display = 'none';
+  document.getElementById('import-log').style.display = 'none';
+  _importRows = [];
+
   // Defaults do painel
   const defConsultor = document.getElementById('imp-default-consultor')?.value || '';
   const defCC        = document.getElementById('imp-default-cc')?.value || '';
@@ -2622,97 +2634,116 @@ function carregarPreviewImportacao(input) {
   const defRegional  = document.getElementById('imp-default-regional')?.value || '';
   const defDepto     = document.getElementById('imp-default-depto')?.value || '';
 
+  const mostrarErro = (msg) => {
+    const log = document.getElementById('import-log');
+    log.style.display = 'block';
+    log.textContent = '❌ ' + msg;
+    toast(msg, 'error');
+  };
+
   const processar = (rows) => {
-    if (!rows.length) { toast('Planilha vazia.','error'); return; }
-    const cabecalho = (rows[0]||[]).map(c => (c||'').toString().trim());
+    try {
+      if (!rows || !rows.length) { mostrarErro('Planilha vazia ou formato inválido.'); return; }
+      const cabecalho = (rows[0]||[]).map(c => (c||'').toString().trim());
 
-    // Mapear nome de coluna → índice
-    const colIdx = {};
-    IMPORT_COLS_ENXUTO.forEach(c => {
-      const label = c.label.replace(' *','');
-      const idx = cabecalho.findIndex(h => h.toLowerCase() === label.toLowerCase() ||
-        h.toLowerCase() === c.campo.toLowerCase());
-      if (idx >= 0) colIdx[c.campo] = idx;
-    });
-
-    _importRows = [];
-    const erros = [];
-    for (let i = 1; i < rows.length; i++) {
-      const row = rows[i];
-      if (!row || row.every(c => !c)) continue;
-      const obj = { _defaults: {} }; // rastrear o que foi aplicado como padrão
-
+      // Mapear nome de coluna → índice (por label ou por campo interno)
+      const colIdx = {};
       IMPORT_COLS_ENXUTO.forEach(c => {
-        const idx = colIdx[c.campo] ?? -1;
-        let val = idx >= 0 && row[idx] != null ? String(row[idx]).trim() : '';
-        if (IMPORT_CAMPOS_DATA.has(c.campo)) val = excelDateToISO(row[idx] ?? '');
-        obj[c.campo] = val;
+        const label = c.label.replace(' *','').toLowerCase();
+        const idx = cabecalho.findIndex(h =>
+          h.toLowerCase() === label ||
+          h.toLowerCase() === c.campo.toLowerCase().replace(/_/g,' ')
+        );
+        if (idx >= 0) colIdx[c.campo] = idx;
       });
 
-      if (!obj.jira) { erros.push(`Linha ${i+1}: Jira vazio — ignorada`); continue; }
+      _importRows = [];
+      const erros = [];
+      for (let i = 1; i < rows.length; i++) {
+        const row = rows[i];
+        if (!row || row.every(c => c == null || c === '')) continue;
+        const obj = { _defaults: {} };
 
-      // Aplicar defaults onde a planilha não preencheu
-      const aplicarDefault = (campo, valor) => {
-        if (!obj[campo] && valor) { obj[campo] = valor; obj._defaults[campo] = true; }
-      };
-      aplicarDefault('consultor',       defConsultor);
-      aplicarDefault('codigo_hub',      defCC);
-      aplicarDefault('local_trabalho',  defLocal);
-      aplicarDefault('regional',        defRegional);
-      aplicarDefault('departamento_gi', defDepto);
+        IMPORT_COLS_ENXUTO.forEach(c => {
+          const idx = colIdx[c.campo] ?? -1;
+          let val = (idx >= 0 && row[idx] != null) ? String(row[idx]).trim() : '';
+          if (IMPORT_CAMPOS_DATA.has(c.campo)) val = excelDateToISO(row[idx] ?? '');
+          obj[c.campo] = val;
+        });
 
-      _importRows.push(obj);
-    }
+        if (!obj.jira) { erros.push(`Linha ${i+1}: Jira vazio — ignorada`); continue; }
 
-    // Preview
-    const wrap    = document.getElementById('import-preview-wrap');
-    const countEl = document.getElementById('import-preview-count');
-    const tableEl = document.getElementById('import-preview-table');
-    wrap.style.display = 'block';
-    countEl.textContent = `${_importRows.length} vaga(s) prontas para importar${erros.length ? ` · ${erros.length} ignoradas` : ''}`;
+        // Aplicar defaults
+        const ap = (campo, valor) => { if (!obj[campo] && valor) { obj[campo] = valor; obj._defaults[campo] = true; } };
+        ap('consultor',       defConsultor);
+        ap('codigo_hub',      defCC);
+        ap('local_trabalho',  defLocal);
+        ap('regional',        defRegional);
+        ap('departamento_gi', defDepto);
 
-    const previewCols = ['jira','consultor','codigo_hub','regional','colaborador','cargo','status_vaga','transporte'];
-    const previewLabels = { jira:'Jira', consultor:'Consultor', codigo_hub:'Hub/Soc', regional:'Regional', colaborador:'Colaborador', cargo:'Cargo', status_vaga:'Status', transporte:'Transporte' };
-    tableEl.innerHTML = `<table>
-      <thead><tr>${previewCols.map(c=>`<th>${previewLabels[c]||c}</th>`).join('')}</tr></thead>
-      <tbody>${_importRows.slice(0,50).map(r =>
-        `<tr>${previewCols.map(c => {
-          const isDefault = r._defaults?.[c];
-          const val = r[c] || '—';
-          return `<td style="${isDefault?'color:var(--voucher);font-style:italic':''}" title="${isDefault?'Valor padrão aplicado':''}">${val}</td>`;
-        }).join('')}</tr>`
-      ).join('')}
-      ${_importRows.length>50?`<tr><td colspan="${previewCols.length}" style="color:var(--muted);padding:8px">… e mais ${_importRows.length-50} linhas</td></tr>`:''}
-      </tbody></table>`;
+        _importRows.push(obj);
+      }
 
-    document.getElementById('btn-confirmar-import').style.display = _importRows.length ? 'flex' : 'none';
-    if (erros.length) {
-      const log = document.getElementById('import-log');
-      log.style.display = 'block';
-      log.textContent = erros.join('\n');
+      // Preview
+      const wrap    = document.getElementById('import-preview-wrap');
+      const countEl = document.getElementById('import-preview-count');
+      const tableEl = document.getElementById('import-preview-table');
+      wrap.style.display = 'block';
+      countEl.textContent = `${_importRows.length} vaga(s) prontas${erros.length ? ` · ${erros.length} ignoradas` : ''}`;
+
+      const previewCols = ['jira','consultor','codigo_hub','regional','colaborador','cargo','status_vaga','transporte'];
+      const previewLabels = { jira:'Jira', consultor:'Consultor', codigo_hub:'Hub/Soc', regional:'Regional', colaborador:'Colaborador', cargo:'Cargo', status_vaga:'Status', transporte:'Transporte' };
+      tableEl.innerHTML = `<table>
+        <thead><tr>${previewCols.map(c=>`<th>${previewLabels[c]||c}</th>`).join('')}</tr></thead>
+        <tbody>${_importRows.slice(0,50).map(r =>
+          `<tr>${previewCols.map(c => {
+            const isDefault = r._defaults?.[c];
+            const val = r[c] || '—';
+            return `<td style="${isDefault?'color:var(--voucher);font-style:italic':''}" title="${isDefault?'Valor padrão':'planilha'}">${val}</td>`;
+          }).join('')}</tr>`).join('')}
+        ${_importRows.length>50?`<tr><td colspan="${previewCols.length}" style="color:var(--muted);padding:8px">… e mais ${_importRows.length-50} linhas</td></tr>`:''}
+        </tbody></table>`;
+
+      document.getElementById('btn-confirmar-import').style.display = _importRows.length ? 'flex' : 'none';
+
+      if (erros.length) {
+        const log = document.getElementById('import-log');
+        log.style.display = 'block';
+        log.textContent = erros.join('\n');
+      }
+    } catch(e) {
+      mostrarErro(`Erro ao processar planilha: ${e.message}`);
     }
   };
 
   const isCsv = file.name.toLowerCase().endsWith('.csv');
   const reader = new FileReader();
+
+  reader.onerror = () => mostrarErro('Não foi possível ler o arquivo. Tente novamente.');
+
   if (isCsv) {
     reader.onload = e => {
-      const rows = e.target.result.split(/\r?\n/).filter(l=>l.trim())
-        .map(l => l.split(',').map(c => c.replace(/^"|"$/g,'').replace(/""/g,'"').trim()));
-      processar(rows);
+      try {
+        const rows = e.target.result.split(/\r?\n/).filter(l=>l.trim())
+          .map(l => l.split(',').map(c => c.replace(/^"|"$/g,'').replace(/""/g,'"').trim()));
+        processar(rows);
+      } catch(e) { mostrarErro(e.message); }
     };
     reader.readAsText(file, 'UTF-8');
   } else {
     reader.onload = e => {
       const lerXLSX = () => {
-        const wb = XLSX.read(e.target.result, {type:'array', cellDates:false});
-        const ws = wb.Sheets[wb.SheetNames[0]];
-        processar(XLSX.utils.sheet_to_json(ws, {header:1, defval:null}));
+        try {
+          const wb = XLSX.read(new Uint8Array(e.target.result), {type:'array', cellDates:false});
+          const ws = wb.Sheets[wb.SheetNames[0]];
+          processar(XLSX.utils.sheet_to_json(ws, {header:1, defval:null}));
+        } catch(e) { mostrarErro(`Erro ao ler XLSX: ${e.message}`); }
       };
       if (typeof XLSX === 'undefined') {
         const s = document.createElement('script');
-        s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+        s.src = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
         s.onload = lerXLSX;
+        s.onerror = () => mostrarErro('Não foi possível carregar o leitor de planilhas. Verifique sua internet.');
         document.head.appendChild(s);
       } else { lerXLSX(); }
     };
