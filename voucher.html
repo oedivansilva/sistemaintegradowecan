@@ -151,16 +151,15 @@ table.main-table td{padding:9px 12px;vertical-align:middle;white-space:nowrap}
   </div>
   <nav>
     <a onclick="navTo('dashboard')" data-page="dashboard"><span class="ico">◆</span> Dashboard</a>
-    <a onclick="navTo('controle')" data-page="controle"><span class="ico">☰</span> Controle de Vouchers <span class="count-badge" id="badge-ativos">0</span></a>
-    <a onclick="navTo('inativar')" data-page="inativar"><span class="ico">⊘</span> Inativar Colaborador</a>
-    <a onclick="navTo('exportar')" data-page="exportar"><span class="ico">↓</span> Exportar Planilha</a>
+    <a onclick="navTo('controle')"  data-page="controle"><span class="ico">☰</span> Controle de Vouchers <span class="count-badge" id="badge-ativos">0</span></a>
+    <a onclick="navTo('inativar')"  data-page="inativar"><span class="ico">⊘</span> Inativar Colaborador</a>
+    <a onclick="navTo('exportar')"  data-page="exportar"><span class="ico">↓</span> Exportar Planilha</a>
     <a onclick="navTo('historico')" data-page="historico"><span class="ico">🕐</span> Histórico</a>
-    <!-- nav-usuarios removido — gerenciado em Suporte > Gestão de Usuários -->
   </nav>
   <div class="sidebar-user">
     <div class="user-avatar" id="user-avatar">?</div>
     <div class="user-info"><strong id="user-nome">—</strong><span id="user-perfil">—</span></div>
-    <button class="btn-logout" onclick="fazerLogout()">Sair</button>
+    <button class="btn-logout" onclick="voltarSistema()">← Voltar</button>
   </div>
 </div>
 
@@ -381,32 +380,60 @@ async function fazerLogin() {
 }
 document.addEventListener('keydown', e => { if(e.key==='Enter') fazerLogin(); });
 
+// Mapa de permissão por página do voucher
+const VOUCHER_PERMS = {
+  dashboard: 'adp_voucher_dashboard',
+  controle:  'adp_voucher_controle',
+  inativar:  'adp_voucher_inativar',
+  exportar:  'adp_voucher_exportar',
+  historico: 'adp_voucher_historico',
+};
+
+function vTemPermissao(id) {
+  if (!vSession) return false;
+  // Master e Gestor têm acesso total
+  if (['master','gestor'].includes(vSession.perfil)) return true;
+  return vSession.permissoes?.[id] === true;
+}
+
 function iniciarApp() {
   document.getElementById('login-page').style.display = 'none';
   document.getElementById('sidebar').style.display   = 'flex';
   document.getElementById('main').style.display      = 'block';
   document.getElementById('user-nome').textContent   = vSession.nome;
-  document.getElementById('user-perfil').textContent = vSession.perfil;
+  document.getElementById('user-perfil').textContent = PERFIL_LABEL?.[vSession.perfil] || vSession.perfil;
   const initials=(vSession.nome||'?').split(' ').map(p=>p[0]).slice(0,2).join('');
   document.getElementById('user-avatar').textContent = initials;
-  // nav-usuarios removido
+
+  // Controla visibilidade de cada item do menu por permissão
+  Object.entries(VOUCHER_PERMS).forEach(([pagina, permId]) => {
+    const link = document.querySelector(`nav a[data-page="${pagina}"]`);
+    if (link) link.style.display = vTemPermissao(permId) ? 'flex' : 'none';
+  });
+
+  // Navega para a primeira página que o usuário tem acesso
+  const primeiraPermitida = Object.keys(VOUCHER_PERMS).find(p => vTemPermissao(VOUCHER_PERMS[p]));
   atualizarDados();
-  navTo('dashboard');
+  navTo(primeiraPermitida || 'dashboard');
+}
+
+// Volta para o sistema principal sem fazer logout
+function voltarSistema() {
+  window.location.href = 'admissao.html';
 }
 
 function fazerLogout() {
   rpc('wc_logout',{}).catch(()=>{});
   limparSessaoSalva();
   vSession=null;
-  document.getElementById('login-page').style.display='flex';
-  document.getElementById('sidebar').style.display='none';
-  document.getElementById('main').style.display='none';
+  window.location.href = 'index.html';
 }
 
-// Verificar sessão já salva
+// Verificar sessão — se não tiver, volta para o login
 (function() {
   const s = carregarSessaoSalva();
-  if (s) { vSession=s; iniciarApp(); }
+  if (s) { vSession = s; iniciarApp(); }
+  else { window.location.href = 'index.html'; }
 })();
 
 // ── Dados ──────────────────────────────
