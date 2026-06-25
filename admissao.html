@@ -1351,6 +1351,54 @@
     </div>
   </div>
 
+
+<!-- MODAL COLABORADOR INTEGRAÇÃO -->
+<div class="modal-backdrop" id="integ-modal-colab" onclick="if(event.target===this)fecharModal('integ-modal-colab')">
+  <div class="modal" style="width:560px">
+    <div class="modal-head">
+      <h2 id="integ-mc-nome" style="font-size:16px"></h2>
+      <p id="integ-mc-sub" style="font-size:12px;color:var(--muted);margin-top:3px"></p>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="integ-mc-id"/>
+      <!-- Observação — visível para todos -->
+      <div class="form-group" style="margin-bottom:14px">
+        <label style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px">Observação</label>
+        <textarea id="integ-mc-obs" rows="3" placeholder="Ex: VT precisa ser ajustado para R$ 35,00 | Benefício incorreto…"
+          style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:9px 12px;font-size:13px;font-family:var(--font);outline:none;resize:vertical;box-sizing:border-box"></textarea>
+      </div>
+      <!-- Benefícios — só Gestor/Master edita -->
+      <div id="integ-mc-ben-wrap">
+        <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:10px">Benefícios registrados</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Mobilidade / Outros</label>
+            <input type="text" id="integ-mc-mob" placeholder="ex: 7006-AUXILIO MOBILIDADE"/>
+          </div>
+          <div class="form-group">
+            <label>Vale Refeição</label>
+            <input type="text" id="integ-mc-vr" placeholder="ex: 7903-VR SHOPEE"/>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Vale Transporte</label>
+            <input type="text" id="integ-mc-vt" placeholder="ex: 2332-VALE TRANSPORTE"/>
+          </div>
+          <div class="form-group">
+            <label>Cargo</label>
+            <input type="text" id="integ-mc-cargo"/>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('integ-modal-colab')">Fechar</button>
+      <button class="btn btn-primary" id="integ-mc-btn-salvar" onclick="integSalvarColab()">Salvar</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL COLABORADOR VOUCHER -->
 <div class="modal-backdrop" id="vchr-modal-colab">
   <div class="modal" style="width:620px">
@@ -5571,30 +5619,36 @@ function integRenderTabela() {
     const bgNoShow = col.presenca === 'NO SHOW'  ? 'var(--danger)'  : 'transparent';
     const txtPagar  = col.presenca === 'PAGAR'   ? '#fff' : 'var(--success)';
     const txtNoShow = col.presenca === 'NO SHOW' ? '#fff' : 'var(--danger)';
-    // Se deptoLabel é só número ou vazio, mostra o código do CC
+    // Departamento: só o nome/código do depto, sem o cliente
     const deptoTexto = col._depto_nome && !/^\d+$/.test(col._depto_nome.trim())
       ? col._depto_nome
       : (col._depto_cod || col._depto_nome || '—');
-    const deptoDisplay = col._cli_nome
-      ? `<div style="font-size:10.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.2px">${col._cli_nome}</div><div style="font-size:12.5px">${deptoTexto}</div>`
-      : `<div style="font-size:12.5px">${deptoTexto}</div>`;
+
+    // Obs resumida embaixo do nome
+    const obsDisplay = col.obs
+      ? `<div style="font-size:11px;color:var(--warning);margin-top:2px;max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${col.obs}">💬 ${col.obs}</div>`
+      : '';
 
     return `<tr id="integ-row-${col.id}" style="border-bottom:1px solid var(--border)">
       <td style="color:var(--muted);font-size:12px;text-align:center">${i+1}</td>
       <td>
-        <div style="font-weight:600;font-size:13px">${col.nome}</div>
+        <div style="font-weight:600;font-size:13px;cursor:pointer"
+          onclick="integAbrirColab('${col.id}')"
+          onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color=''"
+        >${col.nome}</div>
         ${col.codigo ? `<div style="font-size:11px;color:var(--muted)">${col.codigo}</div>` : ''}
+        ${obsDisplay}
       </td>
       <td style="font-size:12.5px;color:var(--muted)">${col.cargo || '—'}</td>
-      <td>${deptoDisplay}</td>
+      <td style="font-size:12.5px">${deptoTexto}</td>
       <td style="font-size:12px;color:var(--text);font-weight:500" title="${benTooltip}">${ben}</td>
       <td style="text-align:center">
         ${fechada
           ? `<span style="font-size:12px;font-weight:700;color:${corPres}">${col.presenca || '—'}</span>`
           : `<div style="display:flex;gap:5px;justify-content:center">
-               <button onclick="integConfirmar('${col.id}','PAGAR')"
+               <button onclick="integToggle('${col.id}','PAGAR')"
                  style="padding:4px 10px;border-radius:6px;border:1.5px solid var(--success);font-size:11.5px;cursor:pointer;font-weight:700;background:${bgPagar};color:${txtPagar};font-family:var(--font)">✅ Pagar</button>
-               <button onclick="integConfirmar('${col.id}','NO SHOW')"
+               <button onclick="integToggle('${col.id}','NO SHOW')"
                  style="padding:4px 10px;border-radius:6px;border:1.5px solid var(--danger);font-size:11.5px;cursor:pointer;font-weight:700;background:${bgNoShow};color:${txtNoShow};font-family:var(--font)">⊘ No Show</button>
              </div>`
         }
@@ -5604,22 +5658,75 @@ function integRenderTabela() {
   }).join('');
 }
 
-async function integConfirmar(colabId, presenca) {
+// Toggle: clique no botão já marcado desmarca; clique no outro marca
+async function integToggle(colabId, novaPresenca) {
+  const col = INTEG_TODOS_COLABS.find(c => c.id === colabId);
+  // Se já está marcado com esse status → desmarcar (enviar vazio)
+  const presencaFinal = (col?.presenca === novaPresenca) ? '' : novaPresenca;
   try {
-    await rpc('wc_integ_confirmar_presenca', { p_colab_id: colabId, p_presenca: presenca, p_obs: '' });
-    const col = INTEG_TODOS_COLABS.find(c => c.id === colabId);
-    if (col) { col.presenca = presenca; col.confirmado_por = session?.nome; }
+    await rpc('wc_integ_confirmar_presenca', { p_colab_id: colabId, p_presenca: presencaFinal, p_obs: col?.obs || '' });
+    if (col) { col.presenca = presencaFinal; col.confirmado_por = presencaFinal ? session?.nome : ''; }
     integRenderTabela();
-    // Atualizar KPIs e pills sem recarregar do banco
     const colmeias = integFiltrarPorOnsite(INTEG_COLMEIAS.filter(c => c.data_admissao === window._integDataAtiva));
-    colmeias.forEach(col => {
-      const colabsDaCol = INTEG_TODOS_COLABS.filter(c => c._colmeia_id === col.id);
-      col.pagos    = colabsDaCol.filter(c => c.presenca === 'PAGAR').length;
-      col.noshow   = colabsDaCol.filter(c => c.presenca === 'NO SHOW').length;
-      col.pendentes= colabsDaCol.filter(c => !c.presenca).length;
+    colmeias.forEach(c => {
+      const cc = INTEG_TODOS_COLABS.filter(x => x._colmeia_id === c.id);
+      c.pagos    = cc.filter(x => x.presenca === 'PAGAR').length;
+      c.noshow   = cc.filter(x => x.presenca === 'NO SHOW').length;
+      c.pendentes= cc.filter(x => !x.presenca).length;
     });
     integRenderKPIs(colmeias);
     integRenderPills();
+  } catch(e) { showToast(e.message, 'error'); }
+}
+
+// Abrir modal do colaborador (obs para todos; benefícios só gestor/master)
+function integAbrirColab(colabId) {
+  const col = INTEG_TODOS_COLABS.find(c => c.id === colabId);
+  if (!col) return;
+  document.getElementById('integ-mc-id').value   = colabId;
+  document.getElementById('integ-mc-nome').textContent = col.nome;
+  document.getElementById('integ-mc-sub').textContent  =
+    (col.cargo || '') + (col._depto_nome ? ' · ' + col._depto_nome : '') + (col.codigo ? ' · ' + col.codigo : '');
+  document.getElementById('integ-mc-obs').value   = col.obs || '';
+  document.getElementById('integ-mc-mob').value   = col.beneficio_mob || '';
+  document.getElementById('integ-mc-vr').value    = col.beneficio_vr  || '';
+  document.getElementById('integ-mc-vt').value    = col.beneficio_vt  || '';
+  document.getElementById('integ-mc-cargo').value = col.cargo || '';
+
+  // Benefícios: só gestor/master pode editar
+  const benWrap = document.getElementById('integ-mc-ben-wrap');
+  const isAdmin = podeAdmin();
+  benWrap.querySelectorAll('input').forEach(inp => { inp.disabled = !isAdmin; inp.style.opacity = isAdmin ? '1' : '.55'; });
+  document.getElementById('integ-mc-btn-salvar').style.display = 'inline-flex';
+
+  abrirModal('integ-modal-colab');
+}
+
+async function integSalvarColab() {
+  const colabId = document.getElementById('integ-mc-id').value;
+  const col     = INTEG_TODOS_COLABS.find(c => c.id === colabId);
+  if (!col) return;
+
+  const obs   = document.getElementById('integ-mc-obs').value.trim();
+  const mob   = document.getElementById('integ-mc-mob').value.trim();
+  const vr    = document.getElementById('integ-mc-vr').value.trim();
+  const vt    = document.getElementById('integ-mc-vt').value.trim();
+  const cargo = document.getElementById('integ-mc-cargo').value.trim();
+
+  try {
+    // Salvar obs (e presença atual) via RPC existente
+    await rpc('wc_integ_confirmar_presenca', { p_colab_id: colabId, p_presenca: col.presenca || '', p_obs: obs });
+    // Atualizar local
+    col.obs = obs;
+    if (podeAdmin()) {
+      col.beneficio_mob = mob;
+      col.beneficio_vr  = vr;
+      col.beneficio_vt  = vt;
+      col.cargo         = cargo;
+    }
+    fecharModal('integ-modal-colab');
+    integRenderTabela();
+    showToast('Salvo!', 'success');
   } catch(e) { showToast(e.message, 'error'); }
 }
 
