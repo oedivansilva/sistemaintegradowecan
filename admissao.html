@@ -5259,13 +5259,11 @@ function integLerPlanilha(input) {
 
         // Usar código do depto (cli_codigo no sistema) como chave de agrupamento
         const depto_cod  = iDepto  >= 0 ? (row[iDepto]  || '').toString().trim() : '';
-        // Nome do departamento = "Razão Social · Departamento" para ficar claro pro Onsite
         const razao      = iRazao  >= 0 ? (row[iRazao]  || '').toString().trim() : '';
-        const deptoNome  = iDeptoNm >= 0 ? (row[iDeptoNm]|| '').toString().trim() : depto_cod;
-        const depto_nome = razao ? `${razao} — ${deptoNome}` : deptoNome;
+        const depto_nome = iDeptoNm >= 0 ? (row[iDeptoNm]|| '').toString().trim() : depto_cod;
         const key = `${dataStr}||${depto_cod}`;
 
-        if (!grupos[key]) grupos[key] = { data_admissao: dataStr, depto_cod, depto_nome, colaboradores: [] };
+        if (!grupos[key]) grupos[key] = { data_admissao: dataStr, depto_cod, depto_nome, cli_nome: razao, colaboradores: [] };
         grupos[key].colaboradores.push({
           codigo:        iCodigo  >= 0 ? String(row[iCodigo]||'').trim() : '',
           nome:          String(nome).trim(),
@@ -5397,38 +5395,39 @@ function integRenderColmeias() {
   if (picker && !picker.value) picker.value = integParaISO(abaAtiva);
 
   // Input date — só mostra datas que têm integração
-  const datasSet = datas.join(',');
-  const abas = `<div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;flex-wrap:wrap">
-    <label style="font-size:12px;color:var(--muted);font-weight:600">📅 Data da integração:</label>
-    <input type="date" id="integ-date-picker" value="${abaAtiva}"
-      onchange="integSelecionarData(this.value)"
-      style="background:var(--surface2);border:1px solid var(--border);color:var(--text);
-      border-radius:8px;padding:6px 12px;font-size:13px;font-family:var(--font);outline:none;cursor:pointer"/>
-    <span id="integ-date-status" style="font-size:12px;color:var(--muted)">
-      ${datas.length} data(s) com integração no histórico
-    </span>
-    <div style="display:flex;gap:6px;flex-wrap:wrap">
-      ${datas.slice(0,5).map(data => {
-        const cols = porData[data];
-        const pend = cols.reduce((s,c)=>s+Number(c.pendentes),0);
-        const ativa = data === abaAtiva;
-        // data pode ser "DD/MM/YYYY" (do banco) ou "YYYY-MM-DD" (ISO)
+  const abas = `
+  <div style="margin-bottom:20px">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap">
+      <div style="display:flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:5px 12px">
+        <span style="font-size:14px">📅</span>
+        <input type="date" id="integ-date-picker" value="${integParaISO(abaAtiva)}"
+          onchange="integSelecionarData(this.value)"
+          style="background:transparent;border:none;color:var(--text);font-size:13px;font-family:var(--font);outline:none;cursor:pointer;min-width:130px"/>
+      </div>
+      <span style="font-size:11.5px;color:var(--muted)">${datas.length} integração(ões) no histórico</span>
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+      \${datas.slice(0,8).map(data => {
+        const colsDt = porData[data];
+        const pend   = colsDt.reduce((s,c)=>s+Number(c.pendentes),0);
+        const total  = colsDt.reduce((s,c)=>s+Number(c.total),0);
+        const pagos  = colsDt.reduce((s,c)=>s+Number(c.pagos),0);
+        const ativa  = data === abaAtiva;
         let label = data;
-        if (data && data.includes('-')) {
-          const p = data.split('-');
-          label = p[2] + '/' + p[1];
-        } else if (data && data.includes('/')) {
-          const p = data.split('/');
-          label = p[0] + '/' + p[1];
-        }
+        if (data.includes('-')) { const p=data.split('-'); label=p[2]+'/'+p[1]; }
+        else if (data.includes('/')) { const p=data.split('/'); label=p[0]+'/'+p[1]; }
+        const completo = pend === 0;
+        const cor = ativa ? 'var(--accent)' : completo ? 'var(--success)' : 'var(--border)';
+        const bg  = ativa ? 'var(--accent)' : 'transparent';
+        const txt = ativa ? 'var(--brand)'  : completo ? 'var(--success)' : 'var(--text)';
         return '<button onclick="integSelecionarData(\'' + data + '\')"' +
-          ' style="padding:3px 10px;border-radius:20px;border:1px solid ' + (ativa?'var(--accent)':'var(--border)') + ';' +
-          'background:' + (ativa?'var(--accent)':'transparent') + ';color:' + (ativa?'var(--brand)':'var(--muted)') + ';' +
-          'font-size:11px;cursor:pointer;font-family:var(--font)">' +
-          label + (pend>0?' ⏳'+pend:'') +
+          ' style="display:flex;flex-direction:column;align-items:center;padding:5px 12px;border-radius:8px;' +
+          'border:1.5px solid ' + cor + ';background:' + bg + ';color:' + txt + ';cursor:pointer;font-family:var(--font);transition:all .15s;min-width:52px">' +
+          '<span style="font-size:12px;font-weight:700">' + label + '</span>' +
+          '<span style="font-size:10px;opacity:.75;margin-top:1px">' + (pend>0 ? '⏳'+pend : '✅'+pagos+'/'+total) + '</span>' +
           '</button>';
       }).join('')}
-      ${datas.length > 5 ? '<span style="font-size:11px;color:var(--muted);padding:4px 0">+' + (datas.length-5) + ' mais…</span>' : ''}
+      \${datas.length > 8 ? '<span style="font-size:11px;color:var(--muted);padding:4px 6px;align-self:center">+' + (datas.length-8) + ' mais</span>' : ''}
     </div>
   </div>`;
 
@@ -5452,36 +5451,65 @@ function integRenderColmeias() {
   const pendentesGeral= cols.reduce((s,c)=>s+Number(c.pendentes),0);
   const todasFechadas = cols.every(c=>c.status==='fechada');
 
-  const cards = cols.map(col => `
-    <div onclick="integAbrirColmeia('${col.id}')"
-      style="background:${col.status==='fechada'?'var(--surface2)':'var(--surface)'};
-      border:1px solid var(--border);border-radius:10px;padding:16px 18px;cursor:pointer;
-      min-width:200px;max-width:260px;flex:1;transition:border-color .15s"
-      onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
-      <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:6px;white-space:normal;line-height:1.3">
-        ${col.depto_nome || col.depto_cod || 'Sem departamento'}
-        ${col.status==='fechada' ? ' <span style="font-size:10px;color:var(--muted)">🔒</span>' : ''}
+  const cards = cols.map(col => {
+    const pct = Number(col.total) > 0 ? Math.round((Number(col.pagos)+Number(col.noshow)) / Number(col.total) * 100) : 0;
+    const fechada = col.status === 'fechada';
+    const completo = Number(col.pendentes) === 0;
+    const statusColor = fechada ? 'var(--muted)' : completo ? 'var(--success)' : Number(col.pendentes) === Number(col.total) ? 'var(--border)' : 'var(--warning)';
+    const statusLabel = fechada ? '🔒 Fechada' : completo ? '✅ Concluída' : `⏳ ${col.pendentes} pendente${col.pendentes==1?'':'s'}`;
+    // Suporte legado: depto_nome antigo vinha como "RAZAO — DEPTO"
+    let clienteLabel = col.cli_nome || '';
+    let deptoLabel   = col.depto_nome || col.depto_cod || 'Sem departamento';
+    if (!clienteLabel && deptoLabel.includes(' — ')) {
+      const parts = deptoLabel.split(' — ');
+      clienteLabel = parts[0].trim();
+      deptoLabel   = parts.slice(1).join(' — ').trim();
+    }
+    return `<div onclick="integAbrirColmeia('${col.id}')"
+      style="background:var(--surface);border:1.5px solid ${completo||fechada?'var(--border)':'var(--border)'};
+      border-radius:12px;padding:0;cursor:pointer;width:220px;flex-shrink:0;
+      transition:box-shadow .15s,border-color .15s;overflow:hidden"
+      onmouseover="this.style.borderColor='var(--accent)';this.style.boxShadow='0 4px 16px rgba(0,0,0,.18)'"
+      onmouseout="this.style.borderColor='var(--border)';this.style.boxShadow='none'">
+      <!-- Topo colorido por status -->
+      <div style="height:4px;background:${statusColor};border-radius:0"></div>
+      <div style="padding:14px 16px">
+        <!-- Cliente (topo, menor) -->
+        ${clienteLabel ? `<div style="font-size:10px;color:var(--muted);font-weight:600;letter-spacing:.3px;text-transform:uppercase;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${clienteLabel}</div>` : ''}
+        <!-- Departamento (destaque) -->
+        <div style="font-size:13px;font-weight:700;color:var(--text);line-height:1.35;margin-bottom:10px;white-space:normal">
+          ${deptoLabel}
+        </div>
+        <!-- Contadores -->
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <div style="display:flex;gap:10px;font-size:11.5px">
+            <span style="color:var(--success);font-weight:700">✅ ${col.pagos}</span>
+            <span style="color:var(--danger);font-weight:700">⊘ ${col.noshow}</span>
+            <span style="color:var(--muted)">${col.total} total</span>
+          </div>
+        </div>
+        <!-- Barra de progresso -->
+        <div style="height:4px;background:var(--surface3);border-radius:4px;overflow:hidden">
+          <div style="height:100%;width:${pct}%;background:${completo?'var(--success)':'var(--accent)'};border-radius:4px;transition:width .3s"></div>
+        </div>
+        <!-- Status label -->
+        <div style="font-size:10.5px;color:${statusColor};font-weight:600;margin-top:6px">${statusLabel}</div>
       </div>
-      <div style="font-size:11.5px;color:var(--muted);margin-bottom:8px">${col.total} colaborador(es)</div>
-      <div style="display:flex;gap:10px;font-size:11px">
-        <span style="color:var(--success);font-weight:600">✅ ${col.pagos}</span>
-        <span style="color:var(--danger);font-weight:600">⊘ ${col.noshow}</span>
-        ${Number(col.pendentes) > 0 ? `<span style="color:var(--warning);font-weight:600">⏳ ${col.pendentes}</span>` : '<span style="color:var(--muted)">✓ Completo</span>'}
-      </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 
   wrap.innerHTML = `
     ${abas}
     <!-- Resumo da aba -->
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
-      <div style="font-size:13px;color:var(--muted)">
-        ${cols.length} departamento(s) · ${totalGeral} pessoa(s)
-        ${todasFechadas ? ' · <span style="color:var(--muted)">🔒 Todos fechados</span>' : ''}
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;padding:10px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;flex-wrap:wrap;gap:8px">
+      <div style="font-size:13px;color:var(--text);font-weight:600">
+        ${cols.length} departamento(s) &nbsp;·&nbsp; ${totalGeral} pessoa(s)
+        ${todasFechadas ? ' &nbsp;·&nbsp; <span style="color:var(--muted)">🔒 Todos fechados</span>' : ''}
       </div>
-      <div style="display:flex;gap:14px;font-size:12.5px">
-        <span style="color:var(--success)">✅ ${pagosGeral} PAGAR</span>
-        <span style="color:var(--danger)">⊘ ${noshowGeral} NO SHOW</span>
-        ${pendentesGeral > 0 ? `<span style="color:var(--warning)">⏳ ${pendentesGeral} pendente(s)</span>` : ''}
+      <div style="display:flex;gap:16px;font-size:12.5px">
+        <span style="color:var(--success);font-weight:700">✅ ${pagosGeral} PAGAR</span>
+        <span style="color:var(--danger);font-weight:700">⊘ ${noshowGeral} NO SHOW</span>
+        ${pendentesGeral > 0 ? `<span style="color:var(--warning);font-weight:700">⏳ ${pendentesGeral} pendente(s)</span>` : '<span style="color:var(--success)">✓ Tudo confirmado</span>'}
       </div>
     </div>
     <!-- Cards de departamento -->
