@@ -1234,11 +1234,13 @@
 
   <!-- VOUCHER INATIVAR -->
   <div class="page" id="page-vchr-inativar">
-    <div class="page-header"><div><h1>Inativar Colaborador</h1><p>Busque pelo nome ou matrícula do colaborador a ser desligado</p></div></div>
+    <div class="page-header"><div><h1>Inativar Colaborador</h1><p>Colaboradores ativos do seu escopo — clique em Inativar para registrar o desligamento</p></div></div>
     <div class="toolbar">
-      <input type="text" id="vchr-busca-inat" placeholder="Nome ou matrícula…" oninput="vchrBuscarParaInativar()"/>
+      <input type="text" id="vchr-busca-inat" placeholder="🔍 Filtrar por nome ou matrícula…" oninput="vchrBuscarParaInativar()"/>
     </div>
-    <div id="vchr-inat-resultados"></div>
+    <div id="vchr-inat-resultados">
+      <div style="color:var(--muted);padding:20px 0;text-align:center">Carregando…</div>
+    </div>
   </div>
 
   <!-- VOUCHER EXPORTAR -->
@@ -1263,7 +1265,7 @@
   <div class="page" id="page-vchr-historico">
     <div class="page-header"><div><h1>Histórico · Voucher</h1><p>Registro de todas as ações no sistema de voucher</p></div></div>
     <div class="toolbar">
-      <input type="text" id="vchr-busca-hist" placeholder="Buscar por matrícula, tipo, responsável…" oninput="vchrRenderHistorico()"/>
+      <input type="text" id="vchr-busca-hist" placeholder="Buscar por matrícula, tipo, responsável…" oninput="VCHR_HIST_PAG=0;vchrRenderHistorico()"/>
     </div>
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 20px">
       <div id="vchr-hist-lista"><div style="color:var(--muted);padding:20px 0;text-align:center">Carregando…</div></div>
@@ -4470,7 +4472,10 @@ function vchrRenderPagina(id) {
   if (id==='vchr-dashboard') vchrRenderDashboard();
   if (id==='vchr-controle')  vchrRenderControle();
   if (id==='vchr-historico') vchrRenderHistorico();
-  if (id==='vchr-inativar')  { const i=document.getElementById('vchr-busca-inat'); if(i)i.value=''; const r=document.getElementById('vchr-inat-resultados'); if(r)r.innerHTML=''; }
+  if (id==='vchr-inativar')  {
+    const i=document.getElementById('vchr-busca-inat'); if(i) i.value='';
+    vchrBuscarParaInativar(); // Carrega lista imediatamente
+  }
 }
 
 function vchrRenderDashboard() {
@@ -4568,28 +4573,58 @@ async function vchrSalvarColab() {
 }
 
 function vchrBuscarParaInativar() {
-  const busca=(document.getElementById('vchr-busca-inat').value||'').toLowerCase();
-  const el=document.getElementById('vchr-inat-resultados');
-  if(busca.length<2){el.innerHTML='';return;}
-  const lista=VCHR_COLABORADORES.filter(c=>c.status==='ATIVO'&&[c.nome,c.matricula].some(f=>(f||'').toLowerCase().includes(busca)));
-  if(!lista.length){el.innerHTML='<p style="color:var(--muted);font-size:13px;margin-top:12px">Nenhum colaborador ativo encontrado.</p>';return;}
-  el.innerHTML=lista.map(c=>`<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 18px;margin-bottom:10px;display:flex;align-items:center;gap:14px"><div style="flex:1"><strong>${c.nome}</strong><br/><span style="color:var(--muted);font-size:12px">${c.matricula} · ${c.unidade||'—'}</span></div><button class="btn btn-warning btn-sm" onclick="vchrAbrirInativar('${c.matricula}','${(c.nome||'').replace(/'/g,"\\'")}')">Inativar</button></div>`).join('');
+  const busca = (document.getElementById('vchr-busca-inat').value||'').toLowerCase();
+  const el    = document.getElementById('vchr-inat-resultados');
+  // Lista todos ativos (já filtrados pelo banco por depto do Onsite)
+  let lista = VCHR_COLABORADORES.filter(c => c.status === 'ATIVO');
+  // Aplica busca se digitou algo
+  if (busca.length >= 1) {
+    lista = lista.filter(c => [c.nome,c.matricula].some(f=>(f||'').toLowerCase().includes(busca)));
+  }
+  if (!lista.length) {
+    el.innerHTML = '<p style="color:var(--muted);font-size:13px;margin-top:12px">Nenhum colaborador ativo encontrado.</p>';
+    return;
+  }
+  el.innerHTML = lista.map(c => `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 18px;margin-bottom:8px;display:flex;align-items:center;gap:14px">
+      <div style="flex:1">
+        <strong>${c.nome}</strong>
+        <span style="color:var(--muted);font-size:12px;margin-left:8px">${c.matricula}</span><br/>
+        <span style="color:var(--muted);font-size:11.5px">${c.unidade||'—'} · ${[c.hora_entrada,c.hora_saida].filter(Boolean).join(' → ')||'—'}</span>
+      </div>
+      <button class="btn btn-warning btn-sm" onclick="vchrAbrirInativar('${c.matricula}','${(c.nome||'').replace(/'/g,"\\'")}')">Inativar</button>
+    </div>`).join('');
 }
 
-function vchrAbrirInativar(matricula,nome) {
-  VCHR_INATIVAR_MATRICULA=matricula;
-  document.getElementById('vchr-inativar-nome').textContent=nome+' · '+matricula;
-  document.getElementById('vchr-motivo-select').value='';
-  document.getElementById('vchr-motivo-obs').value='';
+function vchrAbrirInativar(matricula, nome) {
+  VCHR_INATIVAR_MATRICULA = matricula;
+  document.getElementById('vchr-inativar-nome').textContent = nome + ' · ' + matricula;
+  document.getElementById('vchr-motivo-select').value = '';
+  document.getElementById('vchr-motivo-obs').value = '';
+  // Preenche data de hoje como padrão
+  const hoje = new Date().toISOString().split('T')[0];
+  document.getElementById('vchr-data-deslig').value = hoje;
   abrirModal('vchr-modal-inativar');
 }
 
 async function vchrConfirmarInativar() {
-  const motivo=document.getElementById('vchr-motivo-select').value;
-  const obs=document.getElementById('vchr-motivo-obs').value.trim();
-  if(!motivo){showToast('Selecione o motivo.','error');return;}
-  try{await rpc('wc_voucher_inativar',{p_matricula:VCHR_INATIVAR_MATRICULA,p_motivo:motivo,p_obs:obs});fecharModal('vchr-modal-inativar');await vchrAtualizarDados();vchrRenderControle();vchrBuscarParaInativar();showToast(VCHR_INATIVAR_MATRICULA+' inativado.','success');}
-  catch(e){showToast(e.message,'error');}
+  const motivo   = document.getElementById('vchr-motivo-select').value;
+  const obs      = document.getElementById('vchr-motivo-obs').value.trim();
+  const dataDesl = document.getElementById('vchr-data-deslig').value;
+  if (!motivo)   { showToast('Selecione o motivo.','error'); return; }
+  if (!dataDesl) { showToast('Informe a data de desligamento.','error'); return; }
+  // Formata data para o histórico
+  const [a,m,d] = dataDesl.split('-');
+  const dataFmt = d+'/'+m+'/'+a;
+  const motivoCompleto = motivo + (obs ? ' — ' + obs : '') + ' | Desligamento em: ' + dataFmt;
+  try {
+    await rpc('wc_voucher_inativar', {p_matricula: VCHR_INATIVAR_MATRICULA, p_motivo: motivoCompleto, p_obs: obs});
+    fecharModal('vchr-modal-inativar');
+    await vchrAtualizarDados();
+    vchrRenderControle();
+    vchrBuscarParaInativar();
+    showToast(VCHR_INATIVAR_MATRICULA + ' inativado.', 'success');
+  } catch(e) { showToast(e.message,'error'); }
 }
 
 async function vchrReativar(matricula) {
@@ -4674,14 +4709,53 @@ function vchrBaixarExcel() {
   XLSX.writeFile(wb,`vouchers_${document.getElementById('vchr-exp-data-base').value}.xlsx`);
 }
 
+let VCHR_HIST_PAG = 0; // página atual (0-based)
+const VCHR_HIST_POR_PAG = 20;
+
 function vchrRenderHistorico() {
-  const busca=(document.getElementById('vchr-busca-hist')?.value||'').toLowerCase();
-  let lista=[...VCHR_HISTORICO];
-  if(busca)lista=lista.filter(h=>[h.matricula,h.tipo,h.motivo,h.responsavel].some(f=>(f||'').toLowerCase().includes(busca)));
-  const el=document.getElementById('vchr-hist-lista');if(!el)return;
-  if(!lista.length){el.innerHTML='<div class="empty-state"><div style="font-size:32px;margin-bottom:10px">📋</div>Nenhum registro</div>';return;}
-  const ico={'INATIVAÇÃO':'⊘','REATIVAÇÃO':'✅','CADASTRO':'➕','EDIÇÃO':'✏️'};
-  el.innerHTML=lista.slice(0,100).map(h=>`<div class="vchr-hist-row"><div class="vchr-hist-ico">${ico[h.tipo]||'📌'}</div><div class="vchr-hist-main"><div class="vchr-hist-tipo">${h.tipo||'—'} — ${h.matricula||'—'}</div><div class="vchr-hist-sub">${h.motivo||'—'} · ${h.responsavel||'—'} · ${h.created_at?new Date(h.created_at).toLocaleString('pt-BR'):''}</div></div></div>`).join('');
+  const busca = (document.getElementById('vchr-busca-hist')?.value||'').toLowerCase();
+  let lista = [...VCHR_HISTORICO];
+  if (busca) lista = lista.filter(h=>[h.matricula,h.tipo,h.motivo,h.responsavel].some(f=>(f||'').toLowerCase().includes(busca)));
+  const el = document.getElementById('vchr-hist-lista'); if(!el) return;
+  if (!lista.length) { el.innerHTML='<div class="empty-state"><div style="font-size:32px;margin-bottom:10px">📋</div>Nenhum registro</div>'; return; }
+
+  const totalPags = Math.ceil(lista.length / VCHR_HIST_POR_PAG);
+  if (VCHR_HIST_PAG >= totalPags) VCHR_HIST_PAG = totalPags - 1;
+  const inicio = VCHR_HIST_PAG * VCHR_HIST_POR_PAG;
+  const pagina = lista.slice(inicio, inicio + VCHR_HIST_POR_PAG);
+
+  const ico = {'INATIVAÇÃO':'⊘','REATIVAÇÃO':'✅','CADASTRO':'➕','EDIÇÃO':'✏️','EXCLUSÃO':'🗑️','CADASTRO/EDIÇÃO':'✏️'};
+  const itens = pagina.map(h => {
+    const dt = h.created_at ? new Date(h.created_at) : null;
+    const dataHora = dt ? dt.toLocaleDateString('pt-BR') + ' às ' + dt.toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'}) : '—';
+    const corTipo = h.tipo==='INATIVAÇÃO' ? 'color:var(--danger)' : h.tipo==='REATIVAÇÃO' ? 'color:var(--success)' : 'color:var(--muted)';
+    return `<div class="vchr-hist-row">
+      <div class="vchr-hist-ico">${ico[h.tipo]||'📌'}</div>
+      <div class="vchr-hist-main">
+        <div class="vchr-hist-tipo" style="${corTipo}"><strong>${h.tipo||'—'}</strong> — ${h.matricula||'—'}</div>
+        <div style="font-size:12.5px;margin-top:2px">${h.motivo||'—'}</div>
+        <div class="vchr-hist-sub" style="margin-top:3px">👤 <strong>${h.responsavel||'—'}</strong> &nbsp;·&nbsp; 🕐 ${dataHora}</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Paginação
+  let pags = '';
+  if (totalPags > 1) {
+    const btns = Array.from({length: totalPags}, (_,i) =>
+      `<button onclick="VCHR_HIST_PAG=${i};vchrRenderHistorico()"
+        style="padding:4px 10px;border-radius:6px;border:1px solid var(--border);
+        background:${i===VCHR_HIST_PAG?'var(--accent)':'var(--surface2)'};
+        color:${i===VCHR_HIST_PAG?'var(--brand)':'var(--muted)'};
+        cursor:pointer;font-size:12px;font-family:var(--font)">${i+1}</button>`
+    ).join('');
+    pags = `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:14px;align-items:center">
+      <span style="font-size:12px;color:var(--muted)">${lista.length} registro(s) · página ${VCHR_HIST_PAG+1} de ${totalPags}</span>
+      <div style="display:flex;gap:4px;flex-wrap:wrap;margin-left:8px">${btns}</div>
+    </div>`;
+  }
+
+  el.innerHTML = itens + pags;
 }
 
 // ── Carregar departamentos no select do modal ──
@@ -4972,6 +5046,9 @@ async function vchrExcluir(matricula, nome) {
       <p id="vchr-inativar-nome" style="font-size:13px;color:var(--text);font-weight:600;margin-top:4px"></p>
     </div>
     <div class="modal-body">
+      <div class="form-group"><label>Data de Desligamento *</label>
+        <input type="date" id="vchr-data-deslig" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:9px 12px;font-size:13px;font-family:var(--font);outline:none"/>
+      </div>
       <div class="form-group"><label>Motivo do desligamento *</label>
         <select id="vchr-motivo-select">
           <option value="">Selecione…</option>
