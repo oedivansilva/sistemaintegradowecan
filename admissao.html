@@ -106,6 +106,14 @@
   nav::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 
   .nav-group { margin-bottom: 0; }
+  .nav-subgroup > .nav-subgroup-header {
+    padding: 7px 16px 7px 20px !important;
+    font-size: 12px !important;
+    color: var(--muted) !important;
+    font-weight: 600 !important;
+  }
+  .nav-subgroup > .nav-subgroup-header:hover { color: var(--text) !important; }
+  .nav-subgroup .nav-group-items { padding-left: 0; }
   .nav-group-header {
     width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 6px;
     background: none; border: none; cursor: pointer; font-family: var(--font);
@@ -702,33 +710,97 @@
     <span class="sb-toggle-ico">◀</span>
   </button>
   <nav id="nav">
-    <!-- Home sempre primeiro -->
+    <!-- ── INÍCIO ── -->
     <a onclick="navTo('home')" data-page="home" title="Início"><span class="ico">🏠</span><span class="sb-txt"> Início</span></a>
 
+    <!-- ── SELEÇÃO & ADMISSÃO ── -->
     <div class="nav-group" id="navgroup-selecao">
       <button class="nav-group-header" onclick="toggleNavGroup('selecao')">
         <span>Seleção &amp; Admissão</span><span class="chevron">▾</span>
       </button>
       <div class="nav-group-items">
         <a id="nav-dashboard" onclick="navTo('dashboard')" data-page="dashboard" title="Dashboard"><span class="ico">◆</span><span class="sb-txt"> Dashboard</span></a>
-        <a id="nav-vagas" onclick="navTo('vagas')" data-page="vagas" title="Vagas / Admissões"><span class="ico">▤</span><span class="sb-txt"> Vagas / Admissões</span></a>
+
+        <!-- Vagas com sub -->
+        <div class="nav-group nav-subgroup" id="navgroup-vagas" style="margin:0">
+          <button class="nav-group-header nav-subgroup-header" onclick="toggleNavGroup('vagas')" title="Vagas / Admissões">
+            <span class="ico">▤</span><span class="sb-txt"> Vagas / Admissões</span><span class="chevron">▾</span>
+          </button>
+          <div class="nav-group-items" id="navgroup-vagas-items">
+            <a id="nav-vagas" onclick="navTo('vagas')" data-page="vagas" title="Vagas Abertas" style="padding-left:28px"><span class="ico">📂</span><span class="sb-txt"> Vagas Abertas</span></a>
+            <a id="nav-vagas-fechadas" onclick="navTo('vagas')" data-page="vagas-fechadas" title="Vagas Fechadas" style="padding-left:28px;opacity:.6"><span class="ico">📁</span><span class="sb-txt"> Vagas Fechadas</span> <span style="font-size:9px;color:var(--muted)">(em breve)</span></a>
+          </div>
+        </div>
+
         <a id="nav-voucher" onclick="navTo('voucher')" data-page="voucher" title="Fila de Voucher"><span class="ico">⇄</span><span class="sb-txt"> Fila de Voucher</span> <span class="count-badge alert" id="nav-voucher-count">0</span></a>
         <a id="nav-indicacoes" onclick="navTo('indicacoes')" data-page="indicacoes" title="Indicações"><span class="ico">📋</span><span class="sb-txt"> Indicações</span> <span class="count-badge alert" id="nav-ind-count" style="display:none">0</span></a>
-        <a id="nav-integracao" onclick="navTo('integracao')" data-page="integracao" title="Gestão de Benefícios"><span class="ico">🐝</span><span class="sb-txt"> Gestão de Benefícios</span></a>
-        <!-- nav-usuarios removido -->
+
+        <!-- No Show (em breve) -->
+        <a id="nav-noshow" title="No Show (em breve)" style="opacity:.45;cursor:default;display:none"><span class="ico">🚫</span><span class="sb-txt"> No Show <span style="font-size:9px">(em breve)</span></span></a>
+
+        <!-- EPI (em breve) -->
+        <a id="nav-epi" title="Estoque de EPI (em breve)" style="opacity:.45;cursor:default;display:none"><span class="ico">🦺</span><span class="sb-txt"> Estoque de EPI <span style="font-size:9px">(em breve)</span></span></a>
       </div>
     </div>
 
-    <div class="nav-group" id="navgroup-voucherapp" style="display:none">
-      <button class="nav-group-header" onclick="toggleNavGroup('voucherapp')">
+    <!-- ── ADM. DE PESSOAL ── -->
+    <div class="nav-group" id="navgroup-admpessoal" style="display:none">
+      <button class="nav-group-header" onclick="toggleNavGroup('admpessoal')">
         <span>Adm. de Pessoal</span><span class="chevron">▾</span>
       </button>
       <div class="nav-group-items">
-        <a id="nav-adp-dashboard" onclick="navTo('vchr-dashboard')" data-page="vchr-dashboard" data-vp="dashboard" title="Dashboard Voucher"   style="display:none"><span class="ico">📊</span><span class="sb-txt"> Dashboard</span></a>
-        <a id="nav-adp-controle"  onclick="navTo('vchr-controle')"  data-page="vchr-controle"  data-vp="controle"  title="Controle de Vouchers" style="display:none"><span class="ico">☰</span><span class="sb-txt"> Controle de Vouchers</span> <span class="count-badge" id="vchr-badge-ativos"></span></a>
-        <a id="nav-adp-inativar"  onclick="navTo('vchr-inativar')"  data-page="vchr-inativar"  data-vp="inativar"  title="Inativar Colaborador"  style="display:none"><span class="ico">⊘</span><span class="sb-txt"> Inativar Colaborador</span></a>
-        <a id="nav-adp-exportar"  onclick="navTo('vchr-exportar')"  data-page="vchr-exportar"  data-vp="exportar"  title="Exportar Planilha"     style="display:none"><span class="ico">↓</span><span class="sb-txt"> Exportar Planilha</span></a>
-        <a id="nav-adp-historico" onclick="navTo('vchr-historico')" data-page="vchr-historico" data-vp="historico" title="Histórico Voucher"      style="display:none"><span class="ico">🕐</span><span class="sb-txt"> Histórico</span></a>
+
+        <!-- Voucher Uber sub -->
+        <div class="nav-group nav-subgroup" id="navgroup-voucher-uber" style="margin:0;display:none">
+          <button class="nav-group-header nav-subgroup-header" onclick="toggleNavGroup('voucher-uber')" title="Voucher Uber">
+            <span class="ico">🚗</span><span class="sb-txt"> Voucher Uber</span><span class="chevron">▾</span>
+          </button>
+          <div class="nav-group-items">
+            <a id="nav-adp-dashboard" onclick="navTo('vchr-dashboard')" data-page="vchr-dashboard" data-vp="dashboard" title="Dashboard Voucher" style="padding-left:28px;display:none"><span class="ico">📊</span><span class="sb-txt"> Dashboard</span></a>
+            <!-- Fila Voucher sub -->
+            <div class="nav-group nav-subgroup" id="navgroup-adp-fila" style="margin:0;display:none">
+              <button class="nav-group-header nav-subgroup-header" onclick="toggleNavGroup('adp-fila')" title="Fila Voucher" style="padding-left:28px">
+                <span class="ico">⇄</span><span class="sb-txt"> Fila Voucher</span><span class="chevron">▾</span>
+              </button>
+              <div class="nav-group-items">
+                <a style="padding-left:44px;opacity:.5;cursor:default"><span class="ico">🔑</span><span class="sb-txt"> Pré Aprovados <span style="font-size:9px">(em breve)</span></span></a>
+                <a id="nav-adp-controle" onclick="navTo('vchr-controle')" data-page="vchr-controle" data-vp="controle" title="Controle do Voucher" style="padding-left:44px;display:none"><span class="ico">☰</span><span class="sb-txt"> Controle</span> <span class="count-badge" id="vchr-badge-ativos"></span></a>
+                <a id="nav-adp-inativar" onclick="navTo('vchr-inativar')" data-page="vchr-inativar" data-vp="inativar" title="Inativar" style="padding-left:44px;display:none"><span class="ico">⊘</span><span class="sb-txt"> Inativar</span></a>
+                <a id="nav-adp-exportar" onclick="navTo('vchr-exportar')" data-page="vchr-exportar" data-vp="exportar" title="Exportar Planilha" style="padding-left:44px;display:none"><span class="ico">↓</span><span class="sb-txt"> Exportar Planilha</span></a>
+                <a id="nav-adp-historico" onclick="navTo('vchr-historico')" data-page="vchr-historico" data-vp="historico" title="Histórico Voucher" style="padding-left:44px;display:none"><span class="ico">🕐</span><span class="sb-txt"> Histórico</span></a>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Benefícios sub -->
+        <div class="nav-group nav-subgroup" id="navgroup-adp-beneficios" style="margin:0;display:none">
+          <button class="nav-group-header nav-subgroup-header" onclick="toggleNavGroup('adp-beneficios')" title="Benefícios">
+            <span class="ico">🐝</span><span class="sb-txt"> Benefícios</span><span class="chevron">▾</span>
+          </button>
+          <div class="nav-group-items">
+            <a id="nav-integracao" onclick="navTo('integracao')" data-page="integracao" title="Gestão de Benefícios" style="padding-left:28px;display:none"><span class="ico">✅</span><span class="sb-txt"> Gestão de Benefícios</span></a>
+            <a style="padding-left:28px;opacity:.5;cursor:default"><span class="ico">📊</span><span class="sb-txt"> Dashboard <span style="font-size:9px">(em breve)</span></span></a>
+            <a style="padding-left:28px;opacity:.5;cursor:default"><span class="ico">🕐</span><span class="sb-txt"> Histórico <span style="font-size:9px">(em breve)</span></span></a>
+          </div>
+        </div>
+
+        <!-- Tickets Shopee sub -->
+        <div class="nav-group nav-subgroup" id="navgroup-adp-tickets" style="margin:0;display:none">
+          <button class="nav-group-header nav-subgroup-header" onclick="toggleNavGroup('adp-tickets')" title="Tickets Shopee">
+            <span class="ico">🎫</span><span class="sb-txt"> Tickets Shopee</span><span class="chevron">▾</span>
+          </button>
+          <div class="nav-group-items">
+            <a style="padding-left:28px;opacity:.5;cursor:default"><span class="ico">📊</span><span class="sb-txt"> Dashboard <span style="font-size:9px">(em breve)</span></span></a>
+            <a style="padding-left:28px;opacity:.5;cursor:default"><span class="ico">🔴</span><span class="sb-txt"> Desligamento <span style="font-size:9px">(em breve)</span></span></a>
+            <a style="padding-left:28px;opacity:.5;cursor:default"><span class="ico">🔄</span><span class="sb-txt"> Movimentação <span style="font-size:9px">(em breve)</span></span></a>
+            <a style="padding-left:28px;opacity:.5;cursor:default"><span class="ico">🚗</span><span class="sb-txt"> Voucher Uber <span style="font-size:9px">(em breve)</span></span></a>
+          </div>
+        </div>
+
+        <!-- Central de Solicitações (em breve) -->
+        <a style="opacity:.45;cursor:default;display:flex;align-items:center;gap:10px;padding:9px 16px;font-size:13px;color:var(--muted)"><span class="ico">📨</span><span class="sb-txt"> Solicitações <span style="font-size:9px">(em breve)</span></span></a>
+
       </div>
     </div>
 
@@ -2300,16 +2372,24 @@ const PERMISSOES_GRUPOS = [
     { id:'rs_vagas',       nome:'Vagas / Admissões', descricao:'Cadastro e acompanhamento de vagas' },
     { id:'rs_voucher',     nome:'Fila de Voucher',   descricao:'Autorização de vouchers na fila' },
     { id:'rs_indicacoes',  nome:'Indicações',        descricao:'Currículos enviados pelos líderes' },
-    { id:'rs_integracao',  nome:'Integração',        descricao:'Colmeia de confirmação de presença na integração' },
     { id:'rs_noshow',      nome:'No Show',           descricao:'Controle de ausências', em_breve:true },
     { id:'rs_estoque_epi', nome:'Estoque de EPI',    descricao:'Colete, bota e luva por unidade', em_breve:true },
   ]},
-  { grupo: 'Administração de Pessoal', itens: [
+  { grupo: 'Administração de Pessoal — Voucher Uber', itens: [
     { id:'adp_voucher_dashboard', nome:'Voucher — Dashboard',         descricao:'Visão geral do sistema de Voucher' },
     { id:'adp_voucher_controle',  nome:'Voucher — Controle',          descricao:'Lista de colaboradores com voucher' },
     { id:'adp_voucher_inativar',  nome:'Voucher — Inativar',          descricao:'Inativar colaborador desligado' },
     { id:'adp_voucher_exportar',  nome:'Voucher — Exportar Planilha', descricao:'Gera arquivo para a empresa de voucher' },
     { id:'adp_voucher_historico', nome:'Voucher — Histórico',         descricao:'Registro de inativações e reativações' },
+  ]},
+  { grupo: 'Administração de Pessoal — Benefícios', itens: [
+    { id:'adp_beneficios',          nome:'Gestão de Benefícios',   descricao:'Confirmação de presença para pagamento de benefícios' },
+    { id:'adp_beneficios_historico',nome:'Benefícios — Histórico', descricao:'Histórico de integrações e confirmações', em_breve:true },
+  ]},
+  { grupo: 'Administração de Pessoal — Tickets Shopee', itens: [
+    { id:'adp_tickets_deslig',  nome:'Tickets de Desligamento', descricao:'Abertura e acompanhamento de tickets de desligamento', em_breve:true },
+    { id:'adp_tickets_movim',   nome:'Tickets de Movimentação', descricao:'Abertura e acompanhamento de tickets de movimentação', em_breve:true },
+    { id:'adp_tickets_voucher', nome:'Tickets de Voucher Uber', descricao:'Abertura e acompanhamento de tickets de voucher', em_breve:true },
   ]},
   { grupo: 'Suporte', itens: [
     { id:'sup_configuracoes',   nome:'Configurações',      descricao:'Tema, foto de perfil e preferências' },
@@ -2341,7 +2421,7 @@ function temPermissao(id) {
   // Gestor vê tudo
   if (session.perfil === 'gestor') return true;
   // Consultor (equipe) e Onsite veem Seleção & Admissão básica
-  const RS_BASICO = ['rs_dashboard','rs_vagas','rs_voucher','rs_indicacoes','rs_integracao'];
+  const RS_BASICO = ['rs_dashboard','rs_vagas','rs_voucher','rs_indicacoes','adp_beneficios'];
   if (['equipe','onsite'].includes(session.perfil)) return RS_BASICO.includes(id);
   return false;
 }
@@ -2506,29 +2586,41 @@ async function iniciarSessao(conta) {
   const show = (id, visivel) => { if (el(id)) el(id).style.display = visivel ? 'flex' : 'none'; };
   const showBlock = (id, visivel) => { if (el(id)) el(id).style.display = visivel ? 'block' : 'none'; };
 
+  // ── Seleção & Admissão ──
   show('nav-dashboard',  temPermissao('rs_dashboard'));
   show('nav-vagas',      temPermissao('rs_vagas'));
   show('nav-voucher',    temPermissao('rs_voucher'));
   show('nav-indicacoes', temPermissao('rs_indicacoes'));
-  show('nav-integracao',  temPermissao('rs_integracao'));
-  show('nav-usuarios',   false); // centralizado em Suporte
+  show('nav-noshow',     temPermissao('rs_noshow'));
+  show('nav-epi',        temPermissao('rs_estoque_epi'));
 
-  const _algumVoucher = PERMISSOES_GRUPOS[1].itens.some(i => temPermissao(i.id));
-  showBlock('navgroup-voucherapp',   _algumVoucher);
-  // Itens individuais do Adm. de Pessoal
+  // ── Adm. de Pessoal — grupo pai ──
+  const _algumVoucher = ['adp_voucher_dashboard','adp_voucher_controle','adp_voucher_inativar',
+    'adp_voucher_exportar','adp_voucher_historico'].some(i => temPermissao(i));
+  const _algumBen = temPermissao('adp_beneficios');
+  const _algumTicket = ['adp_tickets_deslig','adp_tickets_movim','adp_tickets_voucher'].some(i=>temPermissao(i));
+  const _algumADP = _algumVoucher || _algumBen || _algumTicket;
+  showBlock('navgroup-admpessoal', _algumADP);
+
+  // Voucher Uber sub
+  showBlock('navgroup-voucher-uber', _algumVoucher);
   show('nav-adp-dashboard', temPermissao('adp_voucher_dashboard'));
+  const _algumFila = ['adp_voucher_controle','adp_voucher_inativar','adp_voucher_exportar','adp_voucher_historico'].some(i=>temPermissao(i));
+  showBlock('navgroup-adp-fila', _algumFila);
   show('nav-adp-controle',  temPermissao('adp_voucher_controle'));
   show('nav-adp-inativar',  temPermissao('adp_voucher_inativar'));
   show('nav-adp-exportar',  temPermissao('adp_voucher_exportar'));
   show('nav-adp-historico', temPermissao('adp_voucher_historico'));
+
+  // Benefícios sub
+  showBlock('navgroup-adp-beneficios', _algumBen);
+  show('nav-integracao', _algumBen);
+
+  // Tickets sub
+  showBlock('navgroup-adp-tickets', _algumTicket);
+
   showBlock('nav-suporte-cadastros', temPermissao('cad_clientes')||temPermissao('cad_cc')||temPermissao('cad_deptos'));
   show('nav-suporte-usuarios',       podeAdmin());
-  if (podeAdmin() && el('cfg-logo-card')) el('cfg-logo-card').style.display = 'block';
-
-  window._homeDefaultPage = temPermissao('rs_dashboard') ? 'home'
-    : temPermissao('rs_vagas') ? 'vagas'
-    : temPermissao('rs_voucher') ? 'voucher'
-    : _algumVoucher ? 'voucherapp' : 'home';
   // botões de Cadastros (só aparecem depois que o _MAIN_HTML é reinserido, por isso via delegação)
   window._cadPodeCriar = podeVerTudo();
   document.getElementById('voucherapp-open-tab').href = VOUCHER_APP_URL;
@@ -2557,6 +2649,11 @@ async function iniciarSessao(conta) {
   popularFiltroConsultor();
   popularFiltroCC();
   iniciarConfiguracoes();
+  window._homeDefaultPage = temPermissao('rs_dashboard') ? 'home'
+    : temPermissao('rs_vagas') ? 'vagas'
+    : temPermissao('rs_voucher') ? 'voucher'
+    : temPermissao('adp_beneficios') ? 'integracao'
+    : _algumVoucher ? 'vchr-dashboard' : 'home';
   navTo(window._homeDefaultPage || 'home');
 }
 
