@@ -4759,6 +4759,7 @@ vchrRenderControle = function() {
           ? `<button class="btn btn-warning btn-sm" onclick="vchrAbrirInativar('${c.matricula}','${(c.nome||'').replace(/'/g,"\'")}')">Inativar</button>`
           : `<button class="btn btn-success btn-sm" onclick="vchrReativar('${c.matricula}')">Reativar</button>`
         }
+        <button class="btn btn-danger btn-sm" onclick="vchrExcluir('${c.matricula}','${(c.nome||'').replace(/'/g,"\'")}')">Excluir</button>
       </td>
     </tr>`;
   }).join('');
@@ -4866,10 +4867,26 @@ async function vchrConfirmarImport() {
     log.textContent = `✓ ${ok} importado(s)${err?` · ✗ ${err} erro(s)`:''} (${ok+err}/${VCHR_IMPORT_ROWS.length})\n` + log.textContent.replace(/^✓.*\n/,'');
     log.scrollTop = 0;
   }
-  log.textContent = `══ CONCLUÍDO ══\n✓ ${ok} colaborador(es) importado(s)${err?`\n✗ ${err} erro(s)`:''}\n\n` + log.textContent;
+  log.textContent = `══ CONCLUÍDO ══\n✓ ${ok} cadastrado(s)/atualizado(s)${err?`\n✗ ${err} erro(s)`:''}\n(colaboradores já existentes foram atualizados automaticamente)\n\n` + log.textContent;
   await vchrAtualizarDados(); vchrRenderControle();
   btn.disabled=false; btn.textContent='✅ Importação concluída';
-  showToast(`${ok} importado(s)${err?`, ${err} erros`:''}`, err?'info':'success');
+  showToast(`${ok} importado(s)/atualizado(s)${err?`, ${err} erros`:''}`, err?'info':'success');
+}
+
+// ── Excluir colaborador ──
+async function vchrExcluir(matricula, nome) {
+  if (!confirm(`Excluir ${nome} (${matricula}) do sistema de voucher?\n\nEsta ação não pode ser desfeita.`)) return;
+  try {
+    const r = await rpc('wc_voucher_excluir', { p_matricula: matricula, p_forcar: false });
+    if (r.temHistorico) {
+      // Tem histórico — pede confirmação extra
+      if (!confirm(`${nome} possui ${r.qtdHistorico} registro(s) no histórico.\nDeseja excluir mesmo assim?`)) return;
+      await rpc('wc_voucher_excluir', { p_matricula: matricula, p_forcar: true });
+    }
+    await vchrAtualizarDados();
+    vchrRenderControle();
+    showToast(`${nome} excluído do sistema.`, 'success');
+  } catch(e) { showToast(e.message, 'error'); }
 }
 
 // ═══════════════ FIM VOUCHER INTEGRADO ═══════════════
