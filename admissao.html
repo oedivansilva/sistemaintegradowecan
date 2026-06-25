@@ -646,6 +646,27 @@
   .ops-item input[type=checkbox] { accent-color:var(--accent); width:14px; height:14px; cursor:pointer; }
   .ops-item .op-label { flex:1; }
   .ops-item .op-reg { font-size:10.5px; color:var(--muted); }
+
+  /* ══════════════════════════════════════════
+     VOUCHER — estilos integrados
+  ══════════════════════════════════════════ */
+  .vchr-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-bottom:22px}
+  .vchr-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 18px}
+  .vchr-card-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.7px}
+  .vchr-card-value{font-size:26px;font-weight:800;margin-top:6px}
+  .vchr-card-value.teal{color:var(--accent)}.vchr-card-value.green{color:#22c55e}.vchr-card-value.red{color:#ef4444}.vchr-card-value.blue{color:#4f7cff}
+  .vchr-pill-ativo{background:rgba(34,197,94,.14);color:#22c55e;display:inline-block;padding:2px 10px;border-radius:20px;font-size:10.5px;font-weight:700}
+  .vchr-pill-inativo{background:rgba(239,68,68,.14);color:#ef4444;display:inline-block;padding:2px 10px;border-radius:20px;font-size:10.5px;font-weight:700}
+  .vchr-pill-muted{background:var(--surface3);color:var(--muted);display:inline-block;padding:2px 10px;border-radius:20px;font-size:10.5px;font-weight:700}
+  .vchr-hist-row{display:flex;gap:12px;padding:8px 0;border-bottom:1px solid var(--border);font-size:12.5px;align-items:flex-start}
+  .vchr-hist-row:last-child{border-bottom:none}
+  .vchr-hist-ico{width:28px;height:28px;border-radius:8px;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0}
+  .vchr-hist-main{flex:1}.vchr-hist-tipo{font-weight:700}.vchr-hist-sub{color:var(--muted);font-size:11.5px;margin-top:2px}
+  .vchr-export-preview{background:var(--surface2);border:1px solid var(--border);border-radius:8px;max-height:220px;overflow:auto;margin-bottom:14px;font-size:12px}
+  .vchr-export-preview table{width:100%;border-collapse:collapse}
+  .vchr-export-preview th{background:var(--surface3);padding:6px 10px;text-align:left;color:var(--muted);position:sticky;top:0;white-space:nowrap}
+  .vchr-export-preview td{padding:5px 10px;border-top:1px solid var(--border);white-space:nowrap}
+
 </style>
 </head>
 <body>
@@ -685,11 +706,11 @@
         <span>Adm. de Pessoal</span><span class="chevron">▾</span>
       </button>
       <div class="nav-group-items">
-        <a id="nav-adp-dashboard" onclick="irParaVoucher()" data-vp="dashboard" style="display:none"><span class="ico">📊</span><span class="sb-txt"> Dashboard</span></a>
-        <a id="nav-adp-controle"  onclick="irParaVoucher()" data-vp="controle"  style="display:none"><span class="ico">☰</span><span class="sb-txt"> Controle de Vouchers</span></a>
-        <a id="nav-adp-inativar"  onclick="irParaVoucher()" data-vp="inativar"  style="display:none"><span class="ico">⊘</span><span class="sb-txt"> Inativar Colaborador</span></a>
-        <a id="nav-adp-exportar"  onclick="irParaVoucher()" data-vp="exportar"  style="display:none"><span class="ico">↓</span><span class="sb-txt"> Exportar Planilha</span></a>
-        <a id="nav-adp-historico" onclick="irParaVoucher()" data-vp="historico" style="display:none"><span class="ico">🕐</span><span class="sb-txt"> Histórico</span></a>
+        <a id="nav-adp-dashboard" onclick="navTo('vchr-dashboard')" data-page="vchr-dashboard" data-vp="dashboard" title="Dashboard Voucher"   style="display:none"><span class="ico">📊</span><span class="sb-txt"> Dashboard</span></a>
+        <a id="nav-adp-controle"  onclick="navTo('vchr-controle')"  data-page="vchr-controle"  data-vp="controle"  title="Controle de Vouchers" style="display:none"><span class="ico">☰</span><span class="sb-txt"> Controle de Vouchers</span> <span class="count-badge" id="vchr-badge-ativos"></span></a>
+        <a id="nav-adp-inativar"  onclick="navTo('vchr-inativar')"  data-page="vchr-inativar"  data-vp="inativar"  title="Inativar Colaborador"  style="display:none"><span class="ico">⊘</span><span class="sb-txt"> Inativar Colaborador</span></a>
+        <a id="nav-adp-exportar"  onclick="navTo('vchr-exportar')"  data-page="vchr-exportar"  data-vp="exportar"  title="Exportar Planilha"     style="display:none"><span class="ico">↓</span><span class="sb-txt"> Exportar Planilha</span></a>
+        <a id="nav-adp-historico" onclick="navTo('vchr-historico')" data-page="vchr-historico" data-vp="historico" title="Histórico Voucher"      style="display:none"><span class="ico">🕐</span><span class="sb-txt"> Histórico</span></a>
       </div>
     </div>
 
@@ -1118,6 +1139,101 @@
       <tbody id="tbody-deptos"></tbody>
     </table></div>
     <p id="deptos-count" style="color:var(--muted);font-size:12px;margin-top:12px"></p>
+  </div>
+
+
+  <!-- ══════════════════════════════════════════
+       VOUCHER — páginas integradas
+  ══════════════════════════════════════════ -->
+
+  <!-- VOUCHER DASHBOARD -->
+  <div class="page" id="page-vchr-dashboard">
+    <div class="page-header">
+      <div><h1>Dashboard · Voucher</h1><p>Visão geral do sistema de vouchers</p></div>
+      <button class="btn btn-ghost btn-sm" onclick="vchrAtualizarDados()">🔄 Atualizar</button>
+    </div>
+    <div class="vchr-cards">
+      <div class="vchr-card"><div class="vchr-card-label">Ativos</div><div class="vchr-card-value teal" id="vchr-kpi-ativos">—</div></div>
+      <div class="vchr-card"><div class="vchr-card-label">Inativos</div><div class="vchr-card-value red" id="vchr-kpi-inativos">—</div></div>
+      <div class="vchr-card"><div class="vchr-card-label">Total</div><div class="vchr-card-value blue" id="vchr-kpi-total">—</div></div>
+      <div class="vchr-card"><div class="vchr-card-label">IDA</div><div class="vchr-card-value green" id="vchr-kpi-ida">—</div></div>
+      <div class="vchr-card"><div class="vchr-card-label">VOLTA</div><div class="vchr-card-value" style="color:var(--warning)" id="vchr-kpi-volta">—</div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px">
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px 20px">
+        <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px">Por Unidade</div>
+        <div id="vchr-dash-unidades"><p style="color:var(--muted);font-size:12.5px">Sem dados</p></div>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px 20px">
+        <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px">Últimas Inativações</div>
+        <div id="vchr-dash-inativacoes"><p style="color:var(--muted);font-size:12.5px">Nenhuma inativação registrada</p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- VOUCHER CONTROLE -->
+  <div class="page" id="page-vchr-controle">
+    <div class="page-header">
+      <div><h1>Controle de Vouchers</h1><p>Colaboradores com benefício de voucher cadastrados</p></div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-ghost btn-sm" onclick="vchrAtualizarDados()">🔄 Atualizar</button>
+        <button class="btn btn-primary" onclick="vchrAbrirModalColab(null)">+ Adicionar Colaborador</button>
+      </div>
+    </div>
+    <div class="toolbar">
+      <input type="text" id="vchr-busca-colab" placeholder="Buscar por nome, matrícula, CPF…" oninput="vchrRenderControle()"/>
+      <select id="vchr-filtro-status" onchange="vchrRenderControle()">
+        <option value="ATIVO">Ativos</option><option value="INATIVO">Inativos</option><option value="TODOS">Todos</option>
+      </select>
+      <select id="vchr-filtro-trajeto" onchange="vchrRenderControle()">
+        <option value="">Todos os trajetos</option><option>IDA</option><option>VOLTA</option><option>IDA E VOLTA</option>
+      </select>
+    </div>
+    <div class="table-wrap">
+      <table class="main-table">
+        <thead><tr><th>Status</th><th>Matrícula</th><th>Nome</th><th>Unidade</th><th>Horário</th><th>Trajeto</th><th>Cód Voucher</th><th>Aplicativo</th><th>Dt. Inclusão</th><th>Ações</th></tr></thead>
+        <tbody id="vchr-tbody-controle"></tbody>
+      </table>
+    </div>
+    <p id="vchr-controle-count" style="color:var(--muted);font-size:12px;margin-top:12px"></p>
+  </div>
+
+  <!-- VOUCHER INATIVAR -->
+  <div class="page" id="page-vchr-inativar">
+    <div class="page-header"><div><h1>Inativar Colaborador</h1><p>Busque pelo nome ou matrícula do colaborador a ser desligado</p></div></div>
+    <div class="toolbar">
+      <input type="text" id="vchr-busca-inat" placeholder="Nome ou matrícula…" oninput="vchrBuscarParaInativar()"/>
+    </div>
+    <div id="vchr-inat-resultados"></div>
+  </div>
+
+  <!-- VOUCHER EXPORTAR -->
+  <div class="page" id="page-vchr-exportar">
+    <div class="page-header"><div><h1>Exportar Planilha</h1><p>Gera o arquivo no padrão Uber/99 para upload</p></div></div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:22px 24px;max-width:520px;margin-bottom:20px">
+      <div class="form-row">
+        <div class="form-group"><label>Data Base do Turno</label><input type="date" id="vchr-exp-data-base"/></div>
+        <div class="form-group"><label>Data Vencimento (FDS, opcional)</label><input type="date" id="vchr-exp-data-venc"/></div>
+      </div>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:16px">Deixe "Vencimento" em branco para modo normal. Preencha para modo FDS (sexta → segunda).</p>
+      <button class="btn btn-primary" onclick="vchrGerarExportacao()">📊 Gerar Prévia</button>
+      <button class="btn btn-ghost" id="vchr-btn-baixar-xlsx" onclick="vchrBaixarExcel()" style="display:none;margin-left:8px">⬇️ Baixar Excel</button>
+    </div>
+    <div class="vchr-export-preview" id="vchr-export-preview" style="display:none">
+      <table><thead id="vchr-exp-head"></thead><tbody id="vchr-exp-body"></tbody></table>
+    </div>
+    <p id="vchr-exp-info" style="color:var(--muted);font-size:12px;margin-top:10px"></p>
+  </div>
+
+  <!-- VOUCHER HISTÓRICO -->
+  <div class="page" id="page-vchr-historico">
+    <div class="page-header"><div><h1>Histórico · Voucher</h1><p>Registro de todas as ações no sistema de voucher</p></div></div>
+    <div class="toolbar">
+      <input type="text" id="vchr-busca-hist" placeholder="Buscar por matrícula, tipo, responsável…" oninput="vchrRenderHistorico()"/>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 20px">
+      <div id="vchr-hist-lista"><div style="color:var(--muted);padding:20px 0;text-align:center">Carregando…</div></div>
+    </div>
   </div>
 
 </div><!-- /main -->
@@ -1793,6 +1909,7 @@
   <button class="btn btn-danger btn-sm" onclick="excluirSelecionadas()">🗑️ Excluir selecionadas</button>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="shared.js"></script>
 <script>
 // ══════════════════════════════════════════════
@@ -2200,9 +2317,9 @@ function navTo(id) {
 }
 function toggleNavGroup(nome) { document.getElementById('navgroup-'+nome).classList.toggle('collapsed'); }
 
-// Navega direto para voucher.html (mesma aba, sessão compartilhada)
-function irParaVoucher() { window.location.href = VOUCHER_APP_URL; }
-function abrirVoucherEm(pagina) { irParaVoucher(); }
+// Voucher agora é integrado nativamente — sem redirect
+function irParaVoucher() {}
+function abrirVoucherEm(p) { navTo("vchr-"+p); }
 function carregarVoucherFrame() {}
 
 async function popularFiltroCC() {
@@ -4271,6 +4388,274 @@ function fecharSidebarMobile() {
 }
 
 initApp();
+
+// ════════════════════════════════════════════════════════════
+//  VOUCHER — lógica integrada (prefixo vchr)
+// ════════════════════════════════════════════════════════════
+let VCHR_COLABORADORES  = [];
+let VCHR_HISTORICO      = [];
+let VCHR_DADOS_CARREGADOS = false;
+let VCHR_INATIVAR_MATRICULA = '';
+
+async function vchrAtualizarDados() {
+  try {
+    const [rc, rh] = await Promise.all([
+      rpc('wc_voucher_listar', { p_status:'TODOS' }),
+      rpc('wc_voucher_historico', {})
+    ]);
+    VCHR_COLABORADORES = rc.itens    || [];
+    VCHR_HISTORICO     = rh.historico || [];
+    VCHR_DADOS_CARREGADOS = true;
+    const ativos = VCHR_COLABORADORES.filter(c=>c.status==='ATIVO').length;
+    const badge  = document.getElementById('vchr-badge-ativos');
+    if (badge) badge.textContent = ativos || '';
+  } catch(e) { showToast(e.message,'error'); }
+}
+
+// Intercepta navTo para páginas vchr-*
+const _origNavTo = window.navTo;
+window.navTo = function(id) {
+  if (id && id.startsWith('vchr-')) {
+    document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+    document.querySelectorAll('nav a, .nav-suporte-item').forEach(a=>a.classList.remove('active'));
+    const page = document.getElementById('page-'+id);
+    if (page) page.classList.add('active');
+    document.querySelector(`[data-page="${id}"]`)?.classList.add('active');
+    if (!VCHR_DADOS_CARREGADOS) {
+      vchrAtualizarDados().then(()=>vchrRenderPagina(id));
+    } else { vchrRenderPagina(id); }
+    fecharSidebarMobile && fecharSidebarMobile();
+    return;
+  }
+  _origNavTo(id);
+};
+
+function vchrRenderPagina(id) {
+  if (id==='vchr-dashboard') vchrRenderDashboard();
+  if (id==='vchr-controle')  vchrRenderControle();
+  if (id==='vchr-historico') vchrRenderHistorico();
+  if (id==='vchr-inativar')  { const i=document.getElementById('vchr-busca-inat'); if(i)i.value=''; const r=document.getElementById('vchr-inat-resultados'); if(r)r.innerHTML=''; }
+}
+
+function vchrRenderDashboard() {
+  const ativos  = VCHR_COLABORADORES.filter(c=>c.status==='ATIVO').length;
+  const inativos= VCHR_COLABORADORES.filter(c=>c.status==='INATIVO').length;
+  const total   = VCHR_COLABORADORES.length;
+  const ida     = VCHR_COLABORADORES.filter(c=>c.status==='ATIVO'&&c.trajeto==='IDA').length;
+  const volta   = VCHR_COLABORADORES.filter(c=>c.status==='ATIVO'&&c.trajeto==='VOLTA').length;
+  const set=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};
+  set('vchr-kpi-ativos',ativos);set('vchr-kpi-inativos',inativos);set('vchr-kpi-total',total);set('vchr-kpi-ida',ida);set('vchr-kpi-volta',volta);
+  const porUnidade={};
+  VCHR_COLABORADORES.filter(c=>c.status==='ATIVO').forEach(c=>{const u=c.unidade||'Sem unidade';porUnidade[u]=(porUnidade[u]||0)+1;});
+  const maxU=Math.max(...Object.values(porUnidade),1);
+  const uEl=document.getElementById('vchr-dash-unidades');
+  if(uEl) uEl.innerHTML=Object.entries(porUnidade).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--border);font-size:12.5px"><span style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${k}</span><div style="width:80px;height:6px;background:var(--surface2);border-radius:3px;flex-shrink:0"><div style="width:${Math.round(v/maxU*100)}%;height:6px;background:var(--accent);border-radius:3px"></div></div><span style="color:var(--muted);min-width:20px;text-align:right">${v}</span></div>`).join('')||'<p style="color:var(--muted);font-size:12.5px">Sem dados</p>';
+  const iEl=document.getElementById('vchr-dash-inativacoes');
+  const inats=VCHR_HISTORICO.filter(h=>h.tipo&&h.tipo.toUpperCase().includes('INATIV')).slice(0,8);
+  if(iEl) iEl.innerHTML=inats.length?inats.map(h=>`<div class="vchr-hist-row"><div class="vchr-hist-ico">⊘</div><div class="vchr-hist-main"><div class="vchr-hist-tipo">${h.matricula} — ${h.motivo||'—'}</div><div class="vchr-hist-sub">${h.responsavel||'—'} · ${h.created_at?new Date(h.created_at).toLocaleDateString('pt-BR'):''}</div></div></div>`).join(''):'<p style="color:var(--muted);font-size:12.5px;padding:12px 0">Nenhuma inativação registrada</p>';
+}
+
+function vchrDefinirTrajeto(e,s){if(!e||!s)return null;const hE=parseInt((e||'').split(':')[0],10),hS=parseInt((s||'').split(':')[0],10);if(hE>=0&&hE<=4)return'IDA';if(hS>=0&&hS<=4)return'VOLTA';return null;}
+
+function vchrRenderControle() {
+  const busca=(document.getElementById('vchr-busca-colab')?.value||'').toLowerCase();
+  const status=document.getElementById('vchr-filtro-status')?.value||'ATIVO';
+  const trajeto=document.getElementById('vchr-filtro-trajeto')?.value||'';
+  let lista=status==='TODOS'?VCHR_COLABORADORES:VCHR_COLABORADORES.filter(c=>c.status===status);
+  if(busca)lista=lista.filter(c=>[c.nome,c.matricula,c.cpf,c.unidade].some(f=>(f||'').toLowerCase().includes(busca)));
+  if(trajeto)lista=lista.filter(c=>(c.trajeto||vchrDefinirTrajeto(c.hora_entrada,c.hora_saida))===trajeto);
+  const tbody=document.getElementById('vchr-tbody-controle');
+  const count=document.getElementById('vchr-controle-count');
+  if(!tbody)return;
+  if(!lista.length){tbody.innerHTML='<tr><td colspan="10"><div class="empty-state"><div style="font-size:32px;margin-bottom:10px">🎟️</div>Nenhum colaborador encontrado</div></td></tr>';if(count)count.textContent='';return;}
+  if(count)count.textContent=`${lista.length} colaborador(es)`;
+  tbody.innerHTML=lista.map(c=>{
+    const traj=c.trajeto||vchrDefinirTrajeto(c.hora_entrada,c.hora_saida)||'—';
+    const dataInc=c.data_inclusao?new Date(c.data_inclusao+'T00:00').toLocaleDateString('pt-BR'):'—';
+    return`<tr><td>${c.status==='ATIVO'?'<span class="vchr-pill-ativo">ATIVO</span>':'<span class="vchr-pill-inativo">INATIVO</span>'}</td><td><strong>${c.matricula||'—'}</strong></td><td>${c.nome||'—'}</td><td style="max-width:140px;overflow:hidden;text-overflow:ellipsis">${c.unidade||'—'}</td><td>${[c.hora_entrada,c.hora_saida].filter(Boolean).join(' AS ')||'—'}</td><td><span class="vchr-pill-muted">${traj}</span></td><td>${c.cod_voucher||'—'}</td><td>${c.aplicativo||'—'}</td><td>${dataInc}</td><td class="actions-cell"><button class="btn btn-ghost btn-sm" onclick='vchrAbrirModalColab(${JSON.stringify(c)})'>Editar</button>${c.status==='ATIVO'?`<button class="btn btn-warning btn-sm" onclick="vchrAbrirInativar('${c.matricula}','${(c.nome||'').replace(/'/g,"\\'")}')">Inativar</button>`:`<button class="btn btn-success btn-sm" onclick="vchrReativar('${c.matricula}')">Reativar</button>`}</td></tr>`;
+  }).join('');
+}
+
+function vchrAbrirModalColab(c) {
+  document.getElementById('vchr-mc-title').textContent=c?'Editar Colaborador':'Adicionar Colaborador';
+  document.getElementById('vchr-mc-id').value=c?.id||'';
+  document.getElementById('vchr-mc-matricula').value=c?.matricula||'';
+  document.getElementById('vchr-mc-unidade').value=c?.unidade||'';
+  document.getElementById('vchr-mc-nome').value=c?.nome||'';
+  document.getElementById('vchr-mc-cpf').value=c?.cpf||'';
+  document.getElementById('vchr-mc-celular').value=c?.celular||'';
+  document.getElementById('vchr-mc-entrada').value=c?.hora_entrada||'';
+  document.getElementById('vchr-mc-saida').value=c?.hora_saida||'';
+  document.getElementById('vchr-mc-trajeto').value=c?.trajeto||'';
+  document.getElementById('vchr-mc-codvoucher').value=c?.cod_voucher||'';
+  document.getElementById('vchr-mc-valor').value=c?.valor||'100,00';
+  document.getElementById('vchr-mc-app').value=c?.aplicativo||'UBER/99';
+  document.getElementById('vchr-mc-beneficio').value=c?.beneficio_original||'';
+  abrirModal('vchr-modal-colab');
+}
+
+async function vchrSalvarColab() {
+  const btn=document.getElementById('vchr-btn-salvar-colab');
+  const g=id=>document.getElementById('vchr-mc-'+id)?.value.trim()||'';
+  const colab={id:g('id')||undefined,matricula:g('matricula'),nome:g('nome'),unidade:g('unidade'),cpf:g('cpf'),celular:g('celular'),hora_entrada:g('entrada'),hora_saida:g('saida'),horario_full:[g('entrada'),g('saida')].filter(Boolean).join(' AS '),trajeto:document.getElementById('vchr-mc-trajeto').value||null,cod_voucher:g('codvoucher'),valor:g('valor')||'100,00',aplicativo:document.getElementById('vchr-mc-app').value,beneficio_original:g('beneficio')};
+  if(!colab.matricula||!colab.nome){showToast('Matrícula e nome são obrigatórios.','error');return;}
+  btn.disabled=true;btn.textContent='Salvando…';
+  try{await rpc('wc_voucher_adicionar',{p_colab:colab});fecharModal('vchr-modal-colab');await vchrAtualizarDados();vchrRenderControle();showToast('Colaborador salvo!','success');}
+  catch(e){showToast(e.message,'error');}
+  finally{btn.disabled=false;btn.textContent='Salvar';}
+}
+
+function vchrBuscarParaInativar() {
+  const busca=(document.getElementById('vchr-busca-inat').value||'').toLowerCase();
+  const el=document.getElementById('vchr-inat-resultados');
+  if(busca.length<2){el.innerHTML='';return;}
+  const lista=VCHR_COLABORADORES.filter(c=>c.status==='ATIVO'&&[c.nome,c.matricula].some(f=>(f||'').toLowerCase().includes(busca)));
+  if(!lista.length){el.innerHTML='<p style="color:var(--muted);font-size:13px;margin-top:12px">Nenhum colaborador ativo encontrado.</p>';return;}
+  el.innerHTML=lista.map(c=>`<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 18px;margin-bottom:10px;display:flex;align-items:center;gap:14px"><div style="flex:1"><strong>${c.nome}</strong><br/><span style="color:var(--muted);font-size:12px">${c.matricula} · ${c.unidade||'—'}</span></div><button class="btn btn-warning btn-sm" onclick="vchrAbrirInativar('${c.matricula}','${(c.nome||'').replace(/'/g,"\\'")}')">Inativar</button></div>`).join('');
+}
+
+function vchrAbrirInativar(matricula,nome) {
+  VCHR_INATIVAR_MATRICULA=matricula;
+  document.getElementById('vchr-inativar-nome').textContent=nome+' · '+matricula;
+  document.getElementById('vchr-motivo-select').value='';
+  document.getElementById('vchr-motivo-obs').value='';
+  abrirModal('vchr-modal-inativar');
+}
+
+async function vchrConfirmarInativar() {
+  const motivo=document.getElementById('vchr-motivo-select').value;
+  const obs=document.getElementById('vchr-motivo-obs').value.trim();
+  if(!motivo){showToast('Selecione o motivo.','error');return;}
+  try{await rpc('wc_voucher_inativar',{p_matricula:VCHR_INATIVAR_MATRICULA,p_motivo:motivo,p_obs:obs});fecharModal('vchr-modal-inativar');await vchrAtualizarDados();vchrRenderControle();vchrBuscarParaInativar();showToast(VCHR_INATIVAR_MATRICULA+' inativado.','success');}
+  catch(e){showToast(e.message,'error');}
+}
+
+async function vchrReativar(matricula) {
+  if(!confirm('Reativar '+matricula+'?'))return;
+  try{await rpc('wc_voucher_reativar',{p_matricula:matricula});await vchrAtualizarDados();vchrRenderControle();showToast('Reativado!','success');}
+  catch(e){showToast(e.message,'error');}
+}
+
+let VCHR_EXPORT_ROWS=[];
+function _vchrPH(h){const m=String(h).match(/(\d{2}:\d{2})\s+AS\s+(\d{2}:\d{2})/i);if(!m)return{entrada:null,saida:null};return{entrada:m[1],saida:m[2]};}
+function _vchrFD(dt){return String(dt.getDate()).padStart(2,'0')+'/'+String(dt.getMonth()+1).padStart(2,'0')+'/'+dt.getFullYear();}
+function _vchrFH(dt){return String(dt.getHours()).padStart(2,'0')+':'+String(dt.getMinutes()).padStart(2,'0');}
+function _vchrCD(horario,dataBase,dataVenc){
+  const {entrada,saida}=_vchrPH(horario);const v={dII:'',hII:'',dFI:'',hFI:'',dIV:'',hIV:'',dFV:'',hFV:''};if(!entrada||!saida||!dataBase)return v;
+  const [hE,mE]=entrada.split(':').map(Number),[hS,mS]=saida.split(':').map(Number),[ano,mes,dia]=dataBase.split('-').map(Number);
+  const calc=(bD,bM,bA,hMin,add)=>{const tot=hMin+add,d=bD+Math.floor(tot/1440),h=((tot%1440)+1440)%1440;return new Date(bA,bM-1,d,Math.floor(h/60),h%60,0);};
+  if(dataVenc){const [av,mv,dv]=dataVenc.split('-').map(Number);return{dII:_vchrFD(calc(dia,mes,ano,hE*60+mE,-120)),hII:_vchrFH(calc(dia,mes,ano,hE*60+mE,-120)),dFI:_vchrFD(calc(dv,mv,av,hE*60+mE,60)),hFI:_vchrFH(calc(dv,mv,av,hE*60+mE,60)),dIV:_vchrFD(calc(dia,mes,ano,hS*60+mS,-60)),hIV:_vchrFH(calc(dia,mes,ano,hS*60+mS,-60)),dFV:_vchrFD(calc(dv,mv,av,hS*60+mS,120)),hFV:_vchrFH(calc(dv,mv,av,hS*60+mS,120))};}
+  const d1=dia+1;return{dII:_vchrFD(calc(d1,mes,ano,hE*60+mE,-120)),hII:_vchrFH(calc(d1,mes,ano,hE*60+mE,-120)),dFI:_vchrFD(calc(d1,mes,ano,hE*60+mE,60)),hFI:_vchrFH(calc(d1,mes,ano,hE*60+mE,60)),dIV:_vchrFD(calc(d1,mes,ano,hS*60+mS,-60)),hIV:_vchrFH(calc(d1,mes,ano,hS*60+mS,-60)),dFV:_vchrFD(calc(d1,mes,ano,hS*60+mS,120)),hFV:_vchrFH(calc(d1,mes,ano,hS*60+mS,120))};
+}
+
+function vchrGerarExportacao() {
+  const dataBase=document.getElementById('vchr-exp-data-base').value,dataVenc=document.getElementById('vchr-exp-data-venc').value||null;
+  if(!dataBase){showToast('Selecione a Data Base.','error');return;}
+  VCHR_EXPORT_ROWS=[];let semV=0;
+  VCHR_COLABORADORES.filter(c=>c.status==='ATIVO').forEach(c=>{
+    const h=c.horario_full||[c.hora_entrada,c.hora_saida].filter(Boolean).join(' AS '),t=c.trajeto||vchrDefinirTrajeto(c.hora_entrada,c.hora_saida);
+    if(!t){semV++;return;}const d=_vchrCD(h,dataBase,dataVenc);
+    VCHR_EXPORT_ROWS.push({'TRAJETO':t,'UNIDADE':c.unidade,'MATRICULA':c.matricula,'NOME COMPLETO':c.nome,'CELULAR':c.celular,'CPF':c.cpf,'DATA INICIO':t==='IDA'?d.dII:d.dIV,'HORA INICIO':t==='IDA'?d.hII:d.hIV,'DATA FIM':t==='IDA'?d.dFI:d.dFV,'HORA FIM':t==='IDA'?d.hFI:d.hFV,'VOUCHER':'','VALOR':c.valor||'100,00','MOTIVO':'ESCALA DE TRABALHO','APLICATIVO':c.aplicativo||'UBER/99'});
+  });
+  const cols=Object.keys(VCHR_EXPORT_ROWS[0]||{});
+  document.getElementById('vchr-exp-head').innerHTML=`<tr>${cols.map(c=>`<th>${c}</th>`).join('')}</tr>`;
+  document.getElementById('vchr-exp-body').innerHTML=VCHR_EXPORT_ROWS.slice(0,20).map(r=>`<tr>${cols.map(c=>`<td>${r[c]||'—'}</td>`).join('')}</tr>`).join('');
+  document.getElementById('vchr-export-preview').style.display='block';
+  document.getElementById('vchr-exp-info').textContent=`${VCHR_EXPORT_ROWS.length} colaborador(es)${semV?` · ${semV} sem trajeto (ignorados)`:''}`;
+  document.getElementById('vchr-btn-baixar-xlsx').style.display='inline-flex';
+}
+
+function vchrBaixarExcel() {
+  if(!VCHR_EXPORT_ROWS.length){showToast('Gere a prévia primeiro.','error');return;}
+  if(typeof XLSX==='undefined'){showToast('XLSX não carregado.','error');return;}
+  const wb=XLSX.utils.book_new(),ws=XLSX.utils.json_to_sheet(VCHR_EXPORT_ROWS);
+  ws['!cols']=Object.keys(VCHR_EXPORT_ROWS[0]).map(()=>({wch:18}));
+  XLSX.utils.book_append_sheet(wb,ws,'Vouchers');
+  XLSX.writeFile(wb,`vouchers_${document.getElementById('vchr-exp-data-base').value}.xlsx`);
+}
+
+function vchrRenderHistorico() {
+  const busca=(document.getElementById('vchr-busca-hist')?.value||'').toLowerCase();
+  let lista=[...VCHR_HISTORICO];
+  if(busca)lista=lista.filter(h=>[h.matricula,h.tipo,h.motivo,h.responsavel].some(f=>(f||'').toLowerCase().includes(busca)));
+  const el=document.getElementById('vchr-hist-lista');if(!el)return;
+  if(!lista.length){el.innerHTML='<div class="empty-state"><div style="font-size:32px;margin-bottom:10px">📋</div>Nenhum registro</div>';return;}
+  const ico={'INATIVAÇÃO':'⊘','REATIVAÇÃO':'✅','CADASTRO':'➕','EDIÇÃO':'✏️'};
+  el.innerHTML=lista.slice(0,100).map(h=>`<div class="vchr-hist-row"><div class="vchr-hist-ico">${ico[h.tipo]||'📌'}</div><div class="vchr-hist-main"><div class="vchr-hist-tipo">${h.tipo||'—'} — ${h.matricula||'—'}</div><div class="vchr-hist-sub">${h.motivo||'—'} · ${h.responsavel||'—'} · ${h.created_at?new Date(h.created_at).toLocaleString('pt-BR'):''}</div></div></div>`).join('');
+}
+// ═══════════════ FIM VOUCHER INTEGRADO ═══════════════
 </script>
+
+<!-- MODAL COLABORADOR VOUCHER -->
+<div class="modal-backdrop" id="vchr-modal-colab">
+  <div class="modal" style="width:600px">
+    <div class="modal-head"><h2 id="vchr-mc-title">Adicionar Colaborador</h2><p>Dados do colaborador com benefício de Voucher</p></div>
+    <div class="modal-body">
+      <input type="hidden" id="vchr-mc-id"/>
+      <div class="form-row">
+        <div class="form-group"><label>Matrícula *</label><input type="text" id="vchr-mc-matricula" placeholder="WE000000"/></div>
+        <div class="form-group"><label>Unidade</label><input type="text" id="vchr-mc-unidade" placeholder="HUB Campinas"/></div>
+      </div>
+      <div class="form-group"><label>Nome Completo *</label><input type="text" id="vchr-mc-nome" placeholder="NOME EM MAIÚSCULO"/></div>
+      <div class="form-row">
+        <div class="form-group"><label>CPF</label><input type="text" id="vchr-mc-cpf" placeholder="000.000.000-00"/></div>
+        <div class="form-group"><label>Celular</label><input type="text" id="vchr-mc-celular" placeholder="11999999999"/></div>
+      </div>
+      <hr style="border:none;border-top:1px solid var(--border);margin:16px 0"/>
+      <div class="form-row three">
+        <div class="form-group"><label>Hora Entrada</label><input type="text" id="vchr-mc-entrada" placeholder="22:00"/></div>
+        <div class="form-group"><label>Hora Saída</label><input type="text" id="vchr-mc-saida" placeholder="02:00"/></div>
+        <div class="form-group"><label>Trajeto</label>
+          <select id="vchr-mc-trajeto"><option value="">Calcular auto</option><option>IDA</option><option>VOLTA</option><option>IDA E VOLTA</option></select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Código do Voucher</label><input type="text" id="vchr-mc-codvoucher"/></div>
+        <div class="form-group"><label>Valor</label><input type="text" id="vchr-mc-valor" placeholder="100,00"/></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Aplicativo</label>
+          <select id="vchr-mc-app"><option>UBER/99</option><option>UBER</option><option>99</option><option>OUTRO</option></select>
+        </div>
+        <div class="form-group"><label>Benefício Original</label><input type="text" id="vchr-mc-beneficio" placeholder="VT + VOUCHER"/></div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('vchr-modal-colab')">Cancelar</button>
+      <button class="btn btn-primary" id="vchr-btn-salvar-colab" onclick="vchrSalvarColab()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL INATIVAR VOUCHER -->
+<div class="modal-backdrop" id="vchr-modal-inativar">
+  <div class="modal" style="width:460px">
+    <div class="modal-head">
+      <h2>Inativar Colaborador</h2>
+      <p id="vchr-inativar-nome" style="font-size:13px;color:var(--text);font-weight:600;margin-top:4px"></p>
+    </div>
+    <div class="modal-body">
+      <div class="form-group"><label>Motivo do desligamento *</label>
+        <select id="vchr-motivo-select">
+          <option value="">Selecione…</option>
+          <option>Desligamento voluntário</option>
+          <option>Desligamento involuntário</option>
+          <option>Transferência de unidade</option>
+          <option>Mudança de horário</option>
+          <option>Afastamento temporário</option>
+          <option>Outro</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Observações</label>
+        <textarea id="vchr-motivo-obs" rows="2" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:9px 12px;font-size:13px;font-family:var(--font);outline:none;resize:vertical" placeholder="Opcional…"></textarea>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('vchr-modal-inativar')">Cancelar</button>
+      <button class="btn btn-danger" onclick="vchrConfirmarInativar()">Confirmar Inativação</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
