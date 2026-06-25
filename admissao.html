@@ -4807,10 +4807,7 @@ function vchrCarregarImport(input) {
   reader.onerror = () => { document.getElementById('vchr-import-log').textContent = 'Erro ao ler o arquivo.'; };
   if(file.name.toLowerCase().endsWith('.csv')) {
     reader.onload = e => {
-      const rows = e.target.result.split(/
-?
-/).filter(l=>l.trim())
-        .map(l=>l.split(',').map(v=>v.replace(/^"|"$/g,'').trim()));
+      const rows = e.target.result.split(/\r?\n/).filter(l=>l.trim()).map(l=>l.split(',').map(v=>v.replace(/^"|"$/g,'').trim()));
       processar(rows);
     };
     reader.readAsText(file,'UTF-8');
