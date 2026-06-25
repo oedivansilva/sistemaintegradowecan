@@ -714,6 +714,7 @@
         <a id="nav-vagas" onclick="navTo('vagas')" data-page="vagas" title="Vagas / Admissões"><span class="ico">▤</span><span class="sb-txt"> Vagas / Admissões</span></a>
         <a id="nav-voucher" onclick="navTo('voucher')" data-page="voucher" title="Fila de Voucher"><span class="ico">⇄</span><span class="sb-txt"> Fila de Voucher</span> <span class="count-badge alert" id="nav-voucher-count">0</span></a>
         <a id="nav-indicacoes" onclick="navTo('indicacoes')" data-page="indicacoes" title="Indicações"><span class="ico">📋</span><span class="sb-txt"> Indicações</span> <span class="count-badge alert" id="nav-ind-count" style="display:none">0</span></a>
+        <a id="nav-integracao" onclick="navTo('integracao')" data-page="integracao" title="Integração"><span class="ico">🐝</span><span class="sb-txt"> Integração</span></a>
         <!-- nav-usuarios removido -->
       </div>
     </div>
@@ -2050,6 +2051,7 @@ const PERMISSOES_GRUPOS = [
     { id:'rs_vagas',       nome:'Vagas / Admissões', descricao:'Cadastro e acompanhamento de vagas' },
     { id:'rs_voucher',     nome:'Fila de Voucher',   descricao:'Autorização de vouchers na fila' },
     { id:'rs_indicacoes',  nome:'Indicações',        descricao:'Currículos enviados pelos líderes' },
+    { id:'rs_integracao',  nome:'Integração',        descricao:'Colmeia de confirmação de presença na integração' },
     { id:'rs_noshow',      nome:'No Show',           descricao:'Controle de ausências', em_breve:true },
     { id:'rs_estoque_epi', nome:'Estoque de EPI',    descricao:'Colete, bota e luva por unidade', em_breve:true },
   ]},
@@ -2090,7 +2092,7 @@ function temPermissao(id) {
   // Gestor vê tudo
   if (session.perfil === 'gestor') return true;
   // Consultor (equipe) e Onsite veem Seleção & Admissão básica
-  const RS_BASICO = ['rs_dashboard','rs_vagas','rs_voucher','rs_indicacoes'];
+  const RS_BASICO = ['rs_dashboard','rs_vagas','rs_voucher','rs_indicacoes','rs_integracao'];
   if (['equipe','onsite'].includes(session.perfil)) return RS_BASICO.includes(id);
   return false;
 }
@@ -2259,6 +2261,7 @@ async function iniciarSessao(conta) {
   show('nav-vagas',      temPermissao('rs_vagas'));
   show('nav-voucher',    temPermissao('rs_voucher'));
   show('nav-indicacoes', temPermissao('rs_indicacoes'));
+  show('nav-integracao',  temPermissao('rs_integracao'));
   show('nav-usuarios',   false); // centralizado em Suporte
 
   const _algumVoucher = PERMISSOES_GRUPOS[1].itens.some(i => temPermissao(i.id));
@@ -5004,7 +5007,375 @@ async function vchrExcluirHistorico(id) {
 }
 
 // ═══════════════ FIM VOUCHER INTEGRADO ═══════════════
+
+// ════════════════════════════════════════════════════════════
+//  INTEGRAÇÃO — Colmeia de confirmação de presença
+// ════════════════════════════════════════════════════════════
+let INTEG_LOTE       = [];   // dados lidos da planilha, agrupados
+let INTEG_COLMEIAS   = [];   // lista de colmeias do banco
+let INTEG_COL_ABERTA = null; // colmeia atualmente aberta no modal
+let INTEG_COLABS     = [];   // colaboradores da colmeia aberta
+
+// ── Carregar lista ao navegar ──
+const _origNavTo2 = window.navTo;
+window.navTo = function(id) {
+  if (id === 'integracao') {
+    document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+    document.querySelectorAll('nav a,.nav-suporte-item').forEach(a=>a.classList.remove('active'));
+    const pg = document.getElementById('page-integracao'); if(pg) pg.classList.add('active');
+    document.querySelector('[data-page="integracao"]')?.classList.add('active');
+    integCarregarColmeias();
+    fecharSidebarMobile && fecharSidebarMobile();
+    // Mostra botão de upload só para quem pode criar
+    const btns = document.getElementById('integ-btns-admin');
+    if (btns) btns.style.display = podeAdmin() ? 'flex' : 'none';
+    return;
+  }
+  _origNavTo2(id);
+};
+
+// ── Ler planilha ATIVOS_E_INATIVOS ──
+function integLerPlanilha(input) {
+  const file = input.files[0]; if(!file) return;
+  input.value = '';
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const wb = XLSX.read(new Uint8Array(e.target.result), {type:'array', cellDates:true});
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:null, raw:false});
+      if (!rows.length) { showToast('Planilha vazia.','error'); return; }
+
+      // Mapear cabeçalhos
+      const header = rows[0].map(h => (h||'').toString().trim());
+      const idx = name => header.findIndex(h => h.toLowerCase().includes(name.toLowerCase()));
+
+      const iNome    = idx('Nome do Funcionário');
+      const iAdmiss  = idx('Data de Admissão');
+      const iDepto   = idx('Depto/Centro de Custo');
+      const iDeptoNm = idx('Departamento');
+      const iCargo   = idx('Cargo ou Função');
+      const iHorario = idx('Descrição do Horário');
+      const iCodigo  = idx('Código');
+      const iVinculo = idx('Vínculo');
+      const iMob     = idx('Nome Beneficios Outros');
+      const iVR      = idx('Nome Vale Refeição');
+      const iVT      = idx('Nome Vale Transporte');
+      const iDemiss  = idx('Data Demissão');
+
+      if (iNome < 0 || iAdmiss < 0) { showToast('Planilha fora do padrão esperado.','error'); return; }
+
+      // Agrupar por data+depto — só ativos (sem data de demissão)
+      const grupos = {};
+      rows.slice(1).forEach(row => {
+        const nome   = row[iNome];
+        const admiss = row[iAdmiss];
+        const demiss = iDemiss >= 0 ? row[iDemiss] : null;
+        if (!nome || !admiss) return;
+        if (demiss && String(demiss).trim()) return; // ignorar demitidos
+
+        // Formatar data
+        let dataStr = '';
+        if (admiss instanceof Date) {
+          dataStr = admiss.toISOString().split('T')[0];
+        } else {
+          const s = String(admiss).trim();
+          // DD/MM/YYYY
+          const m = s.match(/(\d{2})\/(\d{2})\/(\d{4})/);
+          if (m) dataStr = `${m[3]}-${m[2]}-${m[1]}`;
+          else dataStr = s;
+        }
+
+        const depto_cod  = iDepto  >= 0 ? (row[iDepto]  || '').toString().trim() : '';
+        const depto_nome = iDeptoNm >= 0 ? (row[iDeptoNm]|| '').toString().trim() : depto_cod;
+        const key = `${dataStr}||${depto_cod}`;
+
+        if (!grupos[key]) grupos[key] = { data_admissao: dataStr, depto_cod, depto_nome, colaboradores: [] };
+        grupos[key].colaboradores.push({
+          codigo:        iCodigo  >= 0 ? String(row[iCodigo]||'').trim() : '',
+          nome:          String(nome).trim(),
+          cargo:         iCargo   >= 0 ? String(row[iCargo]  ||'').trim() : '',
+          horario:       iHorario >= 0 ? String(row[iHorario]||'').trim().substring(0,80) : '',
+          vinculo:       iVinculo >= 0 ? String(row[iVinculo]||'').trim() : '',
+          beneficio_mob: iMob     >= 0 ? String(row[iMob]    ||'').trim() : '',
+          beneficio_vr:  iVR      >= 0 ? String(row[iVR]     ||'').trim() : '',
+          beneficio_vt:  iVT      >= 0 ? String(row[iVT]     ||'').trim() : '',
+        });
+      });
+
+      INTEG_LOTE = Object.values(grupos).sort((a,b) => a.data_admissao.localeCompare(b.data_admissao));
+
+      if (!INTEG_LOTE.length) { showToast('Nenhum admitido ativo encontrado.','error'); return; }
+
+      // Mostrar preview
+      integMostrarPreview();
+    } catch(e) { showToast('Erro ao ler planilha: ' + e.message, 'error'); }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function integMostrarPreview() {
+  const wrap = document.getElementById('integ-preview-wrap');
+  const titulo = document.getElementById('integ-preview-titulo');
+  const lista  = document.getElementById('integ-preview-lista');
+  const totalCol = INTEG_LOTE.reduce((s,g) => s + g.colaboradores.length, 0);
+
+  titulo.textContent = `${INTEG_LOTE.length} colmeia(s) encontrada(s) · ${totalCol} colaborador(es) admitido(s)`;
+
+  lista.innerHTML = INTEG_LOTE.map(g => {
+    const [a,m,d] = g.data_admissao.split('-');
+    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px">
+      <div>
+        <strong>${d}/${m}/${a}</strong>
+        <span style="color:var(--muted);margin-left:10px">${g.depto_nome || g.depto_cod || 'Sem depto'}</span>
+      </div>
+      <span style="color:var(--accent);font-weight:600">${g.colaboradores.length} pessoa(s)</span>
+    </div>`;
+  }).join('');
+
+  wrap.style.display = 'block';
+  document.getElementById('integ-colmeias-wrap').style.display = 'none';
+}
+
+function integCancelarPreview() {
+  INTEG_LOTE = [];
+  document.getElementById('integ-preview-wrap').style.display = 'none';
+  document.getElementById('integ-colmeias-wrap').style.display = 'block';
+}
+
+async function integCriarColmeias() {
+  try {
+    const r = await rpc('wc_integ_criar_colmeia', { p_lote: INTEG_LOTE });
+    showToast(`${r.colmeias} colmeia(s) criada(s) · ${r.colaboradores} colaborador(es)`, 'success');
+    integCancelarPreview();
+    integCarregarColmeias();
+  } catch(e) { showToast(e.message, 'error'); }
+}
+
+// ── Listar colmeias ──
+async function integCarregarColmeias() {
+  const wrap = document.getElementById('integ-colmeias-lista');
+  if (wrap) wrap.innerHTML = '<div class="loading-overlay"><span class="spinner"></span> Carregando…</div>';
+  try {
+    const r = await rpc('wc_integ_listar_colmeias', {});
+    INTEG_COLMEIAS = r.colmeias || [];
+    integRenderColmeias();
+  } catch(e) { if(wrap) wrap.innerHTML = `<div style="color:var(--danger);padding:16px">${e.message}</div>`; }
+}
+
+function integRenderColmeias() {
+  const wrap = document.getElementById('integ-colmeias-lista');
+  if (!wrap) return;
+  if (!INTEG_COLMEIAS.length) {
+    wrap.innerHTML = '<div class="empty-state"><div style="font-size:32px;margin-bottom:10px">🐝</div>Nenhuma integração ainda. Suba uma planilha para começar.</div>';
+    return;
+  }
+
+  // Agrupar por data
+  const porData = {};
+  INTEG_COLMEIAS.forEach(col => {
+    if (!porData[col.data_admissao]) porData[col.data_admissao] = [];
+    porData[col.data_admissao].push(col);
+  });
+
+  wrap.innerHTML = Object.entries(porData).map(([data, cols]) => {
+    const totalGeral    = cols.reduce((s,c)=>s+Number(c.total),0);
+    const pagosGeral    = cols.reduce((s,c)=>s+Number(c.pagos),0);
+    const noshowGeral   = cols.reduce((s,c)=>s+Number(c.noshow),0);
+    const pendentesGeral= cols.reduce((s,c)=>s+Number(c.pendentes),0);
+    const todasFechadas = cols.every(c=>c.status==='fechada');
+
+    return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;margin-bottom:14px;overflow:hidden">
+      <div style="padding:14px 18px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);background:var(--surface2)">
+        <div>
+          <span style="font-size:15px;font-weight:700">📅 Integração ${data}</span>
+          <span style="font-size:12px;color:var(--muted);margin-left:12px">${cols.length} departamento(s) · ${totalGeral} pessoa(s)</span>
+        </div>
+        <div style="display:flex;gap:12px;font-size:12px">
+          <span style="color:var(--success)">✅ ${pagosGeral} PAGAR</span>
+          <span style="color:var(--danger)">⊘ ${noshowGeral} NO SHOW</span>
+          ${pendentesGeral > 0 ? `<span style="color:var(--warning)">⏳ ${pendentesGeral} pendente(s)</span>` : ''}
+          ${todasFechadas ? '<span style="color:var(--muted);font-size:11px">🔒 FECHADA</span>' : ''}
+        </div>
+      </div>
+      <div style="padding:10px 18px;display:flex;flex-wrap:wrap;gap:8px">
+        ${cols.map(col => `
+          <button onclick="integAbrirColmeia('${col.id}')"
+            style="background:${col.status==='fechada'?'var(--surface3)':'var(--surface2)'};border:1px solid var(--border);
+            border-radius:8px;padding:10px 14px;cursor:pointer;text-align:left;min-width:180px;transition:border-color .15s"
+            onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+            <div style="font-size:12.5px;font-weight:600;color:var(--text)">${col.depto_nome||col.depto_cod}</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:4px">
+              ${col.total} pessoa(s)
+              ${col.pagos > 0 ? ` · <span style="color:var(--success)">${col.pagos} ✅</span>` : ''}
+              ${col.noshow > 0 ? ` · <span style="color:var(--danger)">${col.noshow} ⊘</span>` : ''}
+              ${col.pendentes > 0 ? ` · <span style="color:var(--warning)">${col.pendentes} ⏳</span>` : ''}
+              ${col.status==='fechada' ? ' · 🔒' : ''}
+            </div>
+          </button>`).join('')}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── Abrir colmeia ──
+async function integAbrirColmeia(colmeiaId) {
+  const content = document.getElementById('integ-colmeia-content');
+  if (content) content.innerHTML = '<div class="loading-overlay"><span class="spinner"></span></div>';
+  abrirModal('integ-modal-colmeia');
+
+  try {
+    const r = await rpc('wc_integ_abrir_colmeia', { p_colmeia_id: colmeiaId });
+    INTEG_COL_ABERTA = r.colmeia;
+    INTEG_COLABS = r.colaboradores || [];
+
+    document.getElementById('integ-modal-titulo').textContent = `🐝 ${r.colmeia.depto_nome}`;
+    document.getElementById('integ-modal-sub').textContent = `Integração ${r.colmeia.data_admissao} · ${INTEG_COLABS.length} colaborador(es)`;
+
+    // Botão fechar colmeia — só admin e se ainda aberta
+    const btnFechar = document.getElementById('integ-btn-fechar-col');
+    if (btnFechar) {
+      btnFechar.style.display = (podeAdmin() && r.colmeia.status === 'aberta') ? 'inline-flex' : 'none';
+      btnFechar.dataset.id = colmeiaId;
+    }
+
+    integRenderColabs();
+  } catch(e) { if(content) content.innerHTML = `<div style="color:var(--danger);padding:16px">${e.message}</div>`; }
+}
+
+function integRenderColabs() {
+  const content = document.getElementById('integ-colmeia-content');
+  if (!content) return;
+
+  const pagos   = INTEG_COLABS.filter(c=>c.presenca==='PAGAR').length;
+  const noshow  = INTEG_COLABS.filter(c=>c.presenca==='NO SHOW').length;
+  const pend    = INTEG_COLABS.filter(c=>!c.presenca).length;
+  const fechada = INTEG_COL_ABERTA?.status === 'fechada';
+
+  const badges = document.getElementById('integ-modal-badges');
+  if (badges) badges.innerHTML = `<span style="color:var(--success)">✅ ${pagos}</span> &nbsp; <span style="color:var(--danger)">⊘ ${noshow}</span> &nbsp; <span style="color:var(--warning)">⏳ ${pend}</span>`;
+
+  content.innerHTML = `
+    <table class="main-table" style="margin-top:8px">
+      <thead><tr>
+        <th>Cód.</th><th>Nome</th><th>Cargo</th><th>Benefícios</th>
+        <th style="text-align:center">Presença</th><th>Obs / Confirmado por</th>
+      </tr></thead>
+      <tbody>
+        ${INTEG_COLABS.map(col => {
+          const ben = [col.beneficio_mob, col.beneficio_vr, col.beneficio_vt].filter(Boolean).join(' · ') || '—';
+          const confirmInfo = col.confirmado_por
+            ? `<div style="font-size:10.5px;color:var(--muted);margin-top:2px">👤 ${col.confirmado_por}</div>` : '';
+          return `<tr id="integ-row-${col.id}">
+            <td style="color:var(--muted);font-size:11.5px">${col.codigo||'—'}</td>
+            <td><strong>${col.nome}</strong></td>
+            <td style="font-size:12px;color:var(--muted)">${col.cargo||'—'}</td>
+            <td style="font-size:11.5px;color:var(--muted);max-width:160px;white-space:normal">${ben}</td>
+            <td style="text-align:center">
+              ${fechada
+                ? (()=>{
+                    const cor = col.presenca==='PAGAR' ? 'var(--success)' : col.presenca==='NO SHOW' ? 'var(--danger)' : 'var(--muted)';
+                    return `<span style="font-size:12px;font-weight:700;color:${cor}">${col.presenca||'—'}</span>`;
+                  })()
+                : `<div style="display:flex;gap:6px;justify-content:center">
+                    <button onclick="integConfirmar('${col.id}','PAGAR')"
+                      style="padding:4px 10px;border-radius:6px;border:1px solid;font-size:12px;cursor:pointer;font-weight:600;
+                      background:${col.presenca==='PAGAR'?'var(--success)':'transparent'};
+                      color:${col.presenca==='PAGAR'?'#fff':'var(--success)'};border-color:var(--success)">PAGAR</button>
+                    <button onclick="integConfirmar('${col.id}','NO SHOW')"
+                      style="padding:4px 10px;border-radius:6px;border:1px solid;font-size:12px;cursor:pointer;font-weight:600;
+                      background:${col.presenca==='NO SHOW'?'var(--danger)':'transparent'};
+                      color:${col.presenca==='NO SHOW'?'#fff':'var(--danger)'};border-color:var(--danger)">NO SHOW</button>
+                  </div>`
+              }
+              ${confirmInfo}
+            </td>
+            <td>
+              ${fechada
+                ? `<span style="font-size:12px;color:var(--muted)">${col.obs||'—'}</span>${confirmInfo}`
+                : `<input type="text" value="${col.obs||''}" placeholder="Observação…"
+                    onchange="integSalvarObs('${col.id}',this.value)"
+                    style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:4px 8px;font-size:12px;width:100%;font-family:var(--font)"/>
+                  ${confirmInfo}`
+              }
+            </td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>`;
+}
+
+async function integConfirmar(colabId, presenca) {
+  const obs = document.querySelector(`#integ-row-${colabId} input`)?.value || '';
+  try {
+    await rpc('wc_integ_confirmar_presenca', { p_colab_id: colabId, p_presenca: presenca, p_obs: obs });
+    // Atualiza local
+    const col = INTEG_COLABS.find(c => c.id === colabId);
+    if (col) { col.presenca = presenca; col.confirmado_por = session?.nome; }
+    integRenderColabs();
+    // Atualiza badge da lista
+    integCarregarColmeias();
+  } catch(e) { showToast(e.message, 'error'); }
+}
+
+async function integSalvarObs(colabId, obs) {
+  const col = INTEG_COLABS.find(c => c.id === colabId);
+  const presenca = col?.presenca || '';
+  try {
+    await rpc('wc_integ_confirmar_presenca', { p_colab_id: colabId, p_presenca: presenca, p_obs: obs });
+  } catch(e) { showToast(e.message, 'error'); }
+}
+
+async function integFecharColmeia() {
+  const btn = document.getElementById('integ-btn-fechar-col');
+  const id  = btn?.dataset.id;
+  if (!id) return;
+  const pend = INTEG_COLABS.filter(c => !c.presenca).length;
+  if (pend > 0 && !confirm(`Ainda há ${pend} colaborador(es) sem confirmação. Fechar mesmo assim?`)) return;
+  try {
+    await rpc('wc_integ_fechar_colmeia', { p_colmeia_id: id });
+    if (btn) btn.style.display = 'none';
+    if (INTEG_COL_ABERTA) INTEG_COL_ABERTA.status = 'fechada';
+    integRenderColabs();
+    integCarregarColmeias();
+    showToast('Colmeia fechada.', 'success');
+  } catch(e) { showToast(e.message, 'error'); }
+}
+// ═══════════════ FIM INTEGRAÇÃO ═══════════════
 </script>
+
+  <!-- ══ INTEGRAÇÃO — Colmeia ══ -->
+  <div class="page" id="page-integracao">
+    <div class="page-header">
+      <div>
+        <h1>🐝 Integração</h1>
+        <p>Suba a planilha de admitidos e confirme a presença por departamento</p>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap" id="integ-btns-admin">
+        <button class="btn btn-ghost" onclick="document.getElementById('integ-file-input').click()">📂 Subir planilha</button>
+        <input type="file" id="integ-file-input" accept=".xlsx,.xls" style="display:none" onchange="integLerPlanilha(this)"/>
+      </div>
+    </div>
+
+    <!-- Preview da planilha antes de criar colmeias -->
+    <div id="integ-preview-wrap" style="display:none;margin-bottom:20px">
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px 22px">
+        <div style="font-size:13px;font-weight:600;margin-bottom:12px" id="integ-preview-titulo"></div>
+        <div id="integ-preview-lista"></div>
+        <div style="margin-top:16px;display:flex;gap:10px">
+          <button class="btn btn-primary" onclick="integCriarColmeias()">🐝 Criar colmeias</button>
+          <button class="btn btn-ghost" onclick="integCancelarPreview()">Cancelar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Lista de colmeias existentes -->
+    <div id="integ-colmeias-wrap">
+      <div id="integ-colmeias-lista">
+        <div class="empty-state"><div style="font-size:32px;margin-bottom:10px">🐝</div>Nenhuma integração ainda</div>
+      </div>
+    </div>
+  </div>
 
 <!-- MODAL COLABORADOR VOUCHER -->
 <div class="modal-backdrop" id="vchr-modal-colab">
@@ -5120,6 +5491,29 @@ async function vchrExcluirHistorico(id) {
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="fecharModal('vchr-modal-importar')">Cancelar</button>
       <button class="btn btn-primary" id="vchr-btn-confirmar-import" onclick="vchrConfirmarImport()" style="display:none">✅ Confirmar Importação</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- MODAL COLMEIA -->
+<div class="modal-backdrop" id="integ-modal-colmeia" onclick="if(event.target===this)fecharModal('integ-modal-colmeia')">
+  <div class="modal" style="width:800px;max-width:97vw">
+    <div class="modal-head" style="display:flex;align-items:center;justify-content:space-between">
+      <div>
+        <h2 id="integ-modal-titulo">Colmeia</h2>
+        <p id="integ-modal-sub" style="font-size:12px;color:var(--muted);margin-top:3px"></p>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <span id="integ-modal-badges" style="font-size:12px;color:var(--muted)"></span>
+        <button class="btn btn-ghost btn-sm" id="integ-btn-fechar-col" onclick="integFecharColmeia()" style="display:none">✅ Fechar colmeia</button>
+        <button class="btn btn-ghost btn-sm" onclick="fecharModal('integ-modal-colmeia')">✕</button>
+      </div>
+    </div>
+    <div class="modal-body" style="padding:0 26px 6px">
+      <div id="integ-colmeia-content">
+        <div class="loading-overlay"><span class="spinner"></span></div>
+      </div>
     </div>
   </div>
 </div>
