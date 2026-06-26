@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Seleção & Admissão — WeCan</title>
+<title>Wecan System — WeCan</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
@@ -4553,13 +4553,23 @@ function abrirModalCC(c) {
 function fecharModalCC() { document.getElementById('modal-cc').classList.remove('open'); }
 
 function ccPreencherCliente(codigo) {
-  const cli = CLIENTES.find(c => c.codigo === codigo.trim());
-  const el  = document.getElementById('cc-cliente');
+  const q = codigo.trim().replace(/^0+/, ''); // remove zeros à esquerda
+  const cli = CLIENTES.find(c =>
+    c.codigo === codigo.trim() ||           // exato
+    c.codigo === q ||                        // sem zeros
+    (c.codigo||'').replace(/^0+/,'') === q  // ambos sem zeros
+  );
+  const el = document.getElementById('cc-cliente');
   if (cli) {
     el.value = cli.razao_social || '';
-    el.style.opacity = '.7';
+    el.style.color   = 'var(--text)';
+    el.style.opacity = '1';
+    // Mostra sugestão visual de código normalizado
+    const inp = document.getElementById('cc-cli-codigo');
+    if (inp && cli.codigo !== codigo.trim()) inp.placeholder = `Código: ${cli.codigo}`;
   } else {
-    el.value = '';
+    el.value = codigo.length >= 2 ? '⚠️ Cliente não encontrado' : '';
+    el.style.color   = 'var(--warning)';
   }
 }
 
@@ -6486,10 +6496,26 @@ function histBenPopularFiltros() {
   if (selData) selData.innerHTML = '<option value="">Todas as datas</option>' +
     datas.map(d => `<option value="${d}">${d}</option>`).join('');
 
-  const ccs = [...new Set(HIST_BEN_LISTA.map(c => c.depto_cod).filter(Boolean))].sort();
+  // CCs iniciam com todos; atualiza ao mudar a data
+  histBenAtualizarFiltroCC('');
+}
+
+function histBenAtualizarFiltroCC(dataFiltro) {
+  // Mostra apenas CCs que têm registro na data selecionada (ou todos se sem data)
+  const base = dataFiltro
+    ? HIST_BEN_LISTA.filter(c => c.data_admissao_fmt === dataFiltro)
+    : HIST_BEN_LISTA;
+
+  const ccs = [...new Set(base.map(c => c.depto_cod).filter(Boolean))].sort();
   const selCC = document.getElementById('hist-filtro-cc');
-  if (selCC) selCC.innerHTML = '<option value="">Todos os CCs</option>' +
-    ccs.map(cc => `<option value="${cc}">${cc}</option>`).join('');
+  if (!selCC) return;
+
+  const valorAtual = selCC.value;
+  selCC.innerHTML = '<option value="">Todos os CCs</option>' +
+    ccs.map(cc => `<option value="${cc}" ${cc === valorAtual ? 'selected' : ''}>${cc}</option>`).join('');
+
+  // Se o CC selecionado não existe mais nessa data, limpa
+  if (valorAtual && !ccs.includes(valorAtual)) selCC.value = '';
 }
 
 function histBenSetTab(tab) {
@@ -6509,6 +6535,9 @@ function histBenFiltrar() {
   const filtData = document.getElementById('hist-filtro-data')?.value || '';
   const filtCC   = document.getElementById('hist-filtro-cc')?.value   || '';
   const busca    = (document.getElementById('hist-busca')?.value || '').toLowerCase();
+
+  // Atualizar CCs disponíveis conforme data selecionada
+  histBenAtualizarFiltroCC(filtData);
 
   let lista = [...HIST_BEN_LISTA];
   if (HIST_BEN_TAB === 'pagos')  lista = lista.filter(c => c.presenca === 'PAGAR');
