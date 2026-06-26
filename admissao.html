@@ -2820,6 +2820,8 @@ async function renderHome() {
         chipsEl.innerHTML = r.operacoes.map(o=>`<span class="ops-chip">${o.nome}</span>`).join('');
     }
   } catch(e) {
+    // wc_home_resumo falhou (ex: coluna errada no banco) — fallback local
+    console.warn('wc_home_resumo erro:', e.message);
     cnt = {
       vagas_abertas:    VAGAS.filter(v=>v.statusVaga?.includes('Aberta')).length,
       vagas_andamento:  VAGAS.filter(v=>v.statusVaga?.includes('Andamento')).length,
@@ -2827,6 +2829,15 @@ async function renderHome() {
       voucher_pendente: VAGAS.filter(v=>v.filaVoucherStatus==='pendente').length,
       indicacoes_pendentes: INDICACOES.filter(i=>i.status==='pendente').length,
     };
+    // Tentar buscar operações separadamente como fallback
+    if (!session._operacoes?.length) {
+      try {
+        const ro = await rpc('wc_listar_operacoes', {});
+        // wc_listar_operacoes retorna todas as operações — filtrar pelas do usuário via wc_salvar_usuario não é viável aqui
+        // Mas session já tem operacoes vindas do wc_login se wc_salvar_usuario as salvou
+        // Nada a fazer — o filtro de tela usará os dados que vierem
+      } catch(_) {}
+    }
   }
 
   if (sub) sub.textContent = podeVerTudo()
@@ -3530,9 +3541,9 @@ function impFiltrarCCsPorConsultor() {
   }
 
   // Filtrar CCs cujo cod está entre as operações do usuário
-  // Operações vinculadas via cc_cod ou por nome/descrição
+  // Operações vinculadas via cc_cod ou regional (fallback enquanto banco não tem cc_cod)
   const opsNomes = new Set(usuario.operacoes.map(o => (o.nome||'').toUpperCase()));
-  const opsCods  = new Set(usuario.operacoes.map(o => o.cc_cod).filter(Boolean));
+  const opsCods  = new Set(usuario.operacoes.map(o => (o.cc_cod||o.regional||'').toUpperCase()).filter(Boolean));
 
   const ccsPermitidos = new Set(
     CENTROS_CUSTO
@@ -5556,16 +5567,22 @@ function integGetDatasOrdenadas() {
 // ── Filtro por operação do Onsite ──
 function integFiltrarPorOnsite(colmeias) {
   if (podeVerTudo()) return colmeias;
+  // Se Onsite tem operações configuradas, filtrar
   if (session?.perfil === 'onsite' && session._operacoes?.length) {
-    const opsNomes = new Set(session._operacoes.map(o => (o.nome||'').toUpperCase()));
-    const opsCods  = new Set(session._operacoes.map(o => o.cc_cod).filter(Boolean));
+    const opsNomes    = new Set(session._operacoes.map(o => (o.nome||'').toUpperCase()));
+    // cc_cod pode não vir do banco ainda — usar regional como fallback
+    const opsCods     = new Set(session._operacoes.map(o => (o.cc_cod||o.regional||o.codigo||'').toUpperCase()).filter(Boolean));
+    const opsRegional = new Set(session._operacoes.map(o => (o.regional||'').toUpperCase()).filter(Boolean));
     return colmeias.filter(c => {
-      const cod  = (c.depto_cod || '').toUpperCase();
-      const nome = (c.depto_nome || '').toUpperCase();
-      const cli  = (c.cli_nome || '').toUpperCase();
-      return opsCods.has(cod) || opsNomes.has(nome) || opsNomes.has(cli);
+      const cod      = (c.depto_cod || '').toUpperCase();
+      const nomeDepto= (c.depto_nome || '').toUpperCase();
+      const cli      = (c.cli_nome || '').toUpperCase();
+      if (!opsCods.size && !opsNomes.size && !opsRegional.size) return true;
+      return opsCods.has(cod) || opsNomes.has(nomeDepto) || opsNomes.has(cli)
+          || opsNomes.has(cod) || opsRegional.has(cod) || opsRegional.has(nomeDepto);
     });
   }
+  // Onsite sem operações cadastradas ainda → mostra tudo (melhor que tela em branco)
   return colmeias;
 }
 
