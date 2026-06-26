@@ -1233,7 +1233,7 @@
       </select>
     </div>
     <div class="table-wrap"><table class="main-table">
-      <thead><tr><th>Código</th><th>Cliente</th><th>Descrição</th><th>Endereço</th><th>Cidade / UF</th><th>Status</th><th>Ações</th></tr></thead>
+      <thead><tr><th>Código</th><th>Cliente</th><th>Descrição</th><th>Tipo Operação</th><th>Cidade / UF</th><th>Status</th><th>Ações</th></tr></thead>
       <tbody id="tbody-cc"></tbody>
     </table></div>
     <p id="cc-count" style="color:var(--muted);font-size:12px;margin-top:12px"></p>
@@ -1253,7 +1253,7 @@
       <input type="text" id="busca-dep" placeholder="Buscar por código, descrição, cliente…" oninput="renderDeptos()"/>
     </div>
     <div class="table-wrap"><table class="main-table">
-      <thead><tr><th>Código</th><th>Descrição</th><th>Cliente (Cód)</th><th>Observações</th><th>Ações</th></tr></thead>
+      <thead><tr><th>Código</th><th>Descrição</th><th>Tipo Operação</th><th>Cliente (Cód)</th><th>Observações</th><th>Ações</th></tr></thead>
       <tbody id="tbody-deptos"></tbody>
     </table></div>
     <p id="deptos-count" style="color:var(--muted);font-size:12px;margin-top:12px"></p>
@@ -2125,15 +2125,28 @@
       <div class="modal-section-label">Identificação</div>
       <div class="form-row-2">
         <div class="form-group">
-          <label>Cód. do Cliente</label>
-          <input type="text" id="cc-cod" placeholder="Gerado automaticamente"/>
-          <small style="color:var(--muted);font-size:11px">Gerado automaticamente. Pode ser editado.</small>
+          <label>Código do CC</label>
+          <input type="text" id="cc-cod" placeholder="Ex: HUB-LSP-105"/>
+          <small style="color:var(--muted);font-size:11px">Código único. Ex: HUB-LSP-105, SOC-RJ1</small>
         </div>
-        <div class="form-group"><label>Cliente</label>
-          <input type="text" id="cc-cliente" placeholder="SPX LOGISTICA LTDA" value="SPX LOGISTICA LTDA"/>
+        <div class="form-group"><label>Cliente (Razão Social)</label>
+          <input type="text" id="cc-cliente" placeholder="SHPX LOGISTICA LTDA" value="SHPX LOGISTICA LTDA"/>
         </div>
       </div>
-      <div class="form-group"><label>Descrição</label><input type="text" id="cc-descricao" placeholder="Descrição do centro de custo"/></div>
+      <div class="form-row-2">
+        <div class="form-group"><label>Descrição</label><input type="text" id="cc-descricao" placeholder="Nome do hub ou operação"/></div>
+        <div class="form-group">
+          <label>Tipo de Operação</label>
+          <select id="cc-tipo-operacao" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:8px 12px;font-size:13px;font-family:var(--font);outline:none">
+            <option value="">Não especificado</option>
+            <option value="Last Mile">Last Mile</option>
+            <option value="First Mile">First Mile</option>
+            <option value="Last Mile + First Mile">Last Mile + First Mile</option>
+            <option value="Cross Docking">Cross Docking</option>
+            <option value="Sorting Center">Sorting Center</option>
+          </select>
+        </div>
+      </div>
       <div class="modal-section-label">Status</div>
       <div style="display:flex;align-items:center;gap:12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin-bottom:14px">
         <span style="flex:1;font-size:13px;font-weight:600">Centro de custo ativo</span>
@@ -2346,7 +2359,20 @@
         <div class="form-group"><label>Nome do Cliente</label><input type="text" id="dep-cli-nome" placeholder="Razão Social" disabled style="opacity:.6"/></div>
       </div>
       <div class="modal-section-label">Departamento</div>
-      <div class="form-group"><label>Código</label><input type="text" id="dep-codigo" placeholder="Código do departamento"/></div>
+      <div class="form-row-2">
+        <div class="form-group"><label>Código</label><input type="text" id="dep-codigo" placeholder="Ex: HUB-LSP-105"/></div>
+        <div class="form-group">
+          <label>Tipo de Operação</label>
+          <select id="dep-tipo-operacao" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:8px 12px;font-size:13px;font-family:var(--font);outline:none">
+            <option value="">Não especificado</option>
+            <option value="Last Mile">Last Mile</option>
+            <option value="First Mile">First Mile</option>
+            <option value="Last Mile + First Mile">Last Mile + First Mile</option>
+            <option value="Cross Docking">Cross Docking</option>
+            <option value="Sorting Center">Sorting Center</option>
+          </select>
+        </div>
+      </div>
       <div class="form-group"><label>Descrição</label><input type="text" id="dep-descricao" placeholder="Descrição do departamento"/></div>
       <div class="form-group"><label>Observações</label>
         <textarea id="dep-observacoes" rows="3" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:9px 12px;font-size:13px;font-family:var(--font);outline:none;resize:vertical" placeholder="Observações adicionais…"></textarea>
@@ -4381,7 +4407,7 @@ function renderCentrosCusto() {
     return `<tr>
       <td><code style="font-size:11.5px;font-weight:700">${c.cod}</code></td>
       <td>${c.cliente||'—'}</td><td>${c.descricao||'—'}</td>
-      <td style="max-width:180px;white-space:normal">${end}</td>
+      <td>${c.tipo_operacao ? `<span class="pill" style="background:rgba(99,204,176,.15);color:var(--accent);font-size:10px">${c.tipo_operacao}</span>` : '<span style="color:var(--muted)">—</span>'}</td>
       <td>${[c.cidade,c.uf].filter(Boolean).join(' / ')||'—'}</td>
       <td><span class="pill ${c.ativo?'pill-ativo':'pill-inativo'}">${c.ativo?'ATIVO':'INATIVO'}</span></td>
       <td class="actions-cell">
@@ -4400,8 +4426,9 @@ function abrirModalCC(c) {
   s('cc-id').value         = c?.id||'';
   s('cc-cod').value        = c?.cod||'';
   s('cc-cliente').value    = c?.cliente||'SPX LOGISTICA LTDA';
-  s('cc-descricao').value  = c?.descricao||'';
-  s('cc-ativo').checked    = c ? c.ativo : true;
+  s('cc-descricao').value      = c?.descricao||'';
+  s('cc-tipo-operacao').value  = c?.tipo_operacao||'';
+  s('cc-ativo').checked        = c ? c.ativo : true;
   s('cc-cep').value        = c?.cep||'';
   s('cc-logradouro').value = c?.logradouro||'';
   s('cc-numero').value     = c?.numero||'';
@@ -4416,7 +4443,8 @@ function fecharModalCC() { document.getElementById('modal-cc').classList.remove(
 async function salvarCC() {
   const btn=document.getElementById('btn-salvar-cc'), g=id=>document.getElementById(id)?.value||'';
   const cc = { id:g('cc-id')||undefined, cod:g('cc-cod').trim(), cliente:g('cc-cliente').trim(),
-    descricao:g('cc-descricao').trim(), ativo:document.getElementById('cc-ativo').checked,
+    descricao:g('cc-descricao').trim(), tipo_operacao:g('cc-tipo-operacao'),
+    ativo:document.getElementById('cc-ativo').checked,
     cep:g('cc-cep').trim(), logradouro:g('cc-logradouro').trim(), numero:g('cc-numero').trim(),
     complemento:g('cc-complemento').trim(), bairro:g('cc-bairro').trim(),
     cidade:g('cc-cidade').trim(), uf:g('cc-uf') };
@@ -4554,12 +4582,13 @@ function renderDeptos() {
   if(busca) lista=lista.filter(d=>[d.codigo,d.descricao,d.cli_codigo,d.cli_nome].some(f=>(f||'').toLowerCase().includes(busca)));
   const tbody=document.getElementById('tbody-deptos'),count=document.getElementById('deptos-count');
   if(!tbody) return;
-  if(!lista.length){tbody.innerHTML=`<tr><td colspan="5"><div class="empty-state"><div class="ico">🗂️</div>Nenhum departamento encontrado</div></td></tr>`;if(count)count.textContent='';return;}
+  if(!lista.length){tbody.innerHTML=`<tr><td colspan="6"><div class="empty-state"><div class="ico">🗂️</div>Nenhum departamento encontrado</div></td></tr>`;if(count)count.textContent='';return;}
   if(count) count.textContent=`${lista.length} departamento(s)`;
   const pode=podeVerTudo();
   tbody.innerHTML=lista.map(d=>`<tr>
     <td><code style="font-size:11.5px;font-weight:700">${d.codigo||'—'}</code></td>
     <td>${d.descricao||'—'}</td>
+    <td>${d.tipo_operacao?`<span class="pill" style="background:rgba(99,204,176,.15);color:var(--accent);font-size:10px">${d.tipo_operacao}</span>`:'<span style="color:var(--muted)">—</span>'}</td>
     <td><code style="font-size:11px">${d.cli_codigo||'—'}</code></td>
     <td style="max-width:200px;white-space:normal;font-size:12px;color:var(--muted)">${d.observacoes||'—'}</td>
     <td class="actions-cell">
@@ -4574,7 +4603,7 @@ function abrirModalDepto(d) {
   document.getElementById('modal-dep-title').textContent=d?'Editar Departamento':'Novo Departamento';
   document.getElementById('modal-dep-sub').textContent=d?`Código: ${d.codigo}`:'Preencha os dados';
   set('dep-id',d?.id);set('dep-cli-codigo',d?.cli_codigo);set('dep-cli-nome',d?.cli_nome);
-  set('dep-codigo',d?.codigo);set('dep-descricao',d?.descricao);
+  set('dep-codigo',d?.codigo);set('dep-descricao',d?.descricao);set('dep-tipo-operacao',d?.tipo_operacao);
   const obs=document.getElementById('dep-observacoes');if(obs) obs.value=d?.observacoes||'';
   document.getElementById('modal-depto').classList.add('open');
   document.getElementById('dep-cli-codigo').oninput=function(){
@@ -4586,7 +4615,7 @@ function fecharModalDepto(){document.getElementById('modal-depto').classList.rem
 
 async function salvarDepto() {
   const btn=document.getElementById('btn-salvar-dep'),g=id=>document.getElementById(id)?.value||'';
-  const dep={id:g('dep-id')||undefined,cli_codigo:g('dep-cli-codigo').trim(),
+  const dep={id:g('dep-id')||undefined,cli_codigo:g('dep-cli-codigo').trim(),tipo_operacao:g('dep-tipo-operacao'),
     codigo:g('dep-codigo').trim(),descricao:g('dep-descricao').trim(),observacoes:g('dep-observacoes').trim()};
   if(!dep.descricao){toast('Informe a descrição.','error');return;}
   btn.disabled=true;btn.textContent='Salvando…';
