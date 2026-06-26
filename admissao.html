@@ -846,12 +846,12 @@
       </div>
     </div>
     <!-- Cadastros colapsável — só Master e Gestor -->
-    <div class="nav-group collapsed" id="nav-suporte-cadastros" style="margin:0;display:none">
-      <button class="nav-group-header" onclick="document.getElementById('nav-suporte-cadastros').classList.toggle('collapsed')"
+    <div class="nav-group" id="nav-suporte-cadastros" style="margin:0;display:none">
+      <button class="nav-group-header" onclick="toggleNavGroup('suporte-cadastros-inner')"
         style="padding:7px 14px;font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.6px">
         <span class="sb-txt">Cadastros</span><span class="chevron">▾</span>
       </button>
-      <div class="nav-group-items" id="navgroup-footer-cadastros-items" style="display:none">
+      <div class="nav-group-items" id="navgroup-suporte-cadastros-inner-items">
         <div class="nav-suporte-item" onclick="navTo('cad-clientes')" data-page="cad-clientes"><span class="ico">🏭</span><span class="sb-txt"> Clientes</span></div>
         <div class="nav-suporte-item" onclick="navTo('cad-cc')"       data-page="cad-cc"><span class="ico">🏢</span><span class="sb-txt"> Centro de Custo</span></div>
         <div class="nav-suporte-item" onclick="navTo('cad-deptos')"   data-page="cad-deptos"><span class="ico">🗂️</span><span class="sb-txt"> Departamentos</span></div>
