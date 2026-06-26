@@ -107,19 +107,27 @@
 
   .nav-group { margin-bottom: 0; }
   .nav-subgroup > .nav-subgroup-header {
-    padding: 7px 16px 7px 20px !important;
-    font-size: 11.5px !important;
+    padding: 6px 10px 6px 16px !important;
+    font-size: 11px !important;
     color: var(--muted) !important;
-    font-weight: 600 !important;
+    font-weight: 700 !important;
     white-space: nowrap !important;
     overflow: hidden !important;
     text-overflow: ellipsis !important;
+    letter-spacing: .3px !important;
+    text-transform: uppercase !important;
   }
   .nav-subgroup > .nav-subgroup-header .sb-txt {
     white-space: nowrap !important;
     overflow: hidden !important;
     text-overflow: ellipsis !important;
     min-width: 0 !important;
+    flex: 1 !important;
+  }
+  /* sub-sub nível (ex: Fila Voucher dentro de Voucher Uber) — ainda menor */
+  .nav-subgroup .nav-subgroup > .nav-subgroup-header {
+    padding: 5px 10px 5px 28px !important;
+    font-size: 10.5px !important;
   }
   .nav-subgroup > .nav-subgroup-header:hover { color: var(--text) !important; }
   .nav-subgroup .nav-group-items { padding-left: 0; }
@@ -822,21 +830,34 @@
 
   <!-- SUPORTE — rodapé do menu, acima do usuário -->
   <div class="sidebar-footer">
-    <div style="padding:8px 18px 4px; font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:.7px; font-weight:700;">Suporte</div>
-    <div class="nav-suporte-item" onclick="navTo('configuracoes')" data-page="configuracoes">
-      <span class="ico">⚙️</span><span class="sb-txt"> Configurações</span>
+    <!-- Suporte colapsável -->
+    <div class="nav-group" id="navgroup-footer-suporte" style="margin:0">
+      <button class="nav-group-header" onclick="document.getElementById('navgroup-footer-suporte').classList.toggle('collapsed')"
+        style="padding:7px 14px;font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.6px">
+        <span class="sb-txt">Suporte</span><span class="chevron">▾</span>
+      </button>
+      <div class="nav-group-items">
+        <div class="nav-suporte-item" onclick="navTo('configuracoes')" data-page="configuracoes">
+          <span class="ico">⚙️</span><span class="sb-txt"> Configurações</span>
+        </div>
+        <div class="nav-suporte-item" id="nav-suporte-usuarios" onclick="navTo('suporte-usuarios')" data-page="suporte-usuarios" style="display:none">
+          <span class="ico">🛡️</span><span class="sb-txt"> Gestão de Usuários</span>
+        </div>
+      </div>
     </div>
-    <div class="nav-suporte-item" id="nav-suporte-usuarios" onclick="navTo('suporte-usuarios')" data-page="suporte-usuarios" style="display:none">
-      <span class="ico">🛡️</span><span class="sb-txt"> Gestão de Usuários</span>
+    <!-- Cadastros colapsável — só Master e Gestor -->
+    <div class="nav-group collapsed" id="nav-suporte-cadastros" style="margin:0;display:none">
+      <button class="nav-group-header" onclick="document.getElementById('nav-suporte-cadastros').classList.toggle('collapsed')"
+        style="padding:7px 14px;font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.6px">
+        <span class="sb-txt">Cadastros</span><span class="chevron">▾</span>
+      </button>
+      <div class="nav-group-items" id="navgroup-footer-cadastros-items" style="display:none">
+        <div class="nav-suporte-item" onclick="navTo('cad-clientes')" data-page="cad-clientes"><span class="ico">🏭</span><span class="sb-txt"> Clientes</span></div>
+        <div class="nav-suporte-item" onclick="navTo('cad-cc')"       data-page="cad-cc"><span class="ico">🏢</span><span class="sb-txt"> Centro de Custo</span></div>
+        <div class="nav-suporte-item" onclick="navTo('cad-deptos')"   data-page="cad-deptos"><span class="ico">🗂️</span><span class="sb-txt"> Departamentos</span></div>
+      </div>
     </div>
-    <!-- Cadastros — só Master e Gestor -->
-    <div id="nav-suporte-cadastros" style="display:none">
-      <div style="padding:6px 18px 2px; font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; font-weight:700; margin-top:4px;">Cadastros</div>
-      <div class="nav-suporte-item" onclick="navTo('cad-clientes')" data-page="cad-clientes"><span class="ico">🏭</span><span class="sb-txt"> Clientes</span></div>
-      <div class="nav-suporte-item" onclick="navTo('cad-cc')"       data-page="cad-cc"><span class="ico">🏢</span><span class="sb-txt"> Centro de Custo</span></div>
-      <div class="nav-suporte-item" onclick="navTo('cad-deptos')"   data-page="cad-deptos"><span class="ico">🗂️</span><span class="sb-txt"> Departamentos</span></div>
-    </div>
-    <hr class="section-divider" style="margin:8px 18px;"/>
+    <hr class="section-divider" style="margin:6px 14px;"/>
     <div class="sidebar-user">
       <div class="user-avatar" id="user-avatar" onclick="navTo('configuracoes')" title="Configurações de perfil">?</div>
       <div class="user-info">
