@@ -60,7 +60,7 @@
   #sidebar.sb-col nav a { padding: 8px 0; justify-content: center; gap: 0; }
   #sidebar.sb-col .nav-suporte-item { padding: 8px 0; justify-content: center; gap: 0; }
   #sidebar.sb-col .nav-group-header { padding: 8px 0; justify-content: center; }
-  #sidebar.sb-col .ico { width: 100%; text-align: center; font-size: 15px; }
+  #sidebar.sb-col .ico { display: none; }
   #sidebar.sb-col .sidebar-user { padding: 8px 0; justify-content: center; gap: 0; }
   #sidebar.sb-col .user-avatar { margin: 0 auto; }
   #sidebar.sb-col #sb-toggle-btn { justify-content: center; padding: 6px 0; }
@@ -725,8 +725,8 @@
 <div id="sidebar" style="display:none">
   <div class="sidebar-logo">
     <div class="mark" id="logo-mark">SA</div>
-    <h2 class="sb-txt">WeSys</h2>
-    <span class="sb-txt">WeCan BR · Sys Consolidado</span>
+    <h2 class="sb-txt">SELEÇÃO &amp; ADMISSÃO</h2>
+    <span class="sb-txt">WeCan BR · Consolidado</span>
   </div>
   <button id="sb-toggle-btn" onclick="toggleSidebar()" title="Recolher menu">
     <span class="sb-txt" style="flex:1;text-align:left;font-size:11px">Recolher</span>
@@ -734,7 +734,7 @@
   </button>
   <nav id="nav">
     <!-- ── INÍCIO ── -->
-    <a onclick="navTo('home')" data-page="home" title="Início"><span class="ico">🏠</span><span class="sb-txt"> Início</span></a>
+    <a onclick="navTo('home')" data-page="home" title="Início"><span class="sb-txt"> Início</span></a>
 
     <!-- ── SELEÇÃO & ADMISSÃO ── -->
     <div class="nav-group" id="navgroup-selecao">
@@ -742,27 +742,27 @@
         <span>Seleção &amp; Admissão</span><span class="chevron">▾</span>
       </button>
       <div class="nav-group-items">
-        <a id="nav-dashboard" onclick="navTo('dashboard')" data-page="dashboard" title="Dashboard"><span class="ico">◆</span><span class="sb-txt"> Dashboard</span></a>
+        <a id="nav-dashboard" onclick="navTo('dashboard')" data-page="dashboard" title="Dashboard"><span class="sb-txt"> Dashboard</span></a>
 
         <!-- Vagas com sub -->
         <div class="nav-group nav-subgroup" id="navgroup-vagas" style="margin:0">
           <button class="nav-group-header nav-subgroup-header" onclick="toggleNavGroup('vagas')" title="Vagas / Admissões">
-            <span class="ico">▤</span><span class="sb-txt"> Vagas</span><span class="chevron">▾</span>
+            <span class="sb-txt"> Vagas / Admissões</span><span class="chevron">▾</span>
           </button>
           <div class="nav-group-items" id="navgroup-vagas-items">
-            <a id="nav-vagas" onclick="navTo('vagas')" data-page="vagas" title="Vagas Abertas" style="padding-left:28px"><span class="ico">📂</span><span class="sb-txt"> Vagas Abertas</span></a>
-            <a id="nav-vagas-fechadas" onclick="navTo('vagas')" data-page="vagas-fechadas" title="Vagas Fechadas" style="padding-left:28px;opacity:.6"><span class="ico">📁</span><span class="sb-txt"> Vagas Fechadas</span> <span style="font-size:9px;color:var(--muted)">(em breve)</span></a>
+            <a id="nav-vagas" onclick="navTo('vagas')" data-page="vagas" title="Vagas Abertas" style="padding-left:28px"><span class="sb-txt"> Vagas Abertas</span></a>
+            <a id="nav-vagas-fechadas" onclick="navTo('vagas')" data-page="vagas-fechadas" title="Vagas Fechadas" style="padding-left:28px;opacity:.6"><span class="sb-txt"> Vagas Fechadas</span> <span style="font-size:9px;color:var(--muted)">(em breve)</span></a>
           </div>
         </div>
 
-        <a id="nav-voucher" onclick="navTo('voucher')" data-page="voucher" title="Fila de Voucher"><span class="ico">⇄</span><span class="sb-txt"> Fila de Voucher</span> <span class="count-badge alert" id="nav-voucher-count">0</span></a>
-        <a id="nav-indicacoes" onclick="navTo('indicacoes')" data-page="indicacoes" title="Indicações"><span class="ico">📋</span><span class="sb-txt"> Indicações</span> <span class="count-badge alert" id="nav-ind-count" style="display:none">0</span></a>
+        <a id="nav-voucher" onclick="navTo('voucher')" data-page="voucher" title="Fila de Voucher"><span class="sb-txt"> Fila de Voucher</span> <span class="count-badge alert" id="nav-voucher-count">0</span></a>
+        <a id="nav-indicacoes" onclick="navTo('indicacoes')" data-page="indicacoes" title="Indicações"><span class="sb-txt"> Indicações</span> <span class="count-badge alert" id="nav-ind-count" style="display:none">0</span></a>
 
         <!-- No Show (em breve) -->
-        <a id="nav-noshow" title="No Show (em breve)" style="opacity:.45;cursor:default;display:none"><span class="ico">🚫</span><span class="sb-txt"> No Show <span style="font-size:9px">(em breve)</span></span></a>
+        <a id="nav-noshow" title="No Show (em breve)" style="opacity:.45;cursor:default;display:none"><span class="sb-txt"> No Show <span style="font-size:9px">(em breve)</span></span></a>
 
         <!-- EPI (em breve) -->
-        <a id="nav-epi" title="Estoque de EPI (em breve)" style="opacity:.45;cursor:default;display:none"><span class="ico">🦺</span><span class="sb-txt"> Estoque de EPI <span style="font-size:9px">(em breve)</span></span></a>
+        <a id="nav-epi" title="Estoque de EPI (em breve)" style="opacity:.45;cursor:default;display:none"><span class="sb-txt"> Estoque de EPI <span style="font-size:9px">(em breve)</span></span></a>
       </div>
     </div>
 
@@ -776,59 +776,59 @@
         <!-- Voucher Uber sub -->
         <div class="nav-group nav-subgroup" id="navgroup-voucher-uber" style="margin:0;display:none">
           <button class="nav-group-header nav-subgroup-header" onclick="toggleNavGroup('voucher-uber')" title="Voucher Uber">
-            <span class="ico">🚗</span><span class="sb-txt"> Voucher Uber</span><span class="chevron">▾</span>
+            <span class="sb-txt"> Voucher Uber</span><span class="chevron">▾</span>
           </button>
           <div class="nav-group-items">
             <!-- i. Dashboard -->
-            <a id="nav-adp-dashboard" onclick="navTo('vchr-dashboard')" data-page="vchr-dashboard" data-vp="dashboard" title="Dashboard Voucher" style="padding-left:28px;display:none"><span class="ico">📊</span><span class="sb-txt"> Dashboard</span></a>
+            <a id="nav-adp-dashboard" onclick="navTo('vchr-dashboard')" data-page="vchr-dashboard" data-vp="dashboard" title="Dashboard Voucher" style="padding-left:28px;display:none"><span class="sb-txt"> Dashboard</span></a>
             <!-- ii. Fila Voucher (só Pré Aprovados dentro) -->
             <div class="nav-group nav-subgroup" id="navgroup-adp-fila" style="margin:0">
               <button class="nav-group-header nav-subgroup-header" onclick="toggleNavGroup('adp-fila')" title="Fila Voucher" style="padding-left:28px">
-                <span class="ico">⇄</span><span class="sb-txt"> Fila Voucher</span><span class="chevron">▾</span>
+                <span class="sb-txt"> Fila Voucher</span><span class="chevron">▾</span>
               </button>
               <div class="nav-group-items">
-                <a style="padding-left:44px;opacity:.5;cursor:default"><span class="ico">🔑</span><span class="sb-txt"> Pré Aprovados <span style="font-size:9px">(em breve)</span></span></a>
+                <a style="padding-left:44px;opacity:.5;cursor:default"><span class="sb-txt"> Pré Aprovados <span style="font-size:9px">(em breve)</span></span></a>
               </div>
             </div>
             <!-- iii. Controle do Voucher -->
-            <a id="nav-adp-controle" onclick="navTo('vchr-controle')" data-page="vchr-controle" data-vp="controle" title="Controle do Voucher" style="padding-left:28px;display:none"><span class="ico">☰</span><span class="sb-txt"> Controle do Voucher</span> <span class="count-badge" id="vchr-badge-ativos"></span></a>
+            <a id="nav-adp-controle" onclick="navTo('vchr-controle')" data-page="vchr-controle" data-vp="controle" title="Controle do Voucher" style="padding-left:28px;display:none"><span class="sb-txt"> Controle do Voucher</span> <span class="count-badge" id="vchr-badge-ativos"></span></a>
             <!-- iv. Inativar -->
-            <a id="nav-adp-inativar" onclick="navTo('vchr-inativar')" data-page="vchr-inativar" data-vp="inativar" title="Inativar" style="padding-left:28px;display:none"><span class="ico">⊘</span><span class="sb-txt"> Inativar</span></a>
+            <a id="nav-adp-inativar" onclick="navTo('vchr-inativar')" data-page="vchr-inativar" data-vp="inativar" title="Inativar" style="padding-left:28px;display:none"><span class="sb-txt"> Inativar</span></a>
             <!-- v. Exportar Planilha -->
-            <a id="nav-adp-exportar" onclick="navTo('vchr-exportar')" data-page="vchr-exportar" data-vp="exportar" title="Exportar Planilha" style="padding-left:28px;display:none"><span class="ico">↓</span><span class="sb-txt"> Exportar Planilha</span></a>
+            <a id="nav-adp-exportar" onclick="navTo('vchr-exportar')" data-page="vchr-exportar" data-vp="exportar" title="Exportar Planilha" style="padding-left:28px;display:none"><span class="sb-txt"> Exportar Planilha</span></a>
             <!-- vi. Histórico -->
-            <a id="nav-adp-historico" onclick="navTo('vchr-historico')" data-page="vchr-historico" data-vp="historico" title="Histórico Voucher" style="padding-left:28px;display:none"><span class="ico">🕐</span><span class="sb-txt"> Histórico</span></a>
+            <a id="nav-adp-historico" onclick="navTo('vchr-historico')" data-page="vchr-historico" data-vp="historico" title="Histórico Voucher" style="padding-left:28px;display:none"><span class="sb-txt"> Histórico</span></a>
           </div>
         </div>
 
         <!-- Benefícios sub -->
         <div class="nav-group nav-subgroup" id="navgroup-adp-beneficios" style="margin:0;display:none">
           <button class="nav-group-header nav-subgroup-header" onclick="toggleNavGroup('adp-beneficios')" title="Benefícios">
-            <span class="ico">🐝</span><span class="sb-txt"> Benefícios</span><span class="chevron">▾</span>
+            <span class="sb-txt"> Benefícios</span><span class="chevron">▾</span>
           </button>
           <div class="nav-group-items">
-            <a id="nav-integracao" onclick="navTo('integracao')" data-page="integracao" title="Gestão de Benefícios" style="padding-left:28px;display:none"><span class="ico">✅</span><span class="sb-txt"> Gestão de Benefícios</span></a>
-            <a id="nav-pagar-ben" onclick="navTo('pagar-beneficios')" data-page="pagar-beneficios" title="Pagar Benefícios" style="padding-left:28px;display:none"><span class="ico">💰</span><span class="sb-txt"> Pagar Benefícios</span></a>
-            <a style="padding-left:28px;opacity:.5;cursor:default"><span class="ico">📊</span><span class="sb-txt"> Dashboard <span style="font-size:9px">(em breve)</span></span></a>
-            <a id="nav-ben-historico" onclick="navTo('ben-historico')" data-page="ben-historico" title="Histórico de Benefícios" style="padding-left:28px;display:none"><span class="ico">🕐</span><span class="sb-txt"> Histórico</span></a>
+            <a id="nav-integracao" onclick="navTo('integracao')" data-page="integracao" title="Gestão de Benefícios" style="padding-left:28px;display:none"><span class="sb-txt"> Gestão de Benefícios</span></a>
+            <a id="nav-pagar-ben" onclick="navTo('pagar-beneficios')" data-page="pagar-beneficios" title="Pagar Benefícios" style="padding-left:28px;display:none"><span class="sb-txt"> Pagar Benefícios</span></a>
+            <a style="padding-left:28px;opacity:.5;cursor:default"><span class="sb-txt"> Dashboard <span style="font-size:9px">(em breve)</span></span></a>
+            <a id="nav-ben-historico" onclick="navTo('ben-historico')" data-page="ben-historico" title="Histórico de Benefícios" style="padding-left:28px;display:none"><span class="sb-txt"> Histórico</span></a>
           </div>
         </div>
 
         <!-- Tickets Shopee sub -->
         <div class="nav-group nav-subgroup" id="navgroup-adp-tickets" style="margin:0;display:none">
           <button class="nav-group-header nav-subgroup-header" onclick="toggleNavGroup('adp-tickets')" title="Tickets Shopee">
-            <span class="ico">🎫</span><span class="sb-txt"> Tickets Shopee</span><span class="chevron">▾</span>
+            <span class="sb-txt"> Tickets Shopee</span><span class="chevron">▾</span>
           </button>
           <div class="nav-group-items">
-            <a style="padding-left:28px;opacity:.5;cursor:default"><span class="ico">📊</span><span class="sb-txt"> Dashboard <span style="font-size:9px">(em breve)</span></span></a>
-            <a style="padding-left:28px;opacity:.5;cursor:default"><span class="ico">🔴</span><span class="sb-txt"> Desligamento <span style="font-size:9px">(em breve)</span></span></a>
-            <a style="padding-left:28px;opacity:.5;cursor:default"><span class="ico">🔄</span><span class="sb-txt"> Movimentação <span style="font-size:9px">(em breve)</span></span></a>
-            <a style="padding-left:28px;opacity:.5;cursor:default"><span class="ico">🚗</span><span class="sb-txt"> Voucher Uber <span style="font-size:9px">(em breve)</span></span></a>
+            <a style="padding-left:28px;opacity:.5;cursor:default"><span class="sb-txt"> Dashboard <span style="font-size:9px">(em breve)</span></span></a>
+            <a style="padding-left:28px;opacity:.5;cursor:default"><span class="sb-txt"> Desligamento <span style="font-size:9px">(em breve)</span></span></a>
+            <a style="padding-left:28px;opacity:.5;cursor:default"><span class="sb-txt"> Movimentação <span style="font-size:9px">(em breve)</span></span></a>
+            <a style="padding-left:28px;opacity:.5;cursor:default"><span class="sb-txt"> Voucher Uber <span style="font-size:9px">(em breve)</span></span></a>
           </div>
         </div>
 
         <!-- Central de Solicitações (em breve) -->
-        <a style="opacity:.45;cursor:default;display:flex;align-items:center;gap:10px;padding:9px 16px;font-size:13px;color:var(--muted)"><span class="ico">📨</span><span class="sb-txt"> Solicitações <span style="font-size:9px">(em breve)</span></span></a>
+        <a style="opacity:.45;cursor:default;display:flex;align-items:center;gap:10px;padding:9px 16px;font-size:13px;color:var(--muted)"><span class="sb-txt"> Solicitações <span style="font-size:9px">(em breve)</span></span></a>
 
       </div>
     </div>
@@ -845,23 +845,23 @@
       </button>
       <div class="nav-group-items">
         <div class="nav-suporte-item" onclick="navTo('configuracoes')" data-page="configuracoes">
-          <span class="ico">⚙️</span><span class="sb-txt"> Configurações</span>
+          <span class="sb-txt"> Configurações</span>
         </div>
         <div class="nav-suporte-item" id="nav-suporte-usuarios" onclick="navTo('suporte-usuarios')" data-page="suporte-usuarios" style="display:none">
-          <span class="ico">🛡️</span><span class="sb-txt"> Gestão de Usuários</span>
+          <span class="sb-txt"> Gestão de Usuários</span>
         </div>
       </div>
     </div>
     <!-- Cadastros colapsável — só Master e Gestor -->
-    <div class="nav-group" id="nav-suporte-cadastros" style="margin:0;display:none">
-      <button class="nav-group-header" onclick="toggleNavGroup('suporte-cadastros-inner')"
+    <div class="nav-group" id="navgroup-suporte-cadastros" style="margin:0;display:none">
+      <button class="nav-group-header" onclick="toggleNavGroup('suporte-cadastros')"
         style="padding:7px 14px;font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.6px">
         <span class="sb-txt">Cadastros</span><span class="chevron">▾</span>
       </button>
-      <div class="nav-group-items" id="navgroup-suporte-cadastros-inner-items">
-        <div class="nav-suporte-item" onclick="navTo('cad-clientes')" data-page="cad-clientes"><span class="ico">🏭</span><span class="sb-txt"> Clientes</span></div>
-        <div class="nav-suporte-item" onclick="navTo('cad-cc')"       data-page="cad-cc"><span class="ico">🏢</span><span class="sb-txt"> Centro de Custo</span></div>
-        <div class="nav-suporte-item" onclick="navTo('cad-deptos')"   data-page="cad-deptos"><span class="ico">🗂️</span><span class="sb-txt"> Departamentos</span></div>
+      <div class="nav-group-items">
+        <div class="nav-suporte-item" onclick="navTo('cad-clientes')" data-page="cad-clientes"><span class="sb-txt"> Clientes</span></div>
+        <div class="nav-suporte-item" onclick="navTo('cad-cc')"       data-page="cad-cc"><span class="sb-txt"> Centro de Custo</span></div>
+        <div class="nav-suporte-item" onclick="navTo('cad-deptos')"   data-page="cad-deptos"><span class="sb-txt"> Departamentos</span></div>
       </div>
     </div>
     <hr class="section-divider" style="margin:6px 14px;"/>
@@ -2895,7 +2895,7 @@ async function iniciarSessao(conta) {
   // Tickets sub
   showBlock('navgroup-adp-tickets', _algumTicket);
 
-  showBlock('nav-suporte-cadastros', temPermissao('cad_clientes')||temPermissao('cad_cc')||temPermissao('cad_deptos'));
+  showBlock('navgroup-suporte-cadastros', temPermissao('cad_clientes')||temPermissao('cad_cc')||temPermissao('cad_deptos'));
   show('nav-suporte-usuarios',       podeAdmin());
   // botões de Cadastros (só aparecem depois que o _MAIN_HTML é reinserido, por isso via delegação)
   window._cadPodeCriar = podeVerTudo();
