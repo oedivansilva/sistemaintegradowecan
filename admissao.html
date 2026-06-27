@@ -639,6 +639,23 @@
   body.tema-claro #sidebar .nav-suporte-item { border-top-color:#4a1d7a !important; }
   body.tema-claro #sidebar hr.section-divider { border-color:#4a1d7a !important; }
   body.tema-claro #sidebar .sb-section-label { color:#a394bf !important; }
+
+  /* ── TICKETS SHOPEE ── */
+  .tkt-loading { text-align:center; padding:60px; color:var(--muted); font-size:14px; }
+  .tkt-kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:12px; margin-bottom:20px; }
+  .tkt-kpi { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:14px 18px; }
+  .tkt-kpi-label { font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.6px; color:var(--muted); margin-bottom:6px; }
+  .tkt-kpi-val { font-size:26px; font-weight:800; }
+  .tkt-pill {
+    display:inline-block; font-size:10px; font-weight:700; padding:2px 8px;
+    border-radius:20px; white-space:nowrap;
+  }
+  .tkt-pill-enviado  { background:rgba(99,204,176,.15);  color:var(--accent); }
+  .tkt-pill-pendente { background:rgba(239,68,68,.13);   color:var(--danger); }
+  .tkt-pill-resolvido{ background:rgba(34,197,94,.13);   color:var(--success); }
+  .tkt-pill-default  { background:var(--surface2);        color:var(--muted); }
+  .tkt-int-pendente  { background:rgba(239,68,68,.1);    color:var(--danger); border:1.5px solid var(--danger) !important; }
+  .tkt-int-resolvido { background:rgba(34,197,94,.1);    color:var(--success); border:1.5px solid var(--success) !important; }
   body.tema-claro #sidebar .btn-logout { color:#a394bf !important; border-color:rgba(255,255,255,.15) !important; }
   body.tema-claro #sidebar .btn-logout:hover { color:#efe9f7 !important; border-color:rgba(255,255,255,.3) !important; }
   body.tema-claro #sidebar .sidebar-footer { border-top-color:#4a1d7a !important; }
@@ -2064,8 +2081,95 @@
 
 </body>
 </html>
+  <!-- ══ TICKETS SHOPEE ══ -->
+
+  <!-- TODOS os tickets (aba Tickets) -->
+  <div class="page" id="page-tickets-todos">
+    <div class="page-header">
+      <div><h1>🎫 Tickets Shopee — Todos</h1><p>Visão geral de todos os tickets da sua operação</p></div>
+      <button class="btn btn-ghost btn-sm" onclick="tktCarregar('Tickets')">🔄 Atualizar</button>
+    </div>
+    <div id="tkt-todos-area"><div class="tkt-loading">Carregando…</div></div>
+  </div>
+
+  <!-- DESLIGAMENTO -->
+  <div class="page" id="page-tickets-deslig">
+    <div class="page-header">
+      <div><h1>🔴 Tickets de Desligamento</h1><p>Solicitações de desligamento enviadas ao BPO</p></div>
+      <button class="btn btn-ghost btn-sm" onclick="tktCarregar('Desligamento')">🔄 Atualizar</button>
+    </div>
+    <div id="tkt-deslig-area"><div class="tkt-loading">Carregando…</div></div>
+  </div>
+
+  <!-- MOVIMENTAÇÃO -->
+  <div class="page" id="page-tickets-movim">
+    <div class="page-header">
+      <div><h1>🔄 Tickets de Movimentação</h1><p>Solicitações de movimentação de colaboradores</p></div>
+      <button class="btn btn-ghost btn-sm" onclick="tktCarregar('Movimentações')">🔄 Atualizar</button>
+    </div>
+    <div id="tkt-movim-area"><div class="tkt-loading">Carregando…</div></div>
+  </div>
+
+  <!-- VOUCHER BPO -->
+  <div class="page" id="page-tickets-voucher">
+    <div class="page-header">
+      <div><h1>🚗 Tickets de Voucher BPO</h1><p>Solicitações de voucher processadas pelo BPO</p></div>
+      <button class="btn btn-ghost btn-sm" onclick="tktCarregar('Voucher BPO')">🔄 Atualizar</button>
+    </div>
+    <div id="tkt-voucher-area"><div class="tkt-loading">Carregando…</div></div>
+  </div>
+
 </div><!-- /main -->
 
+
+<!-- ══ MODAL TICKET SHOPEE ══ -->
+<div class="modal-backdrop" id="modal-ticket" onclick="if(event.target===this)fecharModal('modal-ticket')">
+  <div class="modal" style="width:540px">
+    <div class="modal-head">
+      <div>
+        <h2 style="font-size:15px" id="tkt-modal-key">—</h2>
+        <p style="font-size:12px;color:var(--muted);margin-top:3px" id="tkt-modal-tipo">—</p>
+      </div>
+      <button onclick="fecharModal('modal-ticket')" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:20px;line-height:1">✕</button>
+    </div>
+    <div class="modal-body" style="display:grid;gap:14px">
+      <!-- Info do ticket -->
+      <div id="tkt-modal-info" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px"></div>
+
+      <!-- Status interno -->
+      <div>
+        <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px">Status interno</label>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button id="tkt-btn-pendente" onclick="tktSetStatus('pendente')"
+            style="flex:1;padding:8px;border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:var(--font);border:2px solid var(--border);background:var(--surface2);color:var(--muted);transition:all .15s">
+            🔴 Pendente
+          </button>
+          <button id="tkt-btn-resolvido" onclick="tktSetStatus('resolvido')"
+            style="flex:1;padding:8px;border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:var(--font);border:2px solid var(--border);background:var(--surface2);color:var(--muted);transition:all .15s">
+            ✅ Resolvido
+          </button>
+        </div>
+      </div>
+
+      <!-- Observação -->
+      <div>
+        <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px">Observação interna</label>
+        <textarea id="tkt-modal-obs" rows="3" placeholder="Registre uma observação sobre este ticket…"
+          style="width:100%;margin-top:6px;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:10px 12px;font-size:13px;font-family:var(--font);outline:none;resize:vertical;box-sizing:border-box"></textarea>
+      </div>
+
+      <!-- Histórico de observações -->
+      <div id="tkt-modal-hist" style="display:none">
+        <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px">Histórico</div>
+        <div id="tkt-modal-hist-lista" style="display:flex;flex-direction:column;gap:6px;max-height:150px;overflow-y:auto"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="fecharModal('modal-ticket')">Fechar</button>
+      <button class="btn btn-primary" id="tkt-btn-salvar" onclick="tktSalvar()">💾 Salvar</button>
+    </div>
+  </div>
+</div>
 
 <!-- ══ MODAL VAGA -->
 <div class="modal-backdrop" id="modal-vaga">
@@ -3200,9 +3304,9 @@ const PERMISSOES_GRUPOS = [
     { id:'adp_beneficios_historico',nome:'Benefícios — Histórico', descricao:'Acesso ao histórico completo de PAGOS e NO SHOW de todos os CCs' },
   ]},
   { grupo: 'Administração de Pessoal — Tickets Shopee', itens: [
-    { id:'adp_tickets_deslig',  nome:'Tickets de Desligamento', descricao:'Abertura e acompanhamento de tickets de desligamento', em_breve:true },
-    { id:'adp_tickets_movim',   nome:'Tickets de Movimentação', descricao:'Abertura e acompanhamento de tickets de movimentação', em_breve:true },
-    { id:'adp_tickets_voucher', nome:'Tickets de Voucher Uber', descricao:'Abertura e acompanhamento de tickets de voucher', em_breve:true },
+    { id:'adp_tickets_deslig',  nome:'Tickets de Desligamento', descricao:'Abertura e acompanhamento de tickets de desligamento' },
+    { id:'adp_tickets_movim',   nome:'Tickets de Movimentação', descricao:'Abertura e acompanhamento de tickets de movimentação' },
+    { id:'adp_tickets_voucher', nome:'Tickets de Voucher Uber', descricao:'Abertura e acompanhamento de tickets de voucher' },
   ]},
   { grupo: 'Suporte', itens: [
     { id:'sup_configuracoes',   nome:'Configurações',      descricao:'Tema, foto de perfil e preferências' },
@@ -3526,6 +3630,10 @@ function navTo(id) {
   if (id==='cad-clientes')     carregarClientes();
   if (id==='cad-cc')           carregarCentrosCusto();
   if (id==='cad-deptos')       carregarDeptos();
+  if (id==='tickets-todos')    tktCarregar('Tickets');
+  if (id==='tickets-deslig')   tktCarregar('Desligamento');
+  if (id==='tickets-movim')    tktCarregar('Movimentações');
+  if (id==='tickets-voucher')  tktCarregar('Voucher BPO');
   atualizarBadgeFila();
 }
 function toggleNavGroup(nome) { /* legado — mantido para compatibilidade */ try { document.getElementById('navgroup-'+nome).classList.toggle('collapsed'); } catch(e){} }
@@ -3563,10 +3671,10 @@ const GAVETA_MENUS = {
   'tickets': {
     titulo: 'Tickets Shopee',
     items: [
-      { label:'📊 Dashboard',    disabled:true, soon:true },
-      { label:'🔴 Desligamento', disabled:true, soon:true },
-      { label:'🔄 Movimentação', disabled:true, soon:true },
-      { label:'🚗 Voucher Uber', disabled:true, soon:true },
+      { label:'📊 Todos',          page:'tickets-todos',    perm:'adp_tickets_deslig' },
+      { label:'🔴 Desligamento',   page:'tickets-deslig',   perm:'adp_tickets_deslig' },
+      { label:'🔄 Movimentação',   page:'tickets-movim',    perm:'adp_tickets_movim'  },
+      { label:'🚗 Voucher BPO',    page:'tickets-voucher',  perm:'adp_tickets_voucher'},
     ]
   },
   'cadastros': {
@@ -7815,4 +7923,395 @@ function histBenRenderTabela(lista) {
   }).join('');
 }
 // ═══════════════ FIM HISTÓRICO BENEFÍCIOS ═══════════════
+
+// ════════════════════════════════════════════════════════════
+// TICKETS SHOPEE — Google Sheets + Supabase (notas internas)
+// ════════════════════════════════════════════════════════════
+
+const TKT_SHEET_ID  = '14aQ5T9tBFO148fqx4OB8YHd6FkOrELZvsvlo_4KY7Y';
+const TKT_API_KEY   = 'AIzaSyD-dummy-will-use-csv-export'; // fallback para CSV público
+// Mapa: aba lógica → nome real na planilha
+const TKT_ABAS = {
+  'Tickets':       'Tickets',
+  'Movimentações': 'Movimentações',
+  'Desligamento':  'Desligamento',
+  'Voucher BPO':   'Voucher BPO',
+};
+// Mapa: aba → id da área na página
+const TKT_AREAS = {
+  'Tickets':       'tkt-todos-area',
+  'Movimentações': 'tkt-movim-area',
+  'Desligamento':  'tkt-deslig-area',
+  'Voucher BPO':   'tkt-voucher-area',
+};
+
+let TKT_DADOS     = [];   // tickets carregados
+let TKT_NOTAS     = {};   // { key: { status, obs, historico[] } }
+let TKT_ABA_ATUAL = '';
+let _tktKeyAtual  = '';
+let _tktStatusAtual = '';
+
+// ── Buscar CSV público da aba ──────────────────────────────
+async function tktFetchAba(nomeAba) {
+  const url = `https://docs.google.com/spreadsheets/d/${TKT_SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(nomeAba)}`;
+  const resp = await fetch(url);
+  if (!resp.ok) throw new Error(`Erro ao buscar aba "${nomeAba}": HTTP ${resp.status}`);
+  const csv = await resp.text();
+  return tktParseCSV(csv);
+}
+
+// ── Parser CSV simples (lida com aspas e vírgulas) ─────────
+function tktParseCSV(csv) {
+  const lines = csv.trim().split('\n');
+  if (lines.length < 2) return [];
+  const headers = tktCSVRow(lines[0]);
+  return lines.slice(1).map(line => {
+    const vals = tktCSVRow(line);
+    const obj = {};
+    headers.forEach((h, i) => { obj[h.trim()] = (vals[i] || '').trim(); });
+    return obj;
+  }).filter(r => r['Key'] || r['key']);
+}
+
+function tktCSVRow(line) {
+  const result = []; let cur = ''; let inQ = false;
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (c === '"') { inQ = !inQ; continue; }
+    if (c === ',' && !inQ) { result.push(cur); cur = ''; continue; }
+    cur += c;
+  }
+  result.push(cur);
+  return result;
+}
+
+// ── Extrair código HUB sem o sufixo "| SPI" ──────────────
+function tktHubCode(hubStr) {
+  if (!hubStr) return '';
+  return hubStr.split('|')[0].trim();
+}
+
+// ── Filtrar tickets pelo HUB do Onsite logado ─────────────
+function tktFiltrarPorOnsite(lista) {
+  if (!session) return lista;
+  // Master e Gestor veem todos
+  if (['master','gestor'].includes(session.perfil)) return lista;
+  // Onsite: filtra pelos seus HUBs
+  const ops = session.operacoes || [];
+  if (!ops.length) return lista;
+  // ops são os nomes das operações do onsite (ex: "HUB-LSP-10")
+  return lista.filter(r => {
+    const hub = tktHubCode(r['HUB'] || r['Hub'] || r['hub'] || '');
+    return ops.some(op => hub.toLowerCase().includes(op.toLowerCase()) || op.toLowerCase().includes(hub.toLowerCase()));
+  });
+}
+
+// ── Buscar notas internas do Supabase ─────────────────────
+async function tktCarregarNotas(keys) {
+  if (!keys.length) return;
+  try {
+    const r = await rpc('wc_ticket_notas_listar', { p_keys: keys });
+    TKT_NOTAS = {};
+    (r || []).forEach(n => {
+      TKT_NOTAS[n.key] = { status: n.status, obs: n.obs, historico: n.historico || [] };
+    });
+  } catch(e) {
+    // RPC pode não existir ainda — silencioso
+    TKT_NOTAS = {};
+  }
+}
+
+// ── Carregar aba e renderizar ─────────────────────────────
+async function tktCarregar(aba) {
+  TKT_ABA_ATUAL = aba;
+  const areaId = TKT_AREAS[aba];
+  const area = document.getElementById(areaId);
+  if (!area) return;
+  area.innerHTML = '<div class="tkt-loading">🔄 Buscando tickets…</div>';
+
+  try {
+    const nomeAba = TKT_ABAS[aba];
+    let todos = await tktFetchAba(nomeAba);
+    todos = tktFiltrarPorOnsite(todos);
+    TKT_DADOS = todos;
+
+    // Buscar notas internas
+    const keys = todos.map(r => r['Key']).filter(Boolean);
+    await tktCarregarNotas(keys);
+
+    tktRenderArea(areaId, todos);
+  } catch(e) {
+    area.innerHTML = `<div class="tkt-loading" style="color:var(--danger)">❌ ${e.message}</div>`;
+  }
+}
+
+// ── Renderizar área com KPIs + filtros + tabela ───────────
+function tktRenderArea(areaId, lista) {
+  const area = document.getElementById(areaId);
+  if (!area) return;
+
+  const total     = lista.length;
+  const enviados  = lista.filter(r => (r['Status']||'').toLowerCase().includes('enviado')).length;
+  const pendInt   = lista.filter(r => (TKT_NOTAS[r['Key']]?.status || '') === 'pendente').length;
+  const resolv    = lista.filter(r => (TKT_NOTAS[r['Key']]?.status || '') === 'resolvido').length;
+
+  area.innerHTML = `
+    <!-- KPIs -->
+    <div class="tkt-kpis">
+      <div class="tkt-kpi">
+        <div class="tkt-kpi-label">Total</div>
+        <div class="tkt-kpi-val">${total}</div>
+      </div>
+      <div class="tkt-kpi">
+        <div class="tkt-kpi-label">Enviados BPO</div>
+        <div class="tkt-kpi-val" style="color:var(--accent)">${enviados}</div>
+      </div>
+      <div class="tkt-kpi">
+        <div class="tkt-kpi-label">⚠️ Pendentes</div>
+        <div class="tkt-kpi-val" style="color:var(--danger)">${pendInt}</div>
+      </div>
+      <div class="tkt-kpi">
+        <div class="tkt-kpi-label">✅ Resolvidos</div>
+        <div class="tkt-kpi-val" style="color:var(--success)">${resolv}</div>
+      </div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="toolbar" style="margin-bottom:16px">
+      <div class="vt-search-wrap" style="flex:1;min-width:200px">
+        <span class="vt-search-ico">🔍</span>
+        <input type="text" class="vt-search" id="${areaId}-busca"
+          placeholder="Buscar por key, colaborador, matrícula, solicitante…"
+          oninput="tktFiltrar('${areaId}')"/>
+      </div>
+      <select id="${areaId}-filtro-status" onchange="tktFiltrar('${areaId}')"
+        style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:8px 12px;font-size:13px;font-family:var(--font);outline:none">
+        <option value="">Todos os status</option>
+        <option value="enviado">Enviado para BPO</option>
+        <option value="pendente_int">⚠️ Pendente (interno)</option>
+        <option value="resolvido_int">✅ Resolvido (interno)</option>
+      </select>
+      <select id="${areaId}-filtro-tipo" onchange="tktFiltrar('${areaId}')"
+        style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:8px 12px;font-size:13px;font-family:var(--font);outline:none">
+        <option value="">Todos os tipos</option>
+        ${[...new Set(lista.map(r=>r['Tipo']).filter(Boolean))].map(t=>`<option value="${t}">${t}</option>`).join('')}
+      </select>
+      <button class="btn btn-ghost btn-sm" onclick="tktLimparFiltros('${areaId}')">✕ Limpar</button>
+    </div>
+
+    <!-- Tabela -->
+    <div class="table-wrap">
+      <table class="main-table" id="${areaId}-tabela">
+        <thead>
+          <tr>
+            <th>Key</th>
+            <th>Tipo</th>
+            <th>Status Jira</th>
+            <th>Criado</th>
+            <th>Solicitante</th>
+            <th>Colaborador</th>
+            <th>Matrícula</th>
+            <th>Cargo</th>
+            <th>HUB</th>
+            <th>Status Interno</th>
+          </tr>
+        </thead>
+        <tbody id="${areaId}-tbody"></tbody>
+      </table>
+    </div>
+    <p id="${areaId}-count" style="color:var(--muted);font-size:12px;margin-top:12px"></p>
+  `;
+
+  tktRenderTabela(areaId, lista);
+}
+
+// ── Renderizar tbody ──────────────────────────────────────
+function tktRenderTabela(areaId, lista) {
+  const tbody = document.getElementById(`${areaId}-tbody`);
+  const count = document.getElementById(`${areaId}-count`);
+  if (!tbody) return;
+
+  if (!lista.length) {
+    tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;padding:40px;color:var(--muted)">Nenhum ticket encontrado para sua operação.</td></tr>`;
+    if (count) count.textContent = '';
+    return;
+  }
+
+  if (count) count.textContent = `${lista.length} ticket(s)`;
+
+  const fmtData = d => {
+    if (!d) return '—';
+    try { return new Date(d).toLocaleDateString('pt-BR'); } catch { return d; }
+  };
+
+  tbody.innerHTML = lista.map(r => {
+    const key   = r['Key'] || '—';
+    const nota  = TKT_NOTAS[key];
+    const stInt = nota?.status || '';
+    const hub   = tktHubCode(r['HUB'] || r['Hub'] || '');
+
+    let statusJiraPill = `<span class="tkt-pill tkt-pill-default">${r['Status'] || '—'}</span>`;
+    if ((r['Status']||'').toLowerCase().includes('enviado'))
+      statusJiraPill = `<span class="tkt-pill tkt-pill-enviado">${r['Status']}</span>`;
+
+    let statusIntPill = '<span class="tkt-pill tkt-pill-default">—</span>';
+    if (stInt === 'pendente')  statusIntPill = `<span class="tkt-pill tkt-pill-pendente">🔴 Pendente</span>`;
+    if (stInt === 'resolvido') statusIntPill = `<span class="tkt-pill tkt-pill-resolvido">✅ Resolvido</span>`;
+
+    const dataR = JSON.stringify(r).replace(/"/g,'&quot;');
+    return `<tr style="cursor:pointer" onclick="tktAbrirModal(${dataR})">
+      <td><code style="font-size:11px;font-weight:700;color:var(--accent)">${key}</code></td>
+      <td style="font-size:12px">${r['Tipo'] || '—'}</td>
+      <td>${statusJiraPill}</td>
+      <td style="font-size:12px;color:var(--muted)">${fmtData(r['Criado'])}</td>
+      <td style="font-size:12px">${r['Solicitante'] || '—'}</td>
+      <td style="font-size:12.5px;font-weight:600">${r['Nome Colaborador'] || '—'}</td>
+      <td style="font-size:11.5px;font-family:monospace">${r['Matricula'] || r['Matrícula'] || '—'}</td>
+      <td style="font-size:12px;color:var(--muted)">${r['Cargo'] || '—'}</td>
+      <td style="font-size:11px"><span style="background:var(--surface2);padding:2px 6px;border-radius:4px">${hub || '—'}</span></td>
+      <td>${statusIntPill}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ── Filtrar tabela ────────────────────────────────────────
+function tktFiltrar(areaId) {
+  const busca   = (document.getElementById(`${areaId}-busca`)?.value || '').toLowerCase();
+  const filtSt  = document.getElementById(`${areaId}-filtro-status`)?.value || '';
+  const filtTipo= document.getElementById(`${areaId}-filtro-tipo`)?.value || '';
+
+  let lista = [...TKT_DADOS];
+
+  if (busca) lista = lista.filter(r =>
+    [r['Key'], r['Nome Colaborador'], r['Matricula'], r['Matrícula'], r['Solicitante'], r['HUB']]
+      .some(f => (f||'').toLowerCase().includes(busca))
+  );
+  if (filtTipo) lista = lista.filter(r => r['Tipo'] === filtTipo);
+  if (filtSt === 'enviado')
+    lista = lista.filter(r => (r['Status']||'').toLowerCase().includes('enviado'));
+  else if (filtSt === 'pendente_int')
+    lista = lista.filter(r => TKT_NOTAS[r['Key']]?.status === 'pendente');
+  else if (filtSt === 'resolvido_int')
+    lista = lista.filter(r => TKT_NOTAS[r['Key']]?.status === 'resolvido');
+
+  tktRenderTabela(areaId, lista);
+}
+
+function tktLimparFiltros(areaId) {
+  const busca = document.getElementById(`${areaId}-busca`);
+  const fSt   = document.getElementById(`${areaId}-filtro-status`);
+  const fTipo = document.getElementById(`${areaId}-filtro-tipo`);
+  if (busca) busca.value = '';
+  if (fSt)   fSt.value   = '';
+  if (fTipo) fTipo.value = '';
+  tktRenderTabela(areaId, TKT_DADOS);
+}
+
+// ── Abrir modal de detalhes ───────────────────────────────
+function tktAbrirModal(r) {
+  const key  = r['Key'] || '—';
+  _tktKeyAtual = key;
+  const nota = TKT_NOTAS[key] || {};
+  _tktStatusAtual = nota.status || '';
+
+  document.getElementById('tkt-modal-key').textContent  = `🎫 ${key}`;
+  document.getElementById('tkt-modal-tipo').textContent = `${r['Tipo'] || '—'} · ${tktHubCode(r['HUB'] || '')}`;
+  document.getElementById('tkt-modal-obs').value = nota.obs || '';
+
+  // Info grid
+  const fmtData = d => { try { return new Date(d).toLocaleDateString('pt-BR'); } catch { return d||'—'; } };
+  const campo = (l, v) => `<div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;font-weight:700;letter-spacing:.4px;margin-bottom:2px">${l}</div><div style="font-size:12.5px;font-weight:600">${v||'—'}</div></div>`;
+  document.getElementById('tkt-modal-info').innerHTML = [
+    campo('Colaborador',   r['Nome Colaborador']),
+    campo('Matrícula',     r['Matricula'] || r['Matrícula']),
+    campo('Cargo',         r['Cargo']),
+    campo('HUB',           tktHubCode(r['HUB'] || '')),
+    campo('Solicitante',   r['Solicitante']),
+    campo('Criado em',     fmtData(r['Criado'])),
+    campo('Status Jira',   r['Status']),
+    campo('Tipo',          r['Tipo']),
+  ].join('');
+
+  // Botões status interno
+  tktAtualizarBotoesStatus(_tktStatusAtual);
+
+  // Histórico
+  const hist = nota.historico || [];
+  const histEl = document.getElementById('tkt-modal-hist');
+  const histLista = document.getElementById('tkt-modal-hist-lista');
+  if (hist.length) {
+    histEl.style.display = 'block';
+    histLista.innerHTML = hist.map(h => `
+      <div style="background:var(--surface2);border-radius:8px;padding:8px 10px;font-size:11.5px">
+        <div style="font-weight:700;color:var(--text)">${h.usuario||'—'} <span style="font-weight:400;color:var(--muted)">· ${h.data||''}</span></div>
+        <div style="color:var(--muted);margin-top:2px">${h.obs||''}</div>
+        <div style="margin-top:2px">${h.status === 'resolvido'
+          ? '<span style="color:var(--success);font-size:10px;font-weight:700">✅ Resolvido</span>'
+          : '<span style="color:var(--danger);font-size:10px;font-weight:700">🔴 Pendente</span>'}</div>
+      </div>`).join('');
+  } else {
+    histEl.style.display = 'none';
+  }
+
+  abrirModal('modal-ticket');
+}
+
+function tktAtualizarBotoesStatus(st) {
+  const btnP = document.getElementById('tkt-btn-pendente');
+  const btnR = document.getElementById('tkt-btn-resolvido');
+  if (!btnP || !btnR) return;
+  btnP.className = '';
+  btnR.className = '';
+  btnP.style.cssText = 'flex:1;padding:8px;border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:var(--font);transition:all .15s;border:2px solid var(--border);background:var(--surface2);color:var(--muted)';
+  btnR.style.cssText = 'flex:1;padding:8px;border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:var(--font);transition:all .15s;border:2px solid var(--border);background:var(--surface2);color:var(--muted)';
+  if (st === 'pendente')  btnP.style.cssText = 'flex:1;padding:8px;border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:var(--font);border:2px solid var(--danger);background:rgba(239,68,68,.1);color:var(--danger)';
+  if (st === 'resolvido') btnR.style.cssText = 'flex:1;padding:8px;border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:var(--font);border:2px solid var(--success);background:rgba(34,197,94,.1);color:var(--success)';
+}
+
+function tktSetStatus(st) {
+  _tktStatusAtual = (_tktStatusAtual === st) ? '' : st;
+  tktAtualizarBotoesStatus(_tktStatusAtual);
+}
+
+// ── Salvar nota interna ───────────────────────────────────
+async function tktSalvar() {
+  const btn = document.getElementById('tkt-btn-salvar');
+  const obs = document.getElementById('tkt-modal-obs').value.trim();
+  if (!_tktKeyAtual) return;
+
+  btn.disabled = true; btn.textContent = 'Salvando…';
+  try {
+    await rpc('wc_ticket_nota_salvar', {
+      p_key:    _tktKeyAtual,
+      p_status: _tktStatusAtual,
+      p_obs:    obs,
+    });
+
+    // Atualizar cache local
+    if (!TKT_NOTAS[_tktKeyAtual]) TKT_NOTAS[_tktKeyAtual] = { historico: [] };
+    TKT_NOTAS[_tktKeyAtual].status = _tktStatusAtual;
+    TKT_NOTAS[_tktKeyAtual].obs    = obs;
+    if (obs) {
+      const hist = TKT_NOTAS[_tktKeyAtual].historico || [];
+      hist.unshift({
+        usuario: session?.nome || 'Onsite',
+        data:    new Date().toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'}),
+        obs,
+        status:  _tktStatusAtual,
+      });
+      TKT_NOTAS[_tktKeyAtual].historico = hist.slice(0, 20);
+    }
+
+    fecharModal('modal-ticket');
+    // Re-renderizar tabela atual
+    const areaId = TKT_AREAS[TKT_ABA_ATUAL];
+    if (areaId) tktFiltrar(areaId);
+    toast('Ticket atualizado!', 'success');
+  } catch(e) {
+    toast(e.message, 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = '💾 Salvar';
+  }
+}
+// ════════════════ FIM TICKETS SHOPEE ════════════════
 </script>
