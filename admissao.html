@@ -4364,17 +4364,16 @@ function renderPermissoesGestor(perms) {
   html += '<div style="font-size:9.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px">Sistemas com acesso</div>';
   html += '<div style="display:flex;gap:10px;flex-wrap:wrap">';
   html += `<label style="display:flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 16px;cursor:pointer;font-size:13px;font-weight:600">
-    <input type="checkbox" id="gestor-acesso-rs" ${temRS?'checked':''} onchange="renderPermissoesGestor(coletarPermsAtuais())"> 🔍 Seleção &amp; Admissão</label>`;
+    <input type="checkbox" id="gestor-acesso-rs" ${(_rsExist?_rsExist.checked:temRS)?'checked':''}> 🔍 Seleção &amp; Admissão</label>`;
   html += `<label style="display:flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 16px;cursor:pointer;font-size:13px;font-weight:600">
-    <input type="checkbox" id="gestor-acesso-adp" ${temADP?'checked':''} onchange="renderPermissoesGestor(coletarPermsAtuais())"> 🐝 Adm. de Pessoal</label>`;
+    <input type="checkbox" id="gestor-acesso-adp" ${(_adpExist?_adpExist.checked:temADP)?'checked':''}> 🐝 Adm. de Pessoal</label>`;
   html += '</div></div>';
 
-  // Permissões RS
-  const rsCheck = document.getElementById('gestor-acesso-rs');
-  const adpCheck = document.getElementById('gestor-acesso-adp');
-  // Precisamos ler do DOM se já existir, senão usar temRS/temADP
-  const mostraRS  = temRS;
-  const mostraADP = temADP;
+  // Ler estado atual dos checkboxes do DOM (se já existirem) antes de sobrescrever
+  const _rsExist  = document.getElementById('gestor-acesso-rs');
+  const _adpExist = document.getElementById('gestor-acesso-adp');
+  const mostraRS  = _rsExist  ? _rsExist.checked  : temRS;
+  const mostraADP = _adpExist ? _adpExist.checked : temADP;
 
   const renderGrupos = (grupos, mostrar) => {
     if (!mostrar) return '';
