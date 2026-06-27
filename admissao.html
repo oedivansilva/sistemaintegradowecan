@@ -5570,7 +5570,7 @@ function nsRenderTabela() {
   }).join('');
 }
 
-function nsAbrirConsultor(r) {
+async function nsAbrirConsultor(r) {
   document.getElementById('ns-cons-id').value         = r.id;
   document.getElementById('ns-cons-nome').textContent  = r.nome || '—';
   document.getElementById('ns-cons-sub').textContent   = `${r.ns_tipo_abs||''} · ${r.depto_cod||r.depto_nome||''} · Matrícula ${r.matricula||'—'}`;
@@ -5598,6 +5598,9 @@ function nsAbrirConsultor(r) {
   btnReabrir.dataset.vaga = r.ns_vaga_codigo || '';
 
   // Buscar vaga automaticamente pelo nome/matrícula
+  if (!window.VAGAS || !VAGAS.length) {
+    await carregarVagas();
+  }
   nsBuscarVagaAuto(r.nome, r.matricula);
 
   abrirModal('modal-ns-consultor');
