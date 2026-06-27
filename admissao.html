@@ -2722,7 +2722,7 @@ const PERMISSOES_GRUPOS = [
     { id:'rs_vagas',       nome:'Vagas / Admissões', descricao:'Cadastro e acompanhamento de vagas' },
     { id:'rs_voucher',     nome:'Fila de Voucher',   descricao:'Autorização de vouchers na fila' },
     { id:'rs_indicacoes',  nome:'Indicações',        descricao:'Currículos enviados pelos líderes' },
-    { id:'rs_noshow',      nome:'No Show',           descricao:'Controle de ausências', em_breve:true },
+    { id:'rs_noshow',      nome:'No Show',           descricao:'Controle de ausências' },
     { id:'rs_estoque_epi', nome:'Estoque de EPI',    descricao:'Colete, bota e luva por unidade', em_breve:true },
   ]},
   { grupo: 'Administração de Pessoal — Voucher Uber', itens: [
@@ -3595,9 +3595,11 @@ function popularSelectDeptos(codCC) {
   const sel = document.getElementById('v-departamentoGI');
   if (!sel) return;
   const atual = sel.value;
-  // Vínculo: CC.cod === Departamento.cli_codigo
-  const lista = codCC
-    ? DEPTOS.filter(d => !d.cli_codigo || d.cli_codigo === codCC)
+  // Buscar cli_codigo do CC selecionado
+  const ccSelecionado = CENTROS_CUSTO.find(c => c.cod === codCC);
+  const cliCodigo = ccSelecionado?.cli_codigo || '';
+  const lista = cliCodigo
+    ? DEPTOS.filter(d => !d.cli_codigo || d.cli_codigo === cliCodigo)
     : DEPTOS;
   sel.innerHTML = '<option value="">— selecione —</option>' +
     lista.map(d => `<option value="${d.descricao}">${d.codigo ? d.codigo+' — ' : ''}${d.descricao}</option>`).join('');
@@ -3980,9 +3982,13 @@ function impFiltrarDeptosPorCC() {
   const codCC      = selCC?.value || '';
   const valorAtual = selDep.value;
 
-  // Vínculo: CC.cod === Departamento.cli_codigo
-  const lista = codCC
-    ? DEPTOS.filter(d => !d.cli_codigo || d.cli_codigo === codCC)
+  // Buscar cli_codigo do CC selecionado
+  const ccSelecionado = CENTROS_CUSTO.find(c => c.cod === codCC);
+  const cliCodigo = ccSelecionado?.cli_codigo || '';
+
+  // Filtrar deptos pelo cli_codigo do CC selecionado
+  const lista = cliCodigo
+    ? DEPTOS.filter(d => !d.cli_codigo || d.cli_codigo === cliCodigo)
     : DEPTOS;
 
   selDep.innerHTML = '<option value="">— nenhum padrão —</option>' +
