@@ -8105,7 +8105,7 @@ function tktRenderArea(areaId, lista, pageId) {
       <table class="main-table">
         <thead><tr>
           <th>Key</th><th>Tipo</th><th>Status Jira</th><th>Criado</th>
-          <th>Solicitante</th><th>Colaborador</th><th>Matrícula</th>
+          <th>Solicitante</th><th>Colaboradores</th>
           <th>Cargo</th><th>HUB</th><th>Status Interno</th>
         </tr></thead>
         <tbody id="${areaId}-tbody"></tbody>
@@ -8133,10 +8133,19 @@ function tktRenderTabela(areaId, lista) {
   const fmtData = d => { try { return new Date(d).toLocaleDateString('pt-BR'); } catch { return d||'—'; } };
 
   tbody.innerHTML = lista.map(r => {
-    const key  = r['Key'] || '—';
-    const nota = TKT_NOTAS[key];
+    const key   = r['Key'] || '—';
+    const nota  = TKT_NOTAS[key];
     const stInt = nota?.status || '';
-    const hub  = tktHubCode(r['HUB'] || '');
+    const hub   = tktHubCode(r['HUB'] || '');
+
+    // Extrair matrículas de AMBAS as colunas
+    const mats  = tktExtrairMatriculas(r);
+    const matBadge = mats.length
+      ? `<div style="display:flex;flex-wrap:wrap;gap:4px">
+           ${mats.slice(0,3).map(m=>`<span style="background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:1px 6px;font-size:10.5px;font-family:monospace;font-weight:700">${m}</span>`).join('')}
+           ${mats.length > 3 ? `<span style="font-size:10.5px;color:var(--muted);align-self:center">+${mats.length-3}</span>` : ''}
+         </div>`
+      : `<span style="color:var(--muted);font-size:12px">—</span>`;
 
     const statusJiraPill = (r['Status']||'').toLowerCase().includes('enviado')
       ? `<span class="tkt-pill tkt-pill-enviado">${r['Status']}</span>`
@@ -8155,8 +8164,7 @@ function tktRenderTabela(areaId, lista) {
       <td>${statusJiraPill}</td>
       <td style="font-size:12px;color:var(--muted)">${fmtData(r['Criado'])}</td>
       <td style="font-size:12px">${r['Solicitante']||'—'}</td>
-      <td style="font-size:12.5px;font-weight:600">${r['Nome Colaborador']||'—'}</td>
-      <td style="font-size:11.5px;font-family:monospace">${r['Matricula']||r['Matrícula']||'—'}</td>
+      <td>${matBadge}</td>
       <td style="font-size:12px;color:var(--muted)">${r['Cargo']||'—'}</td>
       <td><span style="background:var(--surface2);padding:2px 6px;border-radius:4px;font-size:11px">${hub||'—'}</span></td>
       <td>${statusIntPill}</td>
@@ -8191,6 +8199,17 @@ function tktLimparFiltros(areaId, pageId) {
   tktRenderTabela(areaId, tktFiltrarPorTipo(TKT_TODOS, pageId));
 }
 
+// ── Extrair matrículas (padrão WE+números) de ambas as colunas ──
+function tktExtrairMatriculas(r) {
+  const raw = [
+    r['Nome Colaborador'] || '',
+    r['Matricula']        || '',
+    r['Matrícula']        || '',
+  ].join(' ');
+  const matches = raw.match(/WE\d+/gi) || [];
+  return [...new Set(matches.map(m => m.toUpperCase()))];
+}
+
 // ── Abrir modal de detalhes ───────────────────────────────
 function tktAbrirModal(r) {
   const key  = r['Key'] || '—';
@@ -8204,16 +8223,31 @@ function tktAbrirModal(r) {
 
   const fmtData = d => { try { return new Date(d).toLocaleDateString('pt-BR'); } catch { return d||'—'; } };
   const campo = (l,v) => `<div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;font-weight:700;letter-spacing:.4px;margin-bottom:2px">${l}</div><div style="font-size:12.5px;font-weight:600">${v||'—'}</div></div>`;
-  document.getElementById('tkt-modal-info').innerHTML = [
-    campo('Colaborador',  r['Nome Colaborador']),
-    campo('Matrícula',    r['Matricula']||r['Matrícula']),
-    campo('Cargo',        r['Cargo']),
-    campo('HUB',          tktHubCode(r['HUB']||'')),
-    campo('Solicitante',  r['Solicitante']),
-    campo('Criado em',    fmtData(r['Criado'])),
-    campo('Status Jira',  r['Status']),
-    campo('Tipo',         r['Tipo']),
-  ].join('');
+
+  // Só matrículas — sem tentar casar com nomes
+  const mats = tktExtrairMatriculas(r);
+  const matsHtml = mats.length
+    ? `<div style="display:flex;flex-wrap:wrap;gap:6px">
+        ${mats.map(m => `
+          <span style="font-family:monospace;font-size:12.5px;font-weight:800;color:var(--accent);
+            background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:4px 10px">
+            ${m}
+          </span>`).join('')}
+       </div>`
+    : `<span style="color:var(--muted);font-size:12px">Nenhuma matrícula identificada</span>`;
+
+  document.getElementById('tkt-modal-info').innerHTML = `
+    <div style="grid-column:1/-1">
+      <div style="font-size:10px;color:var(--muted);text-transform:uppercase;font-weight:700;letter-spacing:.4px;margin-bottom:8px">Matrículas (${mats.length})</div>
+      ${matsHtml}
+    </div>
+    ${campo('Cargo',       r['Cargo'])}
+    ${campo('HUB',         tktHubCode(r['HUB']||''))}
+    ${campo('Solicitante', r['Solicitante'])}
+    ${campo('Criado em',   fmtData(r['Criado']))}
+    ${campo('Status Jira', r['Status'])}
+    ${campo('Tipo',        r['Tipo'])}
+  `;
 
   tktAtualizarBotoesStatus(_tktStatusAtual);
 
