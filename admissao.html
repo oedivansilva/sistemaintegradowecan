@@ -572,15 +572,16 @@
   .vt-clear-all { background:none; border:1px solid var(--border); color:var(--danger); font-size:11.5px; padding:4px 10px; border-radius:20px; cursor:pointer; transition:all .15s; margin-left:auto; flex-shrink:0; }
   .vt-clear-all:hover { background:rgba(239,68,68,.1); border-color:var(--danger); }
 
-  #col-picker-panel {
+  /* ── COL PICKER GENÉRICO ── */
+  .col-picker-popup {
     display:none; position:fixed;
     background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
-    padding:14px 16px; width:300px; z-index:9000;
+    padding:14px 16px; width:260px; z-index:9000;
     box-shadow:0 8px 30px rgba(0,0,0,.45);
   }
-  #col-picker-panel.open { display:block; }
-  #col-picker-panel h4 { font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; margin-bottom:10px; }
-  .col-picker-grid { display:flex; flex-direction:column; gap:2px; max-height:380px; overflow-y:auto; }
+  .col-picker-popup.open { display:block; }
+  .col-picker-popup h4 { font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; margin-bottom:10px; }
+  .col-picker-grid { display:flex; flex-direction:column; gap:2px; max-height:340px; overflow-y:auto; }
   .col-check-item {
     display:flex; align-items:center; gap:9px; padding:6px 8px;
     border-radius:6px; cursor:pointer; font-size:12.5px; color:var(--muted);
@@ -591,6 +592,12 @@
   .col-check-item.checked { color:var(--text); }
   .col-picker-actions { display:flex; gap:8px; margin-top:10px; padding-top:10px; border-top:1px solid var(--border); }
   .toolbar-right { position:relative; }
+  /* compat alias para o col-picker-panel antigo (vagas) */
+  #col-picker-panel { display:none; position:fixed;
+    background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
+    padding:14px 16px; width:300px; z-index:9000;
+    box-shadow:0 8px 30px rgba(0,0,0,.45); }
+  #col-picker-panel.open { display:block; }
 
   /* ── CADASTROS — form helpers ── */
   .form-row-2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:0; }
@@ -863,6 +870,7 @@
         <option value="concluido">Concluído</option>
         <option value="rejeitado">Rejeitado</option>
       </select>
+      <button class="btn btn-ghost btn-sm" onclick="filtroLimparTela('ind')">✕ Limpar</button>
     </div>
     <div id="lista-indicacoes"></div>
   </div>
@@ -1016,6 +1024,17 @@
         <option value="pendente">🔴 Pendentes</option>
         <option value="resolvido">✅ Resolvidos</option>
       </select>
+      <div class="toolbar-right">
+        <button class="btn btn-ghost btn-sm" onclick="cpAbrir('ns','ns-cp-popup',this)">⚙️ Colunas</button>
+        <div class="col-picker-popup" id="ns-cp-popup">
+          <h4>Colunas visíveis</h4>
+          <div class="col-picker-grid" id="ns-cp-grid"></div>
+          <div class="col-picker-actions">
+            <button class="btn btn-ghost btn-sm" onclick="cpReset('ns',NS_COLUNAS,nsRenderTabela)">Padrão</button>
+            <button class="btn btn-primary btn-sm" style="margin-left:auto" onclick="cpAplicar('ns','ns-cp-popup',nsRenderTabela)">Aplicar</button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- KPIs -->
@@ -1025,19 +1044,7 @@
     <div class="table-wrap">
       <table class="main-table" id="ns-tabela">
         <thead>
-          <tr>
-            <th>Lançamento</th>
-            <th>Tipo</th>
-            <th>Colaborador</th>
-            <th>Matrícula</th>
-            <th>Centro de Custo</th>
-            <th>Data Integração</th>
-            <th>Data Deslig.</th>
-            <th>Participou?</th>
-            <th>Onsite</th>
-            <th>Vaga</th>
-            <th>Status</th>
-          </tr>
+          <tr id="ns-thead-row"></tr>
         </thead>
         <tbody id="ns-tbody"></tbody>
       </table>
@@ -1272,9 +1279,21 @@
       <select id="filtro-cli-status" onchange="renderClientes()">
         <option value="">Todos os status</option><option value="ativo">Ativos</option><option value="inativo">Inativos</option>
       </select>
+      <button class="btn btn-ghost btn-sm" onclick="filtroLimparTela('cli')">✕ Limpar</button>
+      <div class="toolbar-right">
+        <button class="btn btn-ghost btn-sm" onclick="cpAbrir('cli','cli-cp-popup',this)">⚙️ Colunas</button>
+        <div class="col-picker-popup" id="cli-cp-popup">
+          <h4>Colunas visíveis</h4>
+          <div class="col-picker-grid" id="cli-cp-grid"></div>
+          <div class="col-picker-actions">
+            <button class="btn btn-ghost btn-sm" onclick="cpReset('cli',CLI_COLUNAS,renderClientes)">Padrão</button>
+            <button class="btn btn-primary btn-sm" style="margin-left:auto" onclick="cpAplicar('cli','cli-cp-popup',renderClientes)">Aplicar</button>
+          </div>
+        </div>
+      </div>
     </div>
     <div class="table-wrap"><table class="main-table">
-      <thead><tr><th>Código</th><th>Razão Social</th><th>Nome Fantasia</th><th>CNPJ</th><th>Cidade / UF</th><th>Grupo Econômico</th><th>Status</th><th>Ações</th></tr></thead>
+      <thead><tr id="cli-thead-row"></tr></thead>
       <tbody id="tbody-clientes"></tbody>
     </table></div>
     <p id="clientes-count" style="color:var(--muted);font-size:12px;margin-top:12px"></p>
@@ -1299,9 +1318,21 @@
       <select id="filtro-cc-status" onchange="renderCentrosCusto()">
         <option value="">Todos os status</option><option value="ativo">Ativos</option><option value="inativo">Inativos</option>
       </select>
+      <button class="btn btn-ghost btn-sm" onclick="filtroLimparTela('cc_cad')">✕ Limpar</button>
+      <div class="toolbar-right">
+        <button class="btn btn-ghost btn-sm" onclick="cpAbrir('cc_cad','cc-cad-cp-popup',this)">⚙️ Colunas</button>
+        <div class="col-picker-popup" id="cc-cad-cp-popup">
+          <h4>Colunas visíveis</h4>
+          <div class="col-picker-grid" id="cc-cad-cp-grid"></div>
+          <div class="col-picker-actions">
+            <button class="btn btn-ghost btn-sm" onclick="cpReset('cc_cad',CC_CAD_COLUNAS,renderCentrosCusto)">Padrão</button>
+            <button class="btn btn-primary btn-sm" style="margin-left:auto" onclick="cpAplicar('cc_cad','cc-cad-cp-popup',renderCentrosCusto)">Aplicar</button>
+          </div>
+        </div>
+      </div>
     </div>
     <div class="table-wrap"><table class="main-table">
-      <thead><tr><th>Código</th><th>Cliente</th><th>Descrição</th><th>Tipo Operação</th><th>Cidade / UF</th><th>Status</th><th>Ações</th></tr></thead>
+      <thead><tr id="cc-cad-thead-row"></tr></thead>
       <tbody id="tbody-cc"></tbody>
     </table></div>
     <p id="cc-count" style="color:var(--muted);font-size:12px;margin-top:12px"></p>
@@ -1319,9 +1350,21 @@
     </div>
     <div class="toolbar">
       <input type="text" id="busca-dep" placeholder="Buscar por código, descrição, cliente…" oninput="renderDeptos()"/>
+      <button class="btn btn-ghost btn-sm" onclick="filtroLimparTela('dep')">✕ Limpar</button>
+      <div class="toolbar-right">
+        <button class="btn btn-ghost btn-sm" onclick="cpAbrir('dep','dep-cp-popup',this)">⚙️ Colunas</button>
+        <div class="col-picker-popup" id="dep-cp-popup">
+          <h4>Colunas visíveis</h4>
+          <div class="col-picker-grid" id="dep-cp-grid"></div>
+          <div class="col-picker-actions">
+            <button class="btn btn-ghost btn-sm" onclick="cpReset('dep',DEP_COLUNAS,renderDeptos)">Padrão</button>
+            <button class="btn btn-primary btn-sm" style="margin-left:auto" onclick="cpAplicar('dep','dep-cp-popup',renderDeptos)">Aplicar</button>
+          </div>
+        </div>
+      </div>
     </div>
     <div class="table-wrap"><table class="main-table">
-      <thead><tr><th>Código</th><th>Descrição</th><th>Tipo Operação</th><th>Cliente (Cód)</th><th>Observações</th><th>Ações</th></tr></thead>
+      <thead><tr id="dep-thead-row"></tr></thead>
       <tbody id="tbody-deptos"></tbody>
     </table></div>
     <p id="deptos-count" style="color:var(--muted);font-size:12px;margin-top:12px"></p>
@@ -1378,22 +1421,23 @@
       <select id="vchr-filtro-depto" onchange="vchrRenderControle()">
         <option value="">Todos os departamentos</option>
       </select>
+      <button class="btn btn-ghost btn-sm" onclick="filtroLimparTela('vchr')">✕ Limpar</button>
+      <div class="toolbar-right">
+        <button class="btn btn-ghost btn-sm" onclick="cpAbrir('vchr','vchr-cp-popup',this)">⚙️ Colunas</button>
+        <div class="col-picker-popup" id="vchr-cp-popup">
+          <h4>Colunas visíveis</h4>
+          <div class="col-picker-grid" id="vchr-cp-grid"></div>
+          <div class="col-picker-actions">
+            <button class="btn btn-ghost btn-sm" onclick="cpReset('vchr',VCHR_COLUNAS,vchrRenderControle)">Padrão</button>
+            <button class="btn btn-primary btn-sm" style="margin-left:auto" onclick="cpAplicar('vchr','vchr-cp-popup',vchrRenderControle)">Aplicar</button>
+          </div>
+        </div>
+      </div>
     </div>
     <div class="table-wrap">
       <table class="main-table" id="vchr-tabela-controle">
         <thead>
-          <tr>
-            <th style="cursor:pointer" onclick="vchrOrdenar('status')">Status <span class="sort-ico" data-col="status">⇅</span></th>
-            <th style="cursor:pointer" onclick="vchrOrdenar('matricula')">Matrícula <span class="sort-ico" data-col="matricula">⇅</span></th>
-            <th style="cursor:pointer" onclick="vchrOrdenar('nome')">Nome <span class="sort-ico" data-col="nome">⇅</span></th>
-            <th style="cursor:pointer" onclick="vchrOrdenar('unidade')">Unidade <span class="sort-ico" data-col="unidade">⇅</span></th>
-            <th>Hor. Inicial → Final</th>
-            <th style="cursor:pointer" onclick="vchrOrdenar('trajeto')">Trajeto <span class="sort-ico" data-col="trajeto">⇅</span></th>
-            <th>Cód Voucher</th>
-            <th>Aplicativo</th>
-            <th style="cursor:pointer" onclick="vchrOrdenar('data_inclusao')">Dt. Inclusão <span class="sort-ico" data-col="data_inclusao">⇅</span></th>
-            <th>Ações</th>
-          </tr>
+          <tr id="vchr-thead-row"></tr>
         </thead>
         <tbody id="vchr-tbody-controle"></tbody>
       </table>
@@ -1499,6 +1543,17 @@
           <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:13px;pointer-events:none">🔍</span>
         </div>
         <span id="integ-date-hist" style="font-size:11.5px;color:var(--muted)"></span>
+        <div class="toolbar-right">
+          <button class="btn btn-ghost btn-sm" onclick="cpAbrir('integ','integ-cp-popup',this)">⚙️ Colunas</button>
+          <div class="col-picker-popup" id="integ-cp-popup">
+            <h4>Colunas visíveis</h4>
+            <div class="col-picker-grid" id="integ-cp-grid"></div>
+            <div class="col-picker-actions">
+              <button class="btn btn-ghost btn-sm" onclick="cpReset('integ',INTEG_COLUNAS,integRenderTabela)">Padrão</button>
+              <button class="btn btn-primary btn-sm" style="margin-left:auto" onclick="cpAplicar('integ','integ-cp-popup',integRenderTabela)">Aplicar</button>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- Pills de datas rápidas -->
@@ -1511,15 +1566,7 @@
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden">
         <table class="main-table" id="integ-tabela" style="width:100%">
           <thead>
-            <tr>
-              <th style="width:36px">#</th>
-              <th>Nome</th>
-              <th>Cargo</th>
-              <th>Departamento</th>
-              <th>Benefícios</th>
-              <th style="width:160px;text-align:center">Confirmação</th>
-              <th>Confirmado por</th>
-            </tr>
+            <tr id="integ-thead-row"></tr>
           </thead>
           <tbody id="integ-tabela-body">
             <tr><td colspan="7" style="text-align:center;color:var(--muted);padding:32px">Selecione uma data</td></tr>
@@ -1560,6 +1607,17 @@
         <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:13px;pointer-events:none">🔍</span>
       </div>
       <span id="pagar-contador" style="font-size:12px;color:var(--muted)"></span>
+      <div class="toolbar-right">
+        <button class="btn btn-ghost btn-sm" onclick="cpAbrir('pagar','pagar-cp-popup',this)">⚙️ Colunas</button>
+        <div class="col-picker-popup" id="pagar-cp-popup">
+          <h4>Colunas visíveis</h4>
+          <div class="col-picker-grid" id="pagar-cp-grid"></div>
+          <div class="col-picker-actions">
+            <button class="btn btn-ghost btn-sm" onclick="cpReset('pagar',PAGAR_COLUNAS,pagarBenFiltrar)">Padrão</button>
+            <button class="btn btn-primary btn-sm" style="margin-left:auto" onclick="cpAplicar('pagar','pagar-cp-popup',pagarBenFiltrar)">Aplicar</button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Ação em lote (aparece ao selecionar) -->
@@ -1577,17 +1635,7 @@
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;box-shadow:var(--shadow-sm)">
       <table class="main-table" style="width:100%">
         <thead>
-          <tr>
-            <th style="width:36px">
-              <input type="checkbox" id="pagar-chk-all" onchange="pagarBenSelecionarTodos(this.checked)" style="cursor:pointer;width:14px;height:14px"/>
-            </th>
-            <th>Nome</th>
-            <th>CC / Depto</th>
-            <th>Benefícios</th>
-            <th>Integração</th>
-            <th>Confirmado por</th>
-            <th style="width:190px;text-align:center">Pagamento</th>
-          </tr>
+          <tr id="pagar-thead-row"></tr>
         </thead>
         <tbody id="pagar-tabela-body">
           <tr><td colspan="7" style="text-align:center;color:var(--muted);padding:40px">Carregando…</td></tr>
@@ -1653,20 +1701,24 @@
         <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:13px;pointer-events:none">🔍</span>
       </div>
       <span id="hist-contador" style="font-size:12px;color:var(--muted)"></span>
+      <div class="toolbar-right">
+        <button class="btn btn-ghost btn-sm" onclick="cpAbrir('hist','hist-cp-popup',this)">⚙️ Colunas</button>
+        <div class="col-picker-popup" id="hist-cp-popup">
+          <h4>Colunas visíveis</h4>
+          <div class="col-picker-grid" id="hist-cp-grid"></div>
+          <div class="col-picker-actions">
+            <button class="btn btn-ghost btn-sm" onclick="cpReset('hist',HIST_COLUNAS,histBenFiltrar)">Padrão</button>
+            <button class="btn btn-primary btn-sm" style="margin-left:auto" onclick="cpAplicar('hist','hist-cp-popup',histBenFiltrar)">Aplicar</button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Tabela -->
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;box-shadow:var(--shadow-sm)">
       <table class="main-table" style="width:100%">
         <thead>
-          <tr>
-            <th>Nome</th>
-            <th>CC / Depto</th>
-            <th>Benefícios</th>
-            <th>Integração</th>
-            <th style="width:100px;text-align:center">Status</th>
-            <th>Detalhes</th>
-          </tr>
+          <tr id="hist-thead-row"></tr>
         </thead>
         <tbody id="hist-tabela-body">
           <tr><td colspan="6" style="text-align:center;color:var(--muted);padding:40px">Carregando…</td></tr>
@@ -2664,6 +2716,300 @@ let _MAIN_HTML = '';
 let _importRows = [];
 let _TEMA_ATUAL = 'escuro';
 
+// ══════════════════════════════════════════════
+// SISTEMA UNIVERSAL DE COL PICKER + FILTROS PERSISTENTES
+// Chave no localStorage: wecan_cp_{tela}  (colunas)
+//                        wecan_fi_{tela}  (filtros de texto/select)
+// ══════════════════════════════════════════════
+
+const _cpAtivas = {}; // { tela: Set<id> }
+
+function cpCarregar(tela, defs) {
+  try {
+    const raw = localStorage.getItem('wecan_cp_' + tela);
+    _cpAtivas[tela] = raw ? new Set(JSON.parse(raw)) : new Set(defs.filter(c=>c.default).map(c=>c.id));
+  } catch(e) {
+    _cpAtivas[tela] = new Set(defs.filter(c=>c.default).map(c=>c.id));
+  }
+}
+
+function cpSalvar(tela) {
+  try { localStorage.setItem('wecan_cp_' + tela, JSON.stringify([...(_cpAtivas[tela]||new Set())])); } catch(e) {}
+}
+
+function cpAtivo(tela, id) {
+  return (_cpAtivas[tela] || new Set()).has(id);
+}
+
+function cpAbrir(tela, popupId, btnEl) {
+  // Fechar outros popups abertos
+  document.querySelectorAll('.col-picker-popup.open').forEach(p => { if (p.id !== popupId) p.classList.remove('open'); });
+  const popup = document.getElementById(popupId);
+  if (!popup) return;
+  const isOpen = popup.classList.toggle('open');
+  if (isOpen) {
+    const rect = btnEl.getBoundingClientRect();
+    const pw = 260;
+    let left = rect.right - pw;
+    if (left < 8) left = 8;
+    popup.style.top  = (rect.bottom + 6) + 'px';
+    popup.style.left = left + 'px';
+    cpRenderGrid(tela, popupId.replace('-popup','') + '-grid');
+  }
+}
+
+function cpRenderGrid(tela, gridId) {
+  const defs = _CP_DEFS[tela];
+  if (!defs) return;
+  const grid = document.getElementById(gridId);
+  if (!grid) return;
+  const ativas = _cpAtivas[tela] || new Set();
+  grid.innerHTML = defs.map(c => `
+    <label class="col-check-item ${ativas.has(c.id)?'checked':''}">
+      <input type="checkbox" data-tela="${tela}" data-col="${c.id}" ${ativas.has(c.id)?'checked':''}
+        onchange="cpToggle(this)"/>
+      ${c.label}
+    </label>`).join('');
+}
+
+function cpToggle(input) {
+  const tela = input.dataset.tela;
+  const id   = input.dataset.col;
+  if (!_cpAtivas[tela]) _cpAtivas[tela] = new Set();
+  if (input.checked) _cpAtivas[tela].add(id);
+  else _cpAtivas[tela].delete(id);
+  input.closest('.col-check-item').classList.toggle('checked', input.checked);
+}
+
+function cpAplicar(tela, popupId, renderFn) {
+  cpSalvar(tela);
+  document.getElementById(popupId)?.classList.remove('open');
+  if (renderFn) renderFn();
+}
+
+function cpReset(tela, defs, renderFn) {
+  _cpAtivas[tela] = new Set(defs.filter(c=>c.default).map(c=>c.id));
+  cpSalvar(tela);
+  // Encontrar o grid e re-renderizar
+  const gridId = tela.replace('_','-') + '-cp-grid';
+  cpRenderGrid(tela, gridId);
+  if (renderFn) renderFn();
+}
+
+// Fechar popups ao clicar fora
+document.addEventListener('click', e => {
+  if (!e.target.closest('.toolbar-right') && !e.target.closest('.col-picker-popup')) {
+    document.querySelectorAll('.col-picker-popup.open').forEach(p => p.classList.remove('open'));
+  }
+});
+
+// ── Gerar thead dinâmico ────────────────────
+function cpRenderThead(theadRowId, defs, tela) {
+  const tr = document.getElementById(theadRowId);
+  if (!tr) return;
+  const ativas = _cpAtivas[tela] || new Set();
+  tr.innerHTML = defs.filter(c => ativas.has(c.id)).map(c => `<th>${c.label}</th>`).join('');
+}
+
+// ── Persistência de filtros de texto/select ─
+function filtroSalvar(tela, campos) {
+  // campos = { id: 'elemento-id' }[]
+  const vals = {};
+  campos.forEach(({key,id}) => {
+    const el = document.getElementById(id);
+    if (el) vals[key] = el.value;
+  });
+  try { localStorage.setItem('wecan_fi_'+tela, JSON.stringify(vals)); } catch(e) {}
+}
+
+function filtroCarregar(tela, campos) {
+  try {
+    const raw = localStorage.getItem('wecan_fi_'+tela);
+    if (!raw) return;
+    const vals = JSON.parse(raw);
+    campos.forEach(({key,id}) => {
+      const el = document.getElementById(id);
+      if (el && vals[key] !== undefined) el.value = vals[key];
+    });
+  } catch(e) {}
+}
+
+function filtroLimparTela(tela) {
+  try { localStorage.removeItem('wecan_fi_'+tela); } catch(e) {}
+  const mapa = FILTRO_CAMPOS[tela] || [];
+  mapa.forEach(({id}) => {
+    const el = document.getElementById(id);
+    if (el) el.value = el.tagName==='SELECT' ? (el.options[0]?.value||'') : '';
+  });
+  // Chamar render da tela
+  const fn = FILTRO_RENDER[tela];
+  if (fn) fn();
+}
+
+// Mapa de campos de filtro por tela
+const FILTRO_CAMPOS = {
+  ind:    [{key:'busca',id:'busca-ind'},{key:'status',id:'filtro-ind-status'}],
+  vagas:  [{key:'busca',id:'busca-vaga'},{key:'regional',id:'filtro-regional'},{key:'status',id:'filtro-statusvaga'},{key:'consultor',id:'filtro-consultor'},{key:'cc',id:'filtro-cc'}],
+  ns:     [{key:'busca',id:'ns-busca'},{key:'tipo',id:'ns-filtro-tipo'},{key:'status',id:'ns-filtro-status'}],
+  vchr:   [{key:'busca',id:'vchr-busca-colab'},{key:'status',id:'vchr-filtro-status'},{key:'trajeto',id:'vchr-filtro-trajeto'},{key:'depto',id:'vchr-filtro-depto'}],
+  integ:  [{key:'status',id:'integ-filtro-status'},{key:'busca',id:'integ-busca'}],
+  pagar:  [{key:'data',id:'pagar-filtro-data'},{key:'cc',id:'pagar-filtro-cc'},{key:'busca',id:'pagar-busca'}],
+  hist:   [{key:'data',id:'hist-filtro-data'},{key:'cc',id:'hist-filtro-cc'},{key:'busca',id:'hist-busca'}],
+  cli:    [{key:'busca',id:'busca-cli'},{key:'status',id:'filtro-cli-status'}],
+  cc_cad: [{key:'busca',id:'busca-cc'},{key:'status',id:'filtro-cc-status'}],
+  dep:    [{key:'busca',id:'busca-dep'}],
+};
+
+const FILTRO_RENDER = {
+  ind:    ()=>renderIndicacoes(),
+  vagas:  ()=>renderVagas(),
+  ns:     ()=>nsRenderTabela(),
+  vchr:   ()=>vchrRenderControle(),
+  integ:  ()=>integRenderTabela(),
+  pagar:  ()=>pagarBenFiltrar(),
+  hist:   ()=>histBenFiltrar(),
+  cli:    ()=>renderClientes(),
+  cc_cad: ()=>renderCentrosCusto(),
+  dep:    ()=>renderDeptos(),
+};
+
+// Salvar filtros automaticamente ao mudar inputs
+function _hookFiltroSave(tela) {
+  const campos = FILTRO_CAMPOS[tela]||[];
+  campos.forEach(({id}) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const evt = el.tagName==='SELECT' ? 'change' : 'input';
+    el.addEventListener(evt, () => filtroSalvar(tela, campos));
+  });
+}
+
+// ──────────────────────────────────────────────
+// DEFINIÇÕES DE COLUNAS POR TELA
+// ──────────────────────────────────────────────
+
+const NS_COLUNAS = [
+  { id:'lancamento',  label:'Lançamento',      default:true  },
+  { id:'tipo',        label:'Tipo',            default:true  },
+  { id:'nome',        label:'Colaborador',     default:true  },
+  { id:'matricula',   label:'Matrícula',       default:true  },
+  { id:'cc',          label:'Centro de Custo', default:true  },
+  { id:'data_integ',  label:'Data Integração', default:true  },
+  { id:'data_deslig', label:'Data Deslig.',    default:true  },
+  { id:'participou',  label:'Participou?',     default:true  },
+  { id:'onsite',      label:'Onsite',          default:false },
+  { id:'vaga',        label:'Vaga',            default:true  },
+  { id:'status',      label:'Status',          default:true  },
+];
+
+const VCHR_COLUNAS = [
+  { id:'status',       label:'Status',        default:true  },
+  { id:'matricula',    label:'Matrícula',     default:true  },
+  { id:'nome',         label:'Nome',          default:true  },
+  { id:'unidade',      label:'Unidade',       default:true  },
+  { id:'horario',      label:'Horário',       default:true  },
+  { id:'trajeto',      label:'Trajeto',       default:true  },
+  { id:'cod_voucher',  label:'Cód Voucher',   default:false },
+  { id:'aplicativo',   label:'Aplicativo',    default:true  },
+  { id:'dt_inclusao',  label:'Dt. Inclusão',  default:false },
+  { id:'acoes',        label:'Ações',         default:true  },
+];
+
+const INTEG_COLUNAS = [
+  { id:'num',     label:'#',              default:true  },
+  { id:'nome',    label:'Nome',           default:true  },
+  { id:'cargo',   label:'Cargo',          default:true  },
+  { id:'depto',   label:'Departamento',   default:true  },
+  { id:'ben',     label:'Benefícios',     default:true  },
+  { id:'conf',    label:'Confirmação',    default:true  },
+  { id:'confPor', label:'Confirmado por', default:false },
+];
+
+const PAGAR_COLUNAS = [
+  { id:'sel',      label:'',              default:true  },
+  { id:'nome',     label:'Nome',          default:true  },
+  { id:'cc',       label:'CC / Depto',    default:true  },
+  { id:'ben',      label:'Benefícios',    default:true  },
+  { id:'integ',    label:'Integração',    default:true  },
+  { id:'confPor',  label:'Confirmado por',default:false },
+  { id:'pagar',    label:'Pagamento',     default:true  },
+];
+
+const HIST_COLUNAS = [
+  { id:'nome',   label:'Nome',         default:true  },
+  { id:'cc',     label:'CC / Depto',   default:true  },
+  { id:'ben',    label:'Benefícios',   default:true  },
+  { id:'integ',  label:'Integração',   default:true  },
+  { id:'status', label:'Status',       default:true  },
+  { id:'dets',   label:'Detalhes',     default:true  },
+];
+
+const CLI_COLUNAS = [
+  { id:'codigo',   label:'Código',          default:true  },
+  { id:'razao',    label:'Razão Social',    default:true  },
+  { id:'fantasia', label:'Nome Fantasia',   default:false },
+  { id:'cnpj',     label:'CNPJ',           default:false },
+  { id:'cidade',   label:'Cidade / UF',    default:true  },
+  { id:'grupo',    label:'Grupo Econômico',default:false },
+  { id:'status',   label:'Status',         default:true  },
+  { id:'acoes',    label:'Ações',          default:true  },
+];
+
+const CC_CAD_COLUNAS = [
+  { id:'codigo',   label:'Código',        default:true  },
+  { id:'cliente',  label:'Cliente',       default:true  },
+  { id:'descricao',label:'Descrição',     default:true  },
+  { id:'tipo_op',  label:'Tipo Operação', default:false },
+  { id:'cidade',   label:'Cidade / UF',  default:true  },
+  { id:'status',   label:'Status',       default:true  },
+  { id:'acoes',    label:'Ações',        default:true  },
+];
+
+const DEP_COLUNAS = [
+  { id:'codigo',   label:'Código',       default:true  },
+  { id:'descricao',label:'Descrição',    default:true  },
+  { id:'tipo_op',  label:'Tipo Operação',default:false },
+  { id:'cli_cod',  label:'Cliente (Cód)',default:true  },
+  { id:'obs',      label:'Observações',  default:false },
+  { id:'acoes',    label:'Ações',        default:true  },
+];
+
+// Mapa de defs por tela (para lookup genérico)
+const _CP_DEFS = {
+  ns:     NS_COLUNAS,
+  vchr:   VCHR_COLUNAS,
+  integ:  INTEG_COLUNAS,
+  pagar:  PAGAR_COLUNAS,
+  hist:   HIST_COLUNAS,
+  cli:    CLI_COLUNAS,
+  cc_cad: CC_CAD_COLUNAS,
+  dep:    DEP_COLUNAS,
+};
+
+// Carregar todas as prefs de colunas
+function cpCarregarTodas() {
+  Object.entries(_CP_DEFS).forEach(([tela, defs]) => cpCarregar(tela, defs));
+}
+
+// ── helpers de geração de thead ──
+function cpTheadNS()    { cpRenderThead('ns-thead-row',     NS_COLUNAS,     'ns');     }
+function cpTheadVchr()  { cpRenderThead('vchr-thead-row',   VCHR_COLUNAS,   'vchr');   }
+function cpTheadInteg() { cpRenderThead('integ-thead-row',  INTEG_COLUNAS,  'integ');  }
+function cpTheadPagar() {
+  const tr = document.getElementById('pagar-thead-row');
+  if (!tr) return;
+  const ativas = _cpAtivas['pagar'] || new Set();
+  tr.innerHTML = PAGAR_COLUNAS.filter(c=>ativas.has(c.id)).map(c => {
+    if (c.id === 'sel') return `<th style="width:36px"><input type="checkbox" id="pagar-chk-all" onchange="pagarBenSelecionarTodos(this.checked)" style="cursor:pointer;width:14px;height:14px"/></th>`;
+    return `<th>${c.label}</th>`;
+  }).join('');
+}
+function cpTheadHist()  { cpRenderThead('hist-thead-row',   HIST_COLUNAS,   'hist');   }
+function cpTheadCli()   { cpRenderThead('cli-thead-row',    CLI_COLUNAS,    'cli');    }
+function cpTheadCC()    { cpRenderThead('cc-cad-thead-row', CC_CAD_COLUNAS, 'cc_cad'); }
+function cpTheadDep()   { cpRenderThead('dep-thead-row',    DEP_COLUNAS,    'dep');    }
+
+// ──────────────────────────────────────────────
 // ── Colunas disponíveis na tabela de vagas ─────
 const COLUNAS_DISPONIVEIS = [
   { id:'jira',           label:'Jira',            default:true,  render: v => `<code style="font-size:11px">${v.jira||'—'}</code>` },
@@ -3037,6 +3383,11 @@ async function iniciarSessao(conta) {
   }
   if (overlay) overlay.style.display = 'none';
   carregarPreferenciaColunas();
+  cpCarregarTodas();
+  // Hookar salvamento automático de filtros em todas as telas
+  Object.keys(FILTRO_CAMPOS).forEach(tela => _hookFiltroSave(tela));
+  // Restaurar filtros salvos
+  Object.keys(FILTRO_CAMPOS).forEach(tela => filtroCarregar(tela, FILTRO_CAMPOS[tela]));
   popularFiltroConsultor();
   popularFiltroCC();
   iniciarConfiguracoes();
@@ -4843,6 +5194,7 @@ async function carregarCentrosCusto() {
 }
 
 function renderCentrosCusto() {
+  cpTheadCC();
   const busca  = (document.getElementById('busca-cc')?.value||'').toLowerCase();
   const filtro = document.getElementById('filtro-cc-status')?.value||'';
   let lista = [...CENTROS_CUSTO];
@@ -4851,27 +5203,23 @@ function renderCentrosCusto() {
   if (filtro==='inativo') lista = lista.filter(c=>!c.ativo);
   const tbody=document.getElementById('tbody-cc'), count=document.getElementById('cc-count');
   if (!tbody) return;
-  if (!lista.length) { tbody.innerHTML=`<tr><td colspan="7"><div class="empty-state"><div class="ico">🏢</div>Nenhum centro de custo encontrado</div></td></tr>`; if(count)count.textContent=''; return; }
+  const ativas=_cpAtivas['cc_cad']||new Set(CC_CAD_COLUNAS.filter(c=>c.default).map(c=>c.id));
+  const cols=CC_CAD_COLUNAS.filter(c=>ativas.has(c.id)).map(c=>c.id);
+  const ncols=cols.length||1;
+  if (!lista.length) { tbody.innerHTML=`<tr><td colspan="${ncols}"><div class="empty-state"><div class="ico">🏢</div>Nenhum centro de custo encontrado</div></td></tr>`; if(count)count.textContent=''; return; }
   if(count) count.textContent=`${lista.length} centro(s)`;
   const podeCriar=podeVerTudo(), podExcluir=session?.perfil==='master';
   tbody.innerHTML = lista.map(c=>{
-    const end=[c.logradouro,c.numero,c.complemento].filter(Boolean).join(', ')||'—';
-    return `<tr>
-      <td><code style="font-size:11.5px;font-weight:700">${c.cod}</code></td>
-      <td>
-        ${c.cli_codigo ? `<div style="font-size:10px;color:var(--muted);font-weight:700">${c.cli_codigo}</div>` : ''}
-        <div>${c.cliente||'—'}</div>
-      </td>
-      <td>${c.descricao||'—'}</td>
-      <td>${c.tipo_operacao ? '<span class=\"pill\" style=\"background:rgba(99,204,176,.15);color:var(--accent);font-size:10px\">' + c.tipo_operacao + '</span>' : '<span style=\"color:var(--muted)\">—</span>'}</td>
-      <td>${[c.cidade,c.uf].filter(Boolean).join(' / ')||'—'}</td>
-      <td><span class="pill ${c.ativo?'pill-ativo':'pill-inativo'}">${c.ativo?'ATIVO':'INATIVO'}</span></td>
-      <td class="actions-cell">
-        ${podeCriar?`<button class="btn btn-ghost btn-sm" onclick='abrirModalCC(${JSON.stringify(c)})'>Editar</button>`:''}
-        ${podeCriar?`<button class="btn btn-ghost btn-sm" onclick="toggleCC_cad('${c.id}')">${c.ativo?'Desativar':'Ativar'}</button>`:''}
-        ${podExcluir?`<button class="btn btn-danger btn-sm" onclick="excluirCC_cad('${c.id}','${(c.cod||'').replace(/'/g,"\\'")}')">Excluir</button>`:''}
-      </td>
-    </tr>`;
+    const cellMap={
+      codigo:  `<td><code style="font-size:11.5px;font-weight:700">${c.cod}</code></td>`,
+      cliente: `<td>${c.cli_codigo?`<div style="font-size:10px;color:var(--muted);font-weight:700">${c.cli_codigo}</div>`:''}<div>${c.cliente||'—'}</div></td>`,
+      descricao:`<td>${c.descricao||'—'}</td>`,
+      tipo_op: `<td>${c.tipo_operacao?`<span class="pill" style="background:rgba(99,204,176,.15);color:var(--accent);font-size:10px">${c.tipo_operacao}</span>`:'<span style="color:var(--muted)">—</span>'}</td>`,
+      cidade:  `<td>${[c.cidade,c.uf].filter(Boolean).join(' / ')||'—'}</td>`,
+      status:  `<td><span class="pill ${c.ativo?'pill-ativo':'pill-inativo'}">${c.ativo?'ATIVO':'INATIVO'}</span></td>`,
+      acoes:   `<td class="actions-cell">${podeCriar?`<button class="btn btn-ghost btn-sm" onclick='abrirModalCC(${JSON.stringify(c)})'>Editar</button>`:''} ${podeCriar?`<button class="btn btn-ghost btn-sm" onclick="toggleCC_cad('${c.id}')">${c.ativo?'Desativar':'Ativar'}</button>`:''} ${podExcluir?`<button class="btn btn-danger btn-sm" onclick="excluirCC_cad('${c.id}','${(c.cod||'').replace(/'/g,"\\'")}')">Excluir</button>`:''}</td>`,
+    };
+    return `<tr>${cols.map(id=>cellMap[id]||'<td>—</td>').join('')}</tr>`;
   }).join('');
 }
 
@@ -4991,6 +5339,7 @@ async function carregarClientes() {
 }
 
 function renderClientes() {
+  cpTheadCli();
   const busca=(document.getElementById('busca-cli')?.value||'').toLowerCase();
   const filtro=document.getElementById('filtro-cli-status')?.value||'';
   let lista=[...CLIENTES];
@@ -4999,21 +5348,25 @@ function renderClientes() {
   if(filtro==='inativo') lista=lista.filter(c=>!c.ativo);
   const tbody=document.getElementById('tbody-clientes'), count=document.getElementById('clientes-count');
   if(!tbody) return;
-  if(!lista.length){tbody.innerHTML=`<tr><td colspan="8"><div class="empty-state"><div class="ico">🏭</div>Nenhum cliente encontrado</div></td></tr>`;if(count)count.textContent='';return;}
+  const ativas=_cpAtivas['cli']||new Set(CLI_COLUNAS.filter(c=>c.default).map(c=>c.id));
+  const cols=CLI_COLUNAS.filter(c=>ativas.has(c.id)).map(c=>c.id);
+  const ncols=cols.length||1;
+  if(!lista.length){tbody.innerHTML=`<tr><td colspan="${ncols}"><div class="empty-state"><div class="ico">🏭</div>Nenhum cliente encontrado</div></td></tr>`;if(count)count.textContent='';return;}
   if(count) count.textContent=`${lista.length} cliente(s)`;
   const pode=podeVerTudo();
-  tbody.innerHTML=lista.map(c=>`<tr>
-    <td><code style="font-size:11.5px;font-weight:700">${c.codigo||'—'}</code></td>
-    <td><strong>${c.razao_social||'—'}</strong></td>
-    <td>${c.nome_fantasia||'—'}</td><td>${c.cnpj||'—'}</td>
-    <td>${[c.cidade,c.uf].filter(Boolean).join(' / ')||'—'}</td>
-    <td>${c.grupo_nome||'—'}</td>
-    <td><span class="pill ${c.ativo?'pill-ativo':'pill-inativo'}">${c.ativo?'ATIVO':'INATIVO'}</span></td>
-    <td class="actions-cell">
-      ${pode?`<button class="btn btn-ghost btn-sm" onclick='abrirModalCliente(${JSON.stringify(c)})'>Editar</button>`:''}
-      ${pode?`<button class="btn btn-ghost btn-sm" onclick="toggleCliente('${c.id}')">${c.ativo?'Desativar':'Ativar'}</button>`:''}
-    </td>
-  </tr>`).join('');
+  tbody.innerHTML=lista.map(c=>{
+    const cellMap={
+      codigo:  `<td><code style="font-size:11.5px;font-weight:700">${c.codigo||'—'}</code></td>`,
+      razao:   `<td><strong>${c.razao_social||'—'}</strong></td>`,
+      fantasia:`<td>${c.nome_fantasia||'—'}</td>`,
+      cnpj:    `<td>${c.cnpj||'—'}</td>`,
+      cidade:  `<td>${[c.cidade,c.uf].filter(Boolean).join(' / ')||'—'}</td>`,
+      grupo:   `<td>${c.grupo_nome||'—'}</td>`,
+      status:  `<td><span class="pill ${c.ativo?'pill-ativo':'pill-inativo'}">${c.ativo?'ATIVO':'INATIVO'}</span></td>`,
+      acoes:   `<td class="actions-cell">${pode?`<button class="btn btn-ghost btn-sm" onclick='abrirModalCliente(${JSON.stringify(c)})'>Editar</button>`:''} ${pode?`<button class="btn btn-ghost btn-sm" onclick="toggleCliente('${c.id}')">${c.ativo?'Desativar':'Ativar'}</button>`:''}</td>`,
+    };
+    return `<tr>${cols.map(id=>cellMap[id]||'<td>—</td>').join('')}</tr>`;
+  }).join('');
 }
 
 function abrirModalCliente(c) {
@@ -5076,25 +5429,29 @@ async function carregarDeptos() {
 }
 
 function renderDeptos() {
+  cpTheadDep();
   const busca=(document.getElementById('busca-dep')?.value||'').toLowerCase();
   let lista=[...DEPTOS];
   if(busca) lista=lista.filter(d=>[d.codigo,d.descricao,d.cli_codigo,d.cli_nome].some(f=>(f||'').toLowerCase().includes(busca)));
   const tbody=document.getElementById('tbody-deptos'),count=document.getElementById('deptos-count');
   if(!tbody) return;
-  if(!lista.length){tbody.innerHTML=`<tr><td colspan="6"><div class="empty-state"><div class="ico">🗂️</div>Nenhum departamento encontrado</div></td></tr>`;if(count)count.textContent='';return;}
+  const ativas=_cpAtivas['dep']||new Set(DEP_COLUNAS.filter(c=>c.default).map(c=>c.id));
+  const cols=DEP_COLUNAS.filter(c=>ativas.has(c.id)).map(c=>c.id);
+  const ncols=cols.length||1;
+  if(!lista.length){tbody.innerHTML=`<tr><td colspan="${ncols}"><div class="empty-state"><div class="ico">🗂️</div>Nenhum departamento encontrado</div></td></tr>`;if(count)count.textContent='';return;}
   if(count) count.textContent=`${lista.length} departamento(s)`;
   const pode=podeVerTudo();
-  tbody.innerHTML=lista.map(d=>`<tr>
-    <td><code style="font-size:11.5px;font-weight:700">${d.codigo||'—'}</code></td>
-    <td>${d.descricao||'—'}</td>
-    <td>${d.tipo_operacao ? '<span class=\"pill\" style=\"background:rgba(99,204,176,.15);color:var(--accent);font-size:10px\">' + d.tipo_operacao + '</span>' : '<span style=\"color:var(--muted)\">—</span>'}</td>
-    <td><code style="font-size:11px">${d.cli_codigo||'—'}</code></td>
-    <td style="max-width:200px;white-space:normal;font-size:12px;color:var(--muted)">${d.observacoes||'—'}</td>
-    <td class="actions-cell">
-      ${pode?`<button class="btn btn-ghost btn-sm" onclick='abrirModalDepto(${JSON.stringify(d)})'>Editar</button>`:''}
-      ${session?.perfil==='master'?`<button class="btn btn-danger btn-sm" onclick="excluirDepto('${d.id}','${(d.codigo||'').replace(/'/g,"\\'")}')">Excluir</button>`:''}
-    </td>
-  </tr>`).join('');
+  tbody.innerHTML=lista.map(d=>{
+    const cellMap={
+      codigo:  `<td><code style="font-size:11.5px;font-weight:700">${d.codigo||'—'}</code></td>`,
+      descricao:`<td>${d.descricao||'—'}</td>`,
+      tipo_op: `<td>${d.tipo_operacao?`<span class="pill" style="background:rgba(99,204,176,.15);color:var(--accent);font-size:10px">${d.tipo_operacao}</span>`:'<span style="color:var(--muted)">—</span>'}</td>`,
+      cli_cod: `<td><code style="font-size:11px">${d.cli_codigo||'—'}</code></td>`,
+      obs:     `<td style="max-width:200px;white-space:normal;font-size:12px;color:var(--muted)">${d.observacoes||'—'}</td>`,
+      acoes:   `<td class="actions-cell">${pode?`<button class="btn btn-ghost btn-sm" onclick='abrirModalDepto(${JSON.stringify(d)})'>Editar</button>`:''} ${session?.perfil==='master'?`<button class="btn btn-danger btn-sm" onclick="excluirDepto('${d.id}','${(d.codigo||'').replace(/'/g,"\\'")}')">Excluir</button>`:''}</td>`,
+    };
+    return `<tr>${cols.map(id=>cellMap[id]||'<td>—</td>').join('')}</tr>`;
+  }).join('');
 }
 
 function abrirModalDepto(d) {
@@ -5560,11 +5917,15 @@ function nsRenderTabela() {
     return true;
   });
 
+  cpTheadNS();
   const tbody = document.getElementById('ns-tbody');
   if (!tbody) return;
+  const ativas = _cpAtivas['ns'] || new Set(NS_COLUNAS.filter(c=>c.default).map(c=>c.id));
+  const cols = NS_COLUNAS.filter(c => ativas.has(c.id)).map(c=>c.id);
+  const ncols = cols.length || 1;
 
   if (!dados.length) {
-    tbody.innerHTML = `<tr><td colspan="11" style="text-align:center;padding:40px;color:var(--muted)">Nenhum registro encontrado</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="${ncols}" style="text-align:center;padding:40px;color:var(--muted)">Nenhum registro encontrado</td></tr>`;
     return;
   }
 
@@ -5585,20 +5946,20 @@ function nsRenderTabela() {
       ? `<span style="font-family:monospace;font-size:11px;background:var(--surface2);padding:2px 6px;border-radius:4px">${r.ns_vaga_codigo}</span>`
       : `<span style="color:var(--muted);font-size:11px">—</span>`;
     const dataR = JSON.stringify(r).replace(/"/g,'&quot;');
-
-    return `<tr style="cursor:pointer" onclick="nsAbrirConsultor(${dataR})">
-      <td style="white-space:nowrap">${fmtDt(r.ns_lancamento)}</td>
-      <td>${tipoPill}</td>
-      <td><strong>${r.nome||'—'}</strong></td>
-      <td>${r.matricula||'—'}</td>
-      <td style="font-size:11px">${r.depto_cod||r.depto_nome||'—'}</td>
-      <td>${fmt(r.data_admissao)}</td>
-      <td>${fmt(r.ns_data_desligamento)}</td>
-      <td>${participou}</td>
-      <td style="font-size:11px">${r.onsite_nome||'—'}</td>
-      <td>${vagaCod}</td>
-      <td>${statusPill}</td>
-    </tr>`;
+    const cellMap = {
+      lancamento: `<td style="white-space:nowrap">${fmtDt(r.ns_lancamento)}</td>`,
+      tipo:       `<td>${tipoPill}</td>`,
+      nome:       `<td><strong>${r.nome||'—'}</strong></td>`,
+      matricula:  `<td>${r.matricula||'—'}</td>`,
+      cc:         `<td style="font-size:11px">${r.depto_cod||r.depto_nome||'—'}</td>`,
+      data_integ: `<td>${fmt(r.data_admissao)}</td>`,
+      data_deslig:`<td>${fmt(r.ns_data_desligamento)}</td>`,
+      participou: `<td>${participou}</td>`,
+      onsite:     `<td style="font-size:11px">${r.onsite_nome||'—'}</td>`,
+      vaga:       `<td>${vagaCod}</td>`,
+      status:     `<td>${statusPill}</td>`,
+    };
+    return `<tr style="cursor:pointer" onclick="nsAbrirConsultor(${dataR})">${cols.map(c=>cellMap[c]||'<td>—</td>').join('')}</tr>`;
   }).join('');
 }
 
@@ -5852,18 +6213,39 @@ function vchrRenderControle() {
   const busca=(document.getElementById('vchr-busca-colab')?.value||'').toLowerCase();
   const status=document.getElementById('vchr-filtro-status')?.value||'ATIVO';
   const trajeto=document.getElementById('vchr-filtro-trajeto')?.value||'';
+  const depto=document.getElementById('vchr-filtro-depto')?.value||'';
   let lista=status==='TODOS'?VCHR_COLABORADORES:VCHR_COLABORADORES.filter(c=>c.status===status);
   if(busca)lista=lista.filter(c=>[c.nome,c.matricula,c.cpf,c.unidade].some(f=>(f||'').toLowerCase().includes(busca)));
   if(trajeto)lista=lista.filter(c=>(c.trajeto||vchrDefinirTrajeto(c.hora_entrada,c.hora_saida))===trajeto);
+  if(depto)lista=lista.filter(c=>(c.unidade||'')=== depto);
+
+  cpTheadVchr();
   const tbody=document.getElementById('vchr-tbody-controle');
   const count=document.getElementById('vchr-controle-count');
   if(!tbody)return;
-  if(!lista.length){tbody.innerHTML='<tr><td colspan="10"><div class="empty-state"><div style="font-size:32px;margin-bottom:10px">🎟️</div>Nenhum colaborador encontrado</div></td></tr>';if(count)count.textContent='';return;}
+  const ativas=_cpAtivas['vchr']||new Set(VCHR_COLUNAS.filter(c=>c.default).map(c=>c.id));
+  const cols=VCHR_COLUNAS.filter(c=>ativas.has(c.id)).map(c=>c.id);
+  const ncols=cols.length||1;
+
+  if(!lista.length){tbody.innerHTML=`<tr><td colspan="${ncols}"><div class="empty-state"><div style="font-size:32px;margin-bottom:10px">🎟️</div>Nenhum colaborador encontrado</div></td></tr>`;if(count)count.textContent='';return;}
   if(count)count.textContent=`${lista.length} colaborador(es)`;
   tbody.innerHTML=lista.map(c=>{
     const traj=c.trajeto||vchrDefinirTrajeto(c.hora_entrada,c.hora_saida)||'—';
     const dataInc=c.data_inclusao?new Date(c.data_inclusao+'T00:00').toLocaleDateString('pt-BR'):'—';
-    return`<tr><td>${c.status==='ATIVO'?'<span class="vchr-pill-ativo">ATIVO</span>':'<span class="vchr-pill-inativo">INATIVO</span>'}</td><td><strong>${c.matricula||'—'}</strong></td><td>${c.nome||'—'}</td><td style="max-width:140px;overflow:hidden;text-overflow:ellipsis">${c.unidade||'—'}</td><td>${[c.hora_entrada,c.hora_saida].filter(Boolean).join(' AS ')||'—'}</td><td><span class="vchr-pill-muted">${traj}</span></td><td>${c.cod_voucher||'—'}</td><td>${c.aplicativo||'—'}</td><td>${dataInc}</td><td class="actions-cell"><button class="btn btn-ghost btn-sm" onclick='vchrAbrirModalColab(${JSON.stringify(c)})'>Editar</button>${c.status==='ATIVO'?`<button class="btn btn-warning btn-sm" onclick="vchrAbrirInativar('${c.matricula}','${(c.nome||'').replace(/'/g,"\\'")}')">Inativar</button>`:`<button class="btn btn-success btn-sm" onclick="vchrReativar('${c.matricula}')">Reativar</button>`}</td></tr>`;
+    const acoes=`<td class="actions-cell"><button class="btn btn-ghost btn-sm" onclick='vchrAbrirModalColab(${JSON.stringify(c)})'>Editar</button>${c.status==='ATIVO'?`<button class="btn btn-warning btn-sm" onclick="vchrAbrirInativar('${c.matricula}','${(c.nome||'').replace(/'/g,"\\'")}')">Inativar</button>`:`<button class="btn btn-success btn-sm" onclick="vchrReativar('${c.matricula}')">Reativar</button>`}</td>`;
+    const cellMap={
+      status:     `<td>${c.status==='ATIVO'?'<span class="vchr-pill-ativo">ATIVO</span>':'<span class="vchr-pill-inativo">INATIVO</span>'}</td>`,
+      matricula:  `<td><strong>${c.matricula||'—'}</strong></td>`,
+      nome:       `<td>${c.nome||'—'}</td>`,
+      unidade:    `<td style="max-width:140px;overflow:hidden;text-overflow:ellipsis">${c.unidade||'—'}</td>`,
+      horario:    `<td>${[c.hora_entrada,c.hora_saida].filter(Boolean).join(' AS ')||'—'}</td>`,
+      trajeto:    `<td><span class="vchr-pill-muted">${traj}</span></td>`,
+      cod_voucher:`<td>${c.cod_voucher||'—'}</td>`,
+      aplicativo: `<td>${c.aplicativo||'—'}</td>`,
+      dt_inclusao:`<td>${dataInc}</td>`,
+      acoes,
+    };
+    return`<tr>${cols.map(id=>cellMap[id]||'<td>—</td>').join('')}</tr>`;
   }).join('');
 }
 
@@ -6668,6 +7050,7 @@ function integRenderKPIs(colmeias) {
 
 // ── Tabela de colaboradores ──
 function integRenderTabela() {
+  cpTheadInteg();
   const tbody  = document.getElementById('integ-tabela-body');
   if (!tbody) return;
 
@@ -6675,17 +7058,18 @@ function integRenderTabela() {
   const filtSt = document.getElementById('integ-filtro-status')?.value || '';
 
   let lista = [...INTEG_TODOS_COLABS];
-
-  // Filtro busca
   if (busca) lista = lista.filter(c =>
     [c.nome, c.cargo, c._depto_nome, c._cli_nome, c.codigo].some(f => (f||'').toLowerCase().includes(busca))
   );
-  // Filtro status
   if (filtSt === 'pendente') lista = lista.filter(c => !c.presenca);
   else if (filtSt) lista = lista.filter(c => c.presenca === filtSt);
 
+  const ativas = _cpAtivas['integ'] || new Set(INTEG_COLUNAS.filter(c=>c.default).map(c=>c.id));
+  const cols = INTEG_COLUNAS.filter(c => ativas.has(c.id)).map(c=>c.id);
+  const ncols = cols.length || 1;
+
   if (!lista.length) {
-    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:32px">
+    tbody.innerHTML = `<tr><td colspan="${ncols}" style="text-align:center;color:var(--muted);padding:32px">
       ${INTEG_TODOS_COLABS.length === 0 ? 'Selecione uma data com integração.' : 'Nenhum colaborador encontrado com este filtro.'}
     </td></tr>`;
     return;
@@ -6701,13 +7085,11 @@ function integRenderTabela() {
       if (/cesta.basica/i.test(s)) return 'CB';
       if (/dinheiro/i.test(s)) return 'VT$';
       if (/reembolso/i.test(s)) return 'VT$';
-      // Fallback: pega o código numérico inicial se houver (ex: "2332-VALE TRANSPORTE" → "2332")
       const m = s.match(/^(\d+)/);
       return m ? m[1] : s.substring(0,6);
     }
     const benBrutos = [col.beneficio_mob, col.beneficio_vr, col.beneficio_vt].filter(Boolean);
     const benAbrev  = [...new Set(benBrutos.map(abrevBen))].join(' · ');
-    // Tooltip com nomes completos
     const benTooltip = benBrutos.join(' | ');
     const ben = benAbrev || '—';
     const fechada = col._colmeia_status === 'fechada';
@@ -6716,42 +7098,29 @@ function integRenderTabela() {
     const bgNoShow = col.presenca === 'NO SHOW'  ? 'var(--danger)'  : 'transparent';
     const txtPagar  = col.presenca === 'PAGAR'   ? '#fff' : 'var(--success)';
     const txtNoShow = col.presenca === 'NO SHOW' ? '#fff' : 'var(--danger)';
-    // Departamento: só o nome/código do depto, sem o cliente
     const deptoTexto = col._depto_nome && !/^\d+$/.test(col._depto_nome.trim())
-      ? col._depto_nome
-      : (col._depto_cod || col._depto_nome || '—');
-
-    // Obs resumida embaixo do nome
+      ? col._depto_nome : (col._depto_cod || col._depto_nome || '—');
     const obsDisplay = col.obs
       ? `<div style="font-size:11px;color:var(--warning);margin-top:2px;max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${col.obs}">💬 ${col.obs}</div>`
       : '';
-
-    return `<tr id="integ-row-${col.id}" style="border-bottom:1px solid var(--border)">
-      <td style="color:var(--muted);font-size:12px;text-align:center">${i+1}</td>
-      <td>
-        <div style="font-weight:600;font-size:13px;cursor:pointer"
-          onclick="integAbrirColab('${col.id}')"
-          onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color=''"
-        >${col.nome}</div>
-        ${col.codigo ? `<div style="font-size:11px;color:var(--muted)">${col.codigo}</div>` : ''}
-        ${obsDisplay}
-      </td>
-      <td style="font-size:12.5px;color:var(--muted)">${col.cargo || '—'}</td>
-      <td style="font-size:12.5px">${deptoTexto}</td>
-      <td style="font-size:12px;color:var(--text);font-weight:500" title="${benTooltip}">${ben}</td>
-      <td style="text-align:center">
-        ${fechada
-          ? `<span style="font-size:12px;font-weight:700;color:${corPres}">${col.presenca || '—'}</span>`
-          : `<div style="display:flex;gap:5px;justify-content:center">
-               <button onclick="integToggle('${col.id}','PAGAR')"
-                 style="padding:4px 10px;border-radius:6px;border:1.5px solid var(--success);font-size:11.5px;cursor:pointer;font-weight:700;background:${bgPagar};color:${txtPagar};font-family:var(--font)">✅ Pagar</button>
-               <button onclick="integAbrirNoShow('${col.id}')"
-                 style="padding:4px 10px;border-radius:6px;border:1.5px solid var(--danger);font-size:11.5px;cursor:pointer;font-weight:700;background:${bgNoShow};color:${txtNoShow};font-family:var(--font)">⊘ No Show</button>
-             </div>`
-        }
-      </td>
-      <td style="font-size:11.5px;color:var(--muted)">${col.confirmado_por || '—'}</td>
-    </tr>`;
+    const cellConf = fechada
+      ? `<span style="font-size:12px;font-weight:700;color:${corPres}">${col.presenca || '—'}</span>`
+      : `<div style="display:flex;gap:5px;justify-content:center">
+           <button onclick="integToggle('${col.id}','PAGAR')"
+             style="padding:4px 10px;border-radius:6px;border:1.5px solid var(--success);font-size:11.5px;cursor:pointer;font-weight:700;background:${bgPagar};color:${txtPagar};font-family:var(--font)">✅ Pagar</button>
+           <button onclick="integAbrirNoShow('${col.id}')"
+             style="padding:4px 10px;border-radius:6px;border:1.5px solid var(--danger);font-size:11.5px;cursor:pointer;font-weight:700;background:${bgNoShow};color:${txtNoShow};font-family:var(--font)">⊘ No Show</button>
+         </div>`;
+    const cellMap = {
+      num:    `<td style="color:var(--muted);font-size:12px;text-align:center">${i+1}</td>`,
+      nome:   `<td><div style="font-weight:600;font-size:13px;cursor:pointer" onclick="integAbrirColab('${col.id}')" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color=''">${col.nome}</div>${col.codigo?`<div style="font-size:11px;color:var(--muted)">${col.codigo}</div>`:''}${obsDisplay}</td>`,
+      cargo:  `<td style="font-size:12.5px;color:var(--muted)">${col.cargo || '—'}</td>`,
+      depto:  `<td style="font-size:12.5px">${deptoTexto}</td>`,
+      ben:    `<td style="font-size:12px;color:var(--text);font-weight:500" title="${benTooltip}">${ben}</td>`,
+      conf:   `<td style="text-align:center">${cellConf}</td>`,
+      confPor:`<td style="font-size:11.5px;color:var(--muted)">${col.confirmado_por || '—'}</td>`,
+    };
+    return `<tr id="integ-row-${col.id}" style="border-bottom:1px solid var(--border)">${cols.map(c=>cellMap[c]||'<td>—</td>').join('')}</tr>`;
   }).join('');
 }
 
@@ -6991,17 +7360,20 @@ function abrevBenPagar(s) {
 }
 
 function pagarBenRenderTabela(lista) {
+  cpTheadPagar();
   const tbody = document.getElementById('pagar-tabela-body');
   if (!tbody) return;
+  const ativas = _cpAtivas['pagar'] || new Set(PAGAR_COLUNAS.filter(c=>c.default).map(c=>c.id));
+  const cols = PAGAR_COLUNAS.filter(c => ativas.has(c.id)).map(c=>c.id);
+  const ncols = cols.length || 1;
 
   if (!lista.length) {
-    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:40px">' +
+    tbody.innerHTML = `<tr><td colspan="${ncols}" style="text-align:center;color:var(--muted);padding:40px">` +
       (PAGAR_BEN_LISTA.length === 0 ? '✅ Nenhum benefício pendente de pagamento.' : 'Nenhum resultado para este filtro.') +
       '</td></tr>';
     return;
   }
 
-  // Agrupar por data de integração para separadores visuais
   let dataAtual = null;
   tbody.innerHTML = lista.map((col, i) => {
     const ben = [...new Set([col.beneficio_mob, col.beneficio_vr, col.beneficio_vt].filter(Boolean).map(abrevBenPagar))].join(' · ') || '—';
@@ -7009,45 +7381,26 @@ function pagarBenRenderTabela(lista) {
     const selecionado = PAGAR_BEN_SELECIONADOS.has(col.id);
     const atrasadoBg = col.atrasado ? 'background:rgba(239,68,68,.06)' : '';
 
-    // Separador de data
     let separador = '';
     if (col.data_admissao_fmt !== dataAtual) {
       dataAtual = col.data_admissao_fmt;
       const label = col.atrasado
         ? `<span style="color:var(--danger);font-weight:700">⚠️ Integração ${col.data_admissao_fmt} — ATRASADO</span>`
         : `<span style="color:var(--muted)">📅 Integração ${col.data_admissao_fmt}</span>`;
-      separador = `<tr style="background:var(--surface2)">
-        <td colspan="7" style="padding:6px 14px;font-size:11px;border-bottom:1px solid var(--border)">${label}</td>
-      </tr>`;
+      separador = `<tr style="background:var(--surface2)"><td colspan="${ncols}" style="padding:6px 14px;font-size:11px;border-bottom:1px solid var(--border)">${label}</td></tr>`;
     }
 
-    const row = `<tr id="pagar-row-${col.id}" style="border-bottom:1px solid var(--border);${atrasadoBg}${selecionado ? ';background:rgba(99,204,176,.07)' : ''}">
-      <td style="text-align:center">
-        <input type="checkbox" ${selecionado ? 'checked' : ''} onchange="pagarBenToggle('${col.id}', this.checked)"
-          style="cursor:pointer;width:14px;height:14px"/>
-      </td>
-      <td>
-        <div style="font-weight:600;font-size:13px">${col.nome}
-          ${col.obs && col.obs.includes('[') ? `<span title="${col.obs}" style="margin-left:6px;background:rgba(245,158,11,.2);color:var(--warning);font-size:10px;font-weight:700;padding:2px 6px;border-radius:10px;cursor:help">⚠️ Ajuste</span>` : ''}
-        </div>
-        ${col.codigo ? `<div style="font-size:11px;color:var(--muted)">${col.codigo}</div>` : ''}
-        ${col.obs && col.obs.includes('[') ? `<div style="font-size:10.5px;color:var(--warning);margin-top:2px">${col.obs.match(/\[([^\]]+)\]/g)?.join(' ') || ''}</div>` : ''}
-      </td>
-      <td style="font-size:12px">${col.depto_cod || '—'}</td>
-      <td style="font-size:12px;font-weight:500" title="${benTooltip}">${ben}</td>
-      <td style="font-size:12px;color:var(--muted)">${col.data_admissao_fmt || '—'}</td>
-      <td style="font-size:11.5px;color:var(--muted)">
-        ${col.confirmado_por || '—'}
-        ${col.confirmado_at ? `<div style="font-size:10px">${new Date(col.confirmado_at).toLocaleDateString('pt-BR')}</div>` : ''}
-      </td>
-      <td style="text-align:center">
-        <button onclick="pagarBenAbrirModal('${col.id}')"
-          style="padding:5px 12px;border-radius:8px;border:1.5px solid var(--success);font-size:11.5px;cursor:pointer;font-weight:700;background:transparent;color:var(--success);font-family:var(--font)">
-          💰 Programar
-        </button>
-      </td>
-    </tr>`;
+    const cellMap = {
+      sel:    `<td style="text-align:center"><input type="checkbox" ${selecionado?'checked':''} onchange="pagarBenToggle('${col.id}', this.checked)" style="cursor:pointer;width:14px;height:14px"/></td>`,
+      nome:   `<td><div style="font-weight:600;font-size:13px">${col.nome}${col.obs&&col.obs.includes('[')?`<span title="${col.obs}" style="margin-left:6px;background:rgba(245,158,11,.2);color:var(--warning);font-size:10px;font-weight:700;padding:2px 6px;border-radius:10px;cursor:help">⚠️ Ajuste</span>`:''}</div>${col.codigo?`<div style="font-size:11px;color:var(--muted)">${col.codigo}</div>`:''}${col.obs&&col.obs.includes('[')?`<div style="font-size:10.5px;color:var(--warning);margin-top:2px">${col.obs.match(/\[([^\]]+)\]/g)?.join(' ')||''}</div>`:''}</td>`,
+      cc:     `<td style="font-size:12px">${col.depto_cod||'—'}</td>`,
+      ben:    `<td style="font-size:12px;font-weight:500" title="${benTooltip}">${ben}</td>`,
+      integ:  `<td style="font-size:12px;color:var(--muted)">${col.data_admissao_fmt||'—'}</td>`,
+      confPor:`<td style="font-size:11.5px;color:var(--muted)">${col.confirmado_por||'—'}${col.confirmado_at?`<div style="font-size:10px">${new Date(col.confirmado_at).toLocaleDateString('pt-BR')}</div>`:''}</td>`,
+      pagar:  `<td style="text-align:center"><button onclick="pagarBenAbrirModal('${col.id}')" style="padding:5px 12px;border-radius:8px;border:1.5px solid var(--success);font-size:11.5px;cursor:pointer;font-weight:700;background:transparent;color:var(--success);font-family:var(--font)">💰 Programar</button></td>`,
+    };
 
+    const row = `<tr id="pagar-row-${col.id}" style="border-bottom:1px solid var(--border);${atrasadoBg}${selecionado?';background:rgba(99,204,176,.07)':''}">${cols.map(c=>cellMap[c]||'<td>—</td>').join('')}</tr>`;
     return separador + row;
   }).join('');
 
@@ -7312,11 +7665,15 @@ function histBenFiltrar() {
 }
 
 function histBenRenderTabela(lista) {
+  cpTheadHist();
   const tbody = document.getElementById('hist-tabela-body');
   if (!tbody) return;
+  const ativas = _cpAtivas['hist'] || new Set(HIST_COLUNAS.filter(c=>c.default).map(c=>c.id));
+  const cols = HIST_COLUNAS.filter(c => ativas.has(c.id)).map(c=>c.id);
+  const ncols = cols.length || 1;
 
   if (!lista.length) {
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:40px">' +
+    tbody.innerHTML = `<tr><td colspan="${ncols}" style="text-align:center;color:var(--muted);padding:40px">` +
       (HIST_BEN_LISTA.length === 0 ? 'Nenhum registro no histórico.' : 'Nenhum resultado para este filtro.') +
       '</td></tr>';
     return;
@@ -7332,35 +7689,21 @@ function histBenRenderTabela(lista) {
     if (/dinheiro|reembolso/i.test(s)) return 'VT$';
     return s.substring(0,6);
   }
-
-  function fmtDt(iso) {
-    if (!iso) return '—';
-    try { return new Date(iso).toLocaleDateString('pt-BR'); } catch { return iso; }
-  }
-  function fmtDtHr(iso) {
-    if (!iso) return '—';
-    try { return new Date(iso).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'}); } catch { return iso; }
-  }
+  function fmtDt(iso) { if(!iso)return'—'; try{return new Date(iso).toLocaleDateString('pt-BR');}catch{return iso;} }
+  function fmtDtHr(iso) { if(!iso)return'—'; try{return new Date(iso).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'});}catch{return iso;} }
 
   tbody.innerHTML = lista.map(col => {
     const ben = [...new Set([col.beneficio_mob,col.beneficio_vr,col.beneficio_vt].filter(Boolean).map(abrev))].join(' · ') || '—';
     const benTooltip = [col.beneficio_mob,col.beneficio_vr,col.beneficio_vt].filter(Boolean).join(' | ');
     const isPago   = col.presenca === 'PAGAR';
-    const isNoShow = col.presenca === 'NO SHOW';
-
-    // Extrair ajuste da obs se houver
     const ajusteMatch = col.obs ? col.obs.match(/\[([^\]]+)\]/g) : null;
     const ajusteInfo  = ajusteMatch ? ajusteMatch.join(' ') : null;
 
-    // Detalhes coluna — diferente por tipo
     const detalhes = isPago ? `
       <div style="font-size:12px">
         <div style="font-weight:700;color:var(--success);margin-bottom:4px">💰 Data de pagamento</div>
         <div style="font-size:13px;font-weight:800;color:var(--text)">${fmtDt(col.data_pagamento)}</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:4px">
-          Programado por <strong>${col.programado_por||'—'}</strong><br/>
-          em ${fmtDtHr(col.programado_em)}
-        </div>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px">Programado por <strong>${col.programado_por||'—'}</strong><br/>em ${fmtDtHr(col.programado_em)}</div>
         ${ajusteInfo ? `<div style="margin-top:6px;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.3);border-radius:6px;padding:5px 8px;font-size:10.5px;color:var(--warning)">⚠️ ${ajusteInfo}<br/><span style="color:var(--muted)">Solicitado por <strong>${col.confirmado_por||'—'}</strong></span></div>` : ''}
       </div>` : `
       <div style="font-size:12px">
@@ -7376,21 +7719,15 @@ function histBenRenderTabela(lista) {
         </div>
       </div>`;
 
-    return `<tr style="border-bottom:1px solid var(--border)">
-      <td>
-        <div style="font-weight:700;font-size:13px">${col.nome}</div>
-        ${col.codigo ? `<div style="font-size:11px;color:var(--muted)">${col.codigo}</div>` : ''}
-      </td>
-      <td style="font-size:12px">${col.depto_cod||'—'}</td>
-      <td style="font-size:12px;font-weight:500" title="${benTooltip}">${ben}</td>
-      <td style="font-size:12px;color:var(--muted)">${col.data_admissao_fmt||'—'}</td>
-      <td style="text-align:center">
-        <span class="pill" style="background:${isPago?'rgba(99,204,176,.15)':'rgba(239,68,68,.12)'};color:${isPago?'var(--success)':'var(--danger)'}">
-          ${isPago?'✅ PAGO':'⊘ NO SHOW'}
-        </span>
-      </td>
-      <td>${detalhes}</td>
-    </tr>`;
+    const cellMap = {
+      nome:  `<td><div style="font-weight:700;font-size:13px">${col.nome}</div>${col.codigo?`<div style="font-size:11px;color:var(--muted)">${col.codigo}</div>`:''}</td>`,
+      cc:    `<td style="font-size:12px">${col.depto_cod||'—'}</td>`,
+      ben:   `<td style="font-size:12px;font-weight:500" title="${benTooltip}">${ben}</td>`,
+      integ: `<td style="font-size:12px;color:var(--muted)">${col.data_admissao_fmt||'—'}</td>`,
+      status:`<td style="text-align:center"><span class="pill" style="background:${isPago?'rgba(99,204,176,.15)':'rgba(239,68,68,.12)'};color:${isPago?'var(--success)':'var(--danger)'}">${isPago?'✅ PAGO':'⊘ NO SHOW'}</span></td>`,
+      dets:  `<td>${detalhes}</td>`,
+    };
+    return `<tr style="border-bottom:1px solid var(--border)">${cols.map(c=>cellMap[c]||'<td>—</td>').join('')}</tr>`;
   }).join('');
 }
 // ═══════════════ FIM HISTÓRICO BENEFÍCIOS ═══════════════
