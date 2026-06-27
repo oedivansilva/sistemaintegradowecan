@@ -7998,23 +7998,28 @@ function tktHubCode(hubStr) {
 // ── Filtrar tickets pelo HUB do Onsite logado ─────────────
 function tktFiltrarPorOnsite(lista) {
   if (!session) return lista;
-  // Master e Gestor veem todos
   if (['master','gestor'].includes(session.perfil)) return lista;
 
-  // Onsite: usa session._operacoes (mesmo padrão dos outros módulos)
   const ops = session._operacoes || [];
   if (!ops.length) return lista;
 
-  // Monta sets de comparação — nome da op (ex: "HUB-LSP-10") e cc_cod
+  // Nomes e códigos das operações do usuário — uppercase e sem espaços extras
   const opsNomes = new Set(ops.map(o => (o.nome||'').toUpperCase().trim()));
-  const opsCods  = new Set(ops.map(o => (o.cc_cod||o.regional||'').toUpperCase().trim()).filter(Boolean));
+  const opsCods  = new Set(ops.map(o => (o.cc_cod||o.codigo||o.regional||'').toUpperCase().trim()).filter(Boolean));
 
   return lista.filter(r => {
-    // Campo HUB da planilha: "HUB-LSP-10 | SPI" → extrai só o código
+    // Remove tudo após | e limpa espaços: "HUB-LSP-10 | SPI" → "HUB-LSP-10"
     const hub = tktHubCode(r['HUB'] || r['Hub'] || '').toUpperCase().trim();
     if (!hub) return false;
-    // Compara com nome da operação ou cc_cod
-    return opsNomes.has(hub) || opsCods.has(hub);
+
+    // Compara diretamente
+    if (opsNomes.has(hub) || opsCods.has(hub)) return true;
+
+    // Compara parcialmente — se o hub está contido no nome da op ou vice-versa
+    for (const nome of opsNomes) {
+      if (nome && (hub.includes(nome) || nome.includes(hub))) return true;
+    }
+    return false;
   });
 }
 
@@ -8046,18 +8051,15 @@ async function tktCarregar(pageId) {
   area.innerHTML = '<div class="tkt-loading">🔄 Buscando tickets…</div>';
 
   try {
-    // Garantir que as operações do usuário estão carregadas
+    // 1. Garantir operações carregadas ANTES de buscar/filtrar planilha
     if (!session._operacoes?.length && !['master','gestor'].includes(session?.perfil)) {
       try {
         const ro = await rpc('wc_home_resumo', {});
         if (ro.operacoes?.length) session._operacoes = ro.operacoes;
       } catch(e) {}
     }
-    // Debug temporário — remover após confirmar filtro
-    console.log('TKT operacoes:', JSON.stringify(session._operacoes));
-    console.log('TKT exemplo HUB planilha:', TKT_TODOS?.[0]?.['HUB']);
 
-    // Buscar planilha só se ainda não carregou
+    // 2. Buscar planilha (força recarregar para aplicar filtro correto)
     if (!TKT_LOADED) {
       TKT_TODOS  = await tktFetchTodos();
       TKT_TODOS  = tktFiltrarPorOnsite(TKT_TODOS);
