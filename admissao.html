@@ -4350,28 +4350,19 @@ function renderPermissoesPorPerfil(perfil, perms) {
 
 function renderPermissoesGestor(perms) {
   const container = document.getElementById('sistemas-permissoes');
+  if (!container) return;
   const GRUPOS_RS  = ['Seleção & Admissão'];
   const GRUPOS_ADP = ['Administração de Pessoal — Voucher Uber','Administração de Pessoal — Benefícios','Administração de Pessoal — Tickets Shopee'];
   const GRUPOS_SUP = ['Suporte','Cadastros'];
 
-  // Detectar sistemas já ativos nas perms salvas
+  // Ler estado atual dos checkboxes ANTES de sobrescrever o DOM
+  const _rsExist  = document.getElementById('gestor-acesso-rs');
+  const _adpExist = document.getElementById('gestor-acesso-adp');
+
+  // Fallback: detectar nas perms salvas se checkboxes ainda não existem
   const temRS  = PERMISSOES_GRUPOS.filter(g=>GRUPOS_RS.includes(g.grupo)).flatMap(g=>g.itens).some(s=>perms[s.id]);
   const temADP = PERMISSOES_GRUPOS.filter(g=>GRUPOS_ADP.includes(g.grupo)).flatMap(g=>g.itens).some(s=>perms[s.id]);
 
-  let html = '';
-  // Seleção de sistemas
-  html += '<div style="margin-bottom:18px">';
-  html += '<div style="font-size:9.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px">Sistemas com acesso</div>';
-  html += '<div style="display:flex;gap:10px;flex-wrap:wrap">';
-  html += `<label style="display:flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 16px;cursor:pointer;font-size:13px;font-weight:600">
-    <input type="checkbox" id="gestor-acesso-rs" ${(_rsExist?_rsExist.checked:temRS)?'checked':''}> 🔍 Seleção &amp; Admissão</label>`;
-  html += `<label style="display:flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 16px;cursor:pointer;font-size:13px;font-weight:600">
-    <input type="checkbox" id="gestor-acesso-adp" ${(_adpExist?_adpExist.checked:temADP)?'checked':''}> 🐝 Adm. de Pessoal</label>`;
-  html += '</div></div>';
-
-  // Ler estado atual dos checkboxes do DOM (se já existirem) antes de sobrescrever
-  const _rsExist  = document.getElementById('gestor-acesso-rs');
-  const _adpExist = document.getElementById('gestor-acesso-adp');
   const mostraRS  = _rsExist  ? _rsExist.checked  : temRS;
   const mostraADP = _adpExist ? _adpExist.checked : temADP;
 
@@ -4397,19 +4388,27 @@ function renderPermissoesGestor(perms) {
     return g_html;
   };
 
+  let html = '';
+  html += '<div style="margin-bottom:18px">';
+  html += '<div style="font-size:9.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px">Sistemas com acesso</div>';
+  html += '<div style="display:flex;gap:10px;flex-wrap:wrap">';
+  html += `<label style="display:flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 16px;cursor:pointer;font-size:13px;font-weight:600">
+    <input type="checkbox" id="gestor-acesso-rs" ${mostraRS?'checked':''}> 🔍 Seleção &amp; Admissão</label>`;
+  html += `<label style="display:flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 16px;cursor:pointer;font-size:13px;font-weight:600">
+    <input type="checkbox" id="gestor-acesso-adp" ${mostraADP?'checked':''}> 🐝 Adm. de Pessoal</label>`;
+  html += '</div></div>';
   html += renderGrupos(GRUPOS_RS, mostraRS);
   html += renderGrupos(GRUPOS_ADP, mostraADP);
-  html += renderGrupos(GRUPOS_SUP, true); // Suporte/Cadastros sempre visível para Gestor
+  html += renderGrupos(GRUPOS_SUP, true);
 
   container.innerHTML = html;
 
-  // Re-bind checkboxes após rerender
+  // Bind após render
   const rsEl  = document.getElementById('gestor-acesso-rs');
   const adpEl = document.getElementById('gestor-acesso-adp');
   if (rsEl)  rsEl.onchange  = () => renderPermissoesGestor(coletarPermsAtuais());
   if (adpEl) adpEl.onchange = () => renderPermissoesGestor(coletarPermsAtuais());
 }
-
 function coletarPermsAtuais() {
   const p = {};
   PERMISSOES_GRUPOS.flatMap(g=>g.itens).forEach(s => {
