@@ -607,10 +607,68 @@
 
   /* ── TEMAS ── */
   body.tema-claro {
-    --bg:#f0f2f5; --surface:#ffffff; --surface2:#f5f7fa; --surface3:#eaedf1;
-    --border:#d0d5dd; --text:#1a1a2e; --muted:#6b7280; --brand:#ffffff;
+    --bg:#eef1f6; --surface:#ffffff; --surface2:#e2e7ef; --surface3:#d5dce8;
+    --border:#b8c2d4; --text:#1a1a2e; --muted:#4a5568; --brand:#1a1a2e;
+    --accent:#1a8c78; --accent-dim:#157060;
+    --success:#16a34a; --danger:#dc2626; --warning:#b45309;
   }
-  body.tema-claro nav a:hover { background: #f0f2f5; }
+  /* Sidebar mantém estilo escuro no tema claro — já tem cores fixas no HTML, apenas reforçar */
+  body.tema-claro #sidebar { background:#1e0b35 !important; border-right-color:#4a1d7a !important; }
+  body.tema-claro #sidebar nav a,
+  body.tema-claro #sidebar .nav-label,
+  body.tema-claro #sidebar .nav-section-title { color:#d4b8ff !important; }
+  body.tema-claro #sidebar nav a:hover,
+  body.tema-claro #sidebar nav a.active { background:rgba(255,255,255,.12) !important; color:#ffffff !important; }
+  body.tema-claro #sidebar .nav-user-name { color:#ede8ff !important; }
+  body.tema-claro #sidebar .nav-user-role { color:#b8a0d8 !important; }
+  /* Botão primário com texto legível */
+  body.tema-claro .btn-primary { background:var(--accent); color:#ffffff !important; }
+  body.tema-claro .btn-ghost { background:var(--surface2); color:var(--text); border-color:var(--border); }
+  /* Inputs e selects com fundo branco para contrastar */
+  body.tema-claro .toolbar input,
+  body.tema-claro .toolbar select { background:#ffffff; border-color:#b8c2d4; color:#1a1a2e; }
+  body.tema-claro .toolbar input::placeholder { color:#7a8899; }
+  /* Selects inline com estilo escuro (usam background:var(--surface2) inline) ficam ok */
+  body.tema-claro .col-picker-popup { background:#ffffff; border-color:#b8c2d4; }
+  body.tema-claro .col-check-item { color:#4a5568; }
+  body.tema-claro .col-check-item.checked { color:#1a1a2e; }
+  body.tema-claro .col-check-item:hover { background:#e2e7ef; }
+  /* Tabelas */
+  body.tema-claro .main-table thead th { background:#e2e7ef; color:#1a1a2e; border-bottom-color:#b8c2d4; }
+  body.tema-claro .main-table tbody tr:hover td { background:#f0f4fa; }
+  /* Cards KPI */
+  body.tema-claro .card { background:#ffffff; border-color:#b8c2d4; color:#1a1a2e; }
+  body.tema-claro .card-label { color:#4a5568; }
+  body.tema-claro .card-value { color:#1a1a2e; }
+  /* Pills */
+  body.tema-claro .vchr-pill-muted { background:#d5dce8; color:#4a5568; }
+  /* Gaveta */
+  body.tema-claro .gaveta { background:#1e0b35 !important; border-color:#4a1d7a !important; }
+  body.tema-claro .gaveta a { color:#d4b8ff !important; }
+  body.tema-claro #sidebar nav a:hover { background: rgba(255,255,255,.12); }
+  /* Tabela linhas */
+  body.tema-claro table.main-table tbody tr { border-bottom:1px solid #c4cad6; }
+  body.tema-claro table.main-table tbody tr:hover td { background:rgba(26,140,120,.06); }
+  body.tema-claro table.main-table td { color:#1a1a2e; }
+  /* Página */
+  body.tema-claro .page-header h1 { color:#1a1a2e; }
+  body.tema-claro .page-header p { color:#4a5568; }
+  /* Access note */
+  body.tema-claro .access-note { background:#e2e7ef; border-color:#b8c2d4; color:#1a1a2e; }
+  /* Empty state */
+  body.tema-claro .empty-state { color:#4a5568; }
+  /* KPI cards (no show) */
+  body.tema-claro #ns-kpis > div { background:#ffffff; border-color:#b8c2d4; }
+  /* Voucher pills */
+  body.tema-claro .vchr-pill-ativo  { background:rgba(22,163,74,.15);  color:#15803d; }
+  body.tema-claro .vchr-pill-inativo { background:rgba(220,38,38,.12); color:#b91c1c; }
+  /* Queue cards */
+  body.tema-claro .queue-card { background:#ffffff; border-color:#b8c2d4; }
+  /* Modal */
+  body.tema-claro .modal { background:#ffffff; }
+  body.tema-claro .modal-head { border-bottom-color:#b8c2d4; }
+  body.tema-claro .modal-footer { border-top-color:#b8c2d4; }
+  /* Selects inline (inline style usa var()) — ok pois usam var(--surface2) e var(--text) */
   body.tema-preto {
     --bg:#000000; --surface:#0d0d0d; --surface2:#1a1a1a; --surface3:#242424;
     --border:#2e2e2e; --text:#e8e8e8; --muted:#888888;
