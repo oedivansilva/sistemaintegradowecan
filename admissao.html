@@ -3172,6 +3172,7 @@ const _CP_DEFS = {
   cli:    CLI_COLUNAS,
   cc_cad: CC_CAD_COLUNAS,
   dep:    DEP_COLUNAS,
+  tkt:    null, // definido depois no bloco Tickets
 };
 
 // Carregar todas as prefs de colunas
@@ -8057,17 +8058,33 @@ function tktAtualizar(pageId) {
 }
 
 // ── Renderizar área com KPIs + filtros + tabela ───────────
+// ── Definição de colunas dos tickets ─────────────────────
+const TKT_COLUNAS = [
+  { id:'key',      label:'Key',            default:true  },
+  { id:'tipo',     label:'Tipo',           default:true  },
+  { id:'status',   label:'Status Jira',    default:true  },
+  { id:'criado',   label:'Criado',         default:true  },
+  { id:'solicit',  label:'Solicitante',    default:true  },
+  { id:'colabs',   label:'Colaboradores',  default:true  },
+  { id:'cargo',    label:'Cargo',          default:false },
+  { id:'hub',      label:'HUB',            default:true  },
+  { id:'stInt',    label:'Status Interno', default:true  },
+];
+// Registrar no mapa global de col pickers
+_CP_DEFS['tkt'] = TKT_COLUNAS;
+
 function tktRenderArea(areaId, lista, pageId) {
   const area = document.getElementById(areaId);
   if (!area) return;
+
+  // Carregar prefs de colunas
+  if (!_cpAtivas['tkt']) cpCarregar('tkt', TKT_COLUNAS);
 
   const total    = lista.length;
   const pendInt  = lista.filter(r => TKT_NOTAS[r['Key']]?.status === 'pendente').length;
   const resolv   = lista.filter(r => TKT_NOTAS[r['Key']]?.status === 'resolvido').length;
   const semNota  = total - pendInt - resolv;
-
-  // Tipos disponíveis para o filtro
-  const tipos = [...new Set(lista.map(r => r['Tipo']).filter(Boolean))].sort();
+  const tipos    = [...new Set(lista.map(r => r['Tipo']).filter(Boolean))].sort();
 
   area.innerHTML = `
     <div class="tkt-kpis">
@@ -8099,15 +8116,22 @@ function tktRenderArea(areaId, lista, pageId) {
       </select>` : ''}
       <button class="btn btn-ghost btn-sm" onclick="tktLimparFiltros('${areaId}','${pageId}')">✕ Limpar</button>
       <button class="btn btn-ghost btn-sm" onclick="TKT_LOADED=false;tktCarregar('${pageId}')">🔄 Atualizar</button>
+      <div class="toolbar-right">
+        <button class="btn btn-ghost btn-sm" onclick="cpAbrir('tkt','tkt-cp-popup',this)">⚙️ Colunas</button>
+        <div class="col-picker-popup" id="tkt-cp-popup">
+          <h4>Colunas visíveis</h4>
+          <div class="col-picker-grid" id="tkt-cp-grid"></div>
+          <div class="col-picker-actions">
+            <button class="btn btn-ghost btn-sm" onclick="cpReset('tkt',TKT_COLUNAS,()=>tktFiltrar('${areaId}','${pageId}'))">Padrão</button>
+            <button class="btn btn-primary btn-sm" style="margin-left:auto" onclick="cpAplicar('tkt','tkt-cp-popup',()=>tktFiltrar('${areaId}','${pageId}'))">Aplicar</button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div class="table-wrap">
       <table class="main-table">
-        <thead><tr>
-          <th>Key</th><th>Tipo</th><th>Status Jira</th><th>Criado</th>
-          <th>Solicitante</th><th>Colaboradores</th>
-          <th>Cargo</th><th>HUB</th><th>Status Interno</th>
-        </tr></thead>
+        <thead><tr id="${areaId}-thead"></tr></thead>
         <tbody id="${areaId}-tbody"></tbody>
       </table>
     </div>
@@ -8119,12 +8143,20 @@ function tktRenderArea(areaId, lista, pageId) {
 
 // ── Renderizar tbody ──────────────────────────────────────
 function tktRenderTabela(areaId, lista) {
+  // Thead dinâmico
+  const thead = document.getElementById(`${areaId}-thead`);
   const tbody = document.getElementById(`${areaId}-tbody`);
   const count = document.getElementById(`${areaId}-count`);
   if (!tbody) return;
 
+  const ativas = _cpAtivas['tkt'] || new Set(TKT_COLUNAS.filter(c=>c.default).map(c=>c.id));
+  const cols   = TKT_COLUNAS.filter(c => ativas.has(c.id)).map(c => c.id);
+  const ncols  = cols.length || 1;
+
+  if (thead) thead.innerHTML = TKT_COLUNAS.filter(c => ativas.has(c.id)).map(c=>`<th>${c.label}</th>`).join('');
+
   if (!lista.length) {
-    tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;padding:40px;color:var(--muted)">Nenhum ticket encontrado.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="${ncols}" style="text-align:center;padding:40px;color:var(--muted)">Nenhum ticket encontrado.</td></tr>`;
     if (count) count.textContent = '';
     return;
   }
@@ -8137,9 +8169,8 @@ function tktRenderTabela(areaId, lista) {
     const nota  = TKT_NOTAS[key];
     const stInt = nota?.status || '';
     const hub   = tktHubCode(r['HUB'] || '');
-
-    // Extrair matrículas de AMBAS as colunas
     const mats  = tktExtrairMatriculas(r);
+
     const matBadge = mats.length
       ? `<div style="display:flex;flex-wrap:wrap;gap:4px">
            ${mats.slice(0,3).map(m=>`<span style="background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:1px 6px;font-size:10.5px;font-family:monospace;font-weight:700">${m}</span>`).join('')}
@@ -8157,18 +8188,20 @@ function tktRenderTabela(areaId, lista) {
         ? `<span class="tkt-pill tkt-pill-resolvido">✅ Resolvido</span>`
         : `<span class="tkt-pill tkt-pill-default">—</span>`;
 
+    const cellMap = {
+      key:    `<td><code style="font-size:11px;font-weight:700;color:var(--accent)">${key}</code></td>`,
+      tipo:   `<td style="font-size:12px">${r['Tipo']||'—'}</td>`,
+      status: `<td>${statusJiraPill}</td>`,
+      criado: `<td style="font-size:12px;color:var(--muted)">${fmtData(r['Criado'])}</td>`,
+      solicit:`<td style="font-size:12px">${r['Solicitante']||'—'}</td>`,
+      colabs: `<td>${matBadge}</td>`,
+      cargo:  `<td style="font-size:12px;color:var(--muted)">${r['Cargo']||'—'}</td>`,
+      hub:    `<td><span style="background:var(--surface2);padding:2px 6px;border-radius:4px;font-size:11px">${hub||'—'}</span></td>`,
+      stInt:  `<td>${statusIntPill}</td>`,
+    };
+
     const dataR = JSON.stringify(r).replace(/"/g,'&quot;');
-    return `<tr style="cursor:pointer" onclick="tktAbrirModal(${dataR})">
-      <td><code style="font-size:11px;font-weight:700;color:var(--accent)">${key}</code></td>
-      <td style="font-size:12px">${r['Tipo']||'—'}</td>
-      <td>${statusJiraPill}</td>
-      <td style="font-size:12px;color:var(--muted)">${fmtData(r['Criado'])}</td>
-      <td style="font-size:12px">${r['Solicitante']||'—'}</td>
-      <td>${matBadge}</td>
-      <td style="font-size:12px;color:var(--muted)">${r['Cargo']||'—'}</td>
-      <td><span style="background:var(--surface2);padding:2px 6px;border-radius:4px;font-size:11px">${hub||'—'}</span></td>
-      <td>${statusIntPill}</td>
-    </tr>`;
+    return `<tr style="cursor:pointer" onclick="tktAbrirModal(${dataR})">${cols.map(c=>cellMap[c]||'<td>—</td>').join('')}</tr>`;
   }).join('');
 }
 
