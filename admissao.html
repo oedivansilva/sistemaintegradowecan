@@ -30,7 +30,7 @@
     --font:      'Segoe UI', system-ui, sans-serif;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: var(--bg); color: var(--text); font-family: var(--font); min-height: 100vh; display: flex; }
+  body { background: var(--bg); color: var(--text); font-family: var(--font); min-height: 100vh; display: flex; overflow-x: hidden; }
   ::-webkit-scrollbar { width: 8px; height: 8px; }
   ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
 
@@ -219,7 +219,7 @@
   #sidebar.sb-col nav a { padding:8px 0; justify-content:center; gap:0; }
   #sidebar.sb-col .nav-suporte-item { padding:8px 0; justify-content:center; gap:0; }
   #sidebar.sb-col .sb-ico { width:100%; text-align:center; font-size:15px; }
-  #main { margin-left: var(--sb-w); flex: 1; padding: 28px 36px; min-height: 100vh; transition: margin-left .22s cubic-bezier(.4,0,.2,1); min-width: 0; box-sizing: border-box; width: calc(100vw - var(--sb-w)); }
+  #main { margin-left: var(--sb-w); flex: 1; padding: 28px 36px; min-height: 100vh; transition: margin-left .22s cubic-bezier(.4,0,.2,1); min-width: 0; box-sizing: border-box; width: calc(100vw - var(--sb-w)); overflow-x: hidden; }
   body.sb-collapsed #main { margin-left: var(--sb-col); width: calc(100vw - var(--sb-col)); }
 
   /* ── HOME header ── */
