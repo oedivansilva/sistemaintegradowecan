@@ -8,10 +8,10 @@
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
   :root {
-    --bg:        #150a20;
-    --surface:   #211132;
-    --surface2:  #2c1740;
-    --surface3:  #38204e;
+    --bg:        #0f0718;
+    --surface:   #1a0a2e;
+    --surface2:  #2a1045;
+    --surface3:  #3d1860;
     --border:    #432a5c;
     --accent:    #63ccb0;
     --accent-dim:#4aa890;
@@ -39,8 +39,8 @@
   :root { --sb-w: 200px; --sb-col: 48px; }
 
   #sidebar {
-    width: var(--sb-w); min-height: 100vh; background: var(--surface);
-    border-right: 1px solid var(--border); display: flex; flex-direction: column;
+    width: var(--sb-w); min-height: 100vh; background: #1e0b35;
+    border-right: 1px solid #4a1d7a; display: flex; flex-direction: column;
     position: fixed; top: 0; left: 0; bottom: 0; z-index: 100;
     transition: width .22s cubic-bezier(.4,0,.2,1); overflow: hidden;
   }
@@ -3014,13 +3014,18 @@ function abrirGaveta(key) {
   }).join('');
 
   const gaveta = document.getElementById('gaveta');
-  // Posicionar na altura do botão clicado
+  // Posicionar na altura do botão clicado, alinhado ao topo dele
   if (btn) {
     const rect = btn.getBoundingClientRect();
-    gaveta.style.top = Math.min(rect.top, window.innerHeight - 300) + 'px';
+    const maxTop = window.innerHeight - 320;
+    gaveta.style.top = Math.max(60, Math.min(rect.top, maxTop)) + 'px';
   } else {
     gaveta.style.top = '80px';
   }
+  // Posicionar à direita da sidebar (considera se está recolhida)
+  const sbCollapsed = document.body.classList.contains('sb-collapsed');
+  const sbW = sbCollapsed ? 48 : parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sb-w')) || 190;
+  gaveta.style.left = sbW + 'px';
   gaveta.style.display = 'flex';
   document.getElementById('gaveta-overlay').style.display = 'block';
 }
