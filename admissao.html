@@ -5610,31 +5610,43 @@ async function nsAbrirConsultor(r) {
 }
 
 async function nsBuscarVagaAuto(nome, matricula) {
-  if (!window.VAGAS || !VAGAS.length) return;
-  const busca = (nome||'').toLowerCase();
-  // Matricula sem prefixo WE (como vem do benefícios)
-  const mat     = (matricula||'').replace(/^WE/i,'').toLowerCase();
-  const matWE   = 'WE' + mat;
-
-  const vaga = VAGAS.find(v =>
-    // Tenta pela matrícula com e sem prefixo WE
-    (v.matricula||'').replace(/^WE/i,'').toLowerCase() === mat ||
-    (v.matricula||'').toLowerCase() === matWE.toLowerCase() ||
-    // Fallback pelo nome do colaborador
-    (v.colaborador||'').toLowerCase().includes(busca)
-  );
-
   const infoEl = document.getElementById('ns-vaga-info');
   const vagaEl = document.getElementById('ns-cons-vaga');
-  if (vaga && !vagaEl.value) {
+  if (!vagaEl || vagaEl.value) return;
+
+  if (infoEl) infoEl.innerHTML = `<span style="color:var(--muted)">🔍 Buscando vaga…</span>`;
+
+  const mat   = (matricula||'').replace(/^WE/i,'').toLowerCase();
+  const matWE = 'WE' + mat;
+  const busca = (nome||'').toLowerCase();
+
+  // Busca nas vagas em memória (todas)
+  let vaga = null;
+  if (window.VAGAS && VAGAS.length) {
+    vaga = VAGAS.find(v =>
+      (v.matricula||'').replace(/^WE/i,'').toLowerCase() === mat ||
+      (v.colaborador||'').toLowerCase() === busca
+    );
+  }
+
+  // Se não encontrou, busca direto no banco
+  if (!vaga) {
+    try {
+      const r = await rpc('wc_buscar_vaga_por_matricula', { p_matricula: matWE });
+      if (r && r.jira) vaga = r;
+    } catch(e) { /* RPC pode não existir */ }
+  }
+
+  if (vaga) {
     vagaEl.value = vaga.jira || '';
-    if (infoEl) infoEl.innerHTML = `<span style="color:var(--success)">✅ Vaga encontrada: ${vaga.jira} · ${vaga.cargo||''} · ${vaga.local||vaga.regional||''}</span>`;
-    document.getElementById('ns-btn-reabrir').style.display = 'flex';
-    document.getElementById('ns-btn-reabrir').dataset.vaga = vaga.jira || '';
-  } else if (!vagaEl.value) {
+    if (infoEl) infoEl.innerHTML = `<span style="color:var(--success)">✅ ${vaga.jira} · ${vaga.cargo||''} · ${vaga.local||vaga.regional||vaga.codigo_hub||''}</span>`;
+    const btn = document.getElementById('ns-btn-reabrir');
+    if (btn) { btn.style.display = 'flex'; btn.dataset.vaga = vaga.jira || ''; }
+  } else {
     if (infoEl) infoEl.innerHTML = `<span style="color:var(--muted)">Nenhuma vaga encontrada — preencha manualmente.</span>`;
   }
 }
+
 
 function nsBuscarVaga() {
   const vagaCod = document.getElementById('ns-cons-vaga').value.trim();
