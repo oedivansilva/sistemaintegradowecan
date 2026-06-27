@@ -777,10 +777,10 @@
     <a onclick="navTo('home')" data-page="home" title="Início"><span class="sb-ico">🏠</span><span class="sb-txt">Início</span></a>
 
     <!-- ── SELEÇÃO & ADMISSÃO ── -->
-    <div class="sb-section-label sb-txt">Seleção &amp; Admissão</div>
+    <div class="sb-section-label sb-txt" id="label-selecao">Seleção &amp; Admissão</div>
     <div id="navgroup-selecao">
       <a id="nav-dashboard" onclick="navTo('dashboard')" data-page="dashboard" title="Dashboard"><span class="sb-ico">◆</span><span class="sb-txt">Dashboard</span></a>
-      <a onclick="abrirGaveta('vagas', event)" title="Vagas / Admissões" class="sb-has-sub" id="sb-btn-vagas"><span class="sb-ico">📂</span><span class="sb-txt">Vagas / Admissões</span><span class="sb-arr sb-txt">›</span></a>
+      <a onclick="abrirGaveta('vagas', event)" title="Vagas / Admissões" class="sb-has-sub" id="sb-btn-vagas" style="display:none"><span class="sb-ico">📂</span><span class="sb-txt">Vagas / Admissões</span><span class="sb-arr sb-txt">›</span></a>
       <a id="nav-voucher" onclick="navTo('voucher')" data-page="voucher" title="Fila de Voucher"><span class="sb-ico">⇄</span><span class="sb-txt">Fila de Voucher</span><span class="count-badge alert" id="nav-voucher-count">0</span></a>
       <a id="nav-indicacoes" onclick="navTo('indicacoes')" data-page="indicacoes" title="Indicações"><span class="sb-ico">📋</span><span class="sb-txt">Indicações</span><span class="count-badge alert" id="nav-ind-count" style="display:none">0</span></a>
       <a id="nav-noshow" title="No Show (em breve)" style="opacity:.4;cursor:default;display:none"><span class="sb-ico">🚫</span><span class="sb-txt">No Show <small>(em breve)</small></span></a>
@@ -2813,6 +2813,7 @@ async function iniciarSessao(conta) {
   // ── Seleção & Admissão ──
   show('nav-dashboard',  temPermissao('rs_dashboard'));
   show('nav-vagas',      temPermissao('rs_vagas'));
+  show('sb-btn-vagas',   temPermissao('rs_vagas'));
   show('nav-voucher',    temPermissao('rs_voucher'));
   show('nav-indicacoes', temPermissao('rs_indicacoes'));
   show('nav-noshow',     temPermissao('rs_noshow'));
@@ -2822,10 +2823,7 @@ async function iniciarSessao(conta) {
   const _algumRS = ['rs_dashboard','rs_vagas','rs_voucher','rs_indicacoes','rs_noshow','rs_estoque_epi'].some(i => temPermissao(i));
   const _secaoRS = document.getElementById('navgroup-selecao');
   if (_secaoRS) _secaoRS.style.display = _algumRS ? 'block' : 'none';
-  // Label "Seleção & Admissão"
-  document.querySelectorAll('.sb-section-label').forEach(el => {
-    if (el.textContent.includes('Seleção')) el.style.display = _algumRS ? 'block' : 'none';
-  });
+  showBlock('label-selecao', _algumRS);
 
   // ── Adm. de Pessoal — grupo pai ──
   const _algumVoucher = ['adp_voucher_dashboard','adp_voucher_controle','adp_voucher_inativar',
@@ -2834,10 +2832,6 @@ async function iniciarSessao(conta) {
   const _algumTicket = ['adp_tickets_deslig','adp_tickets_movim','adp_tickets_voucher'].some(i=>temPermissao(i));
   const _algumADP = _algumVoucher || _algumBen || _algumTicket;
   showBlock('navgroup-admpessoal', _algumADP);
-  // Label "Adm. de Pessoal"
-  document.querySelectorAll('.sb-section-label').forEach(el => {
-    if (el.textContent.includes('Adm.')) el.style.display = _algumADP ? 'block' : 'none';
-  });
 
   // Voucher Uber sub
   showBlock('navgroup-voucher-uber', _algumVoucher);
