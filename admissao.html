@@ -1395,8 +1395,38 @@ const COL_INATIVOS = {
 };
 
 function doGet(e) {
+  // Sem parâmetros = teste de conexão
+  const action = e?.parameter?.action || '';
+  if (action === 'ler') {
+    return lerColaboradores(e.parameter.tipo || 'ativos');
+  }
   return ContentService.createTextOutput(JSON.stringify({ ok:true, msg:'WeSys Colaboradores OK' }))
     .setMimeType(ContentService.MimeType.JSON);
+}
+
+function lerColaboradores(tipo) {
+  try {
+    const gid    = tipo === 'ativos' ? GID_ATIVOS : GID_INATIVOS;
+    const ss     = SpreadsheetApp.openById(SHEET_ID);
+    const sheets = ss.getSheets();
+    const sheet  = sheets.find(s => s.getSheetId().toString() === gid);
+    if (!sheet) throw new Error('Aba não encontrada: ' + gid);
+
+    const data   = sheet.getDataRange().getValues();
+    // Converter para CSV simples
+    const csv = data.map(row =>
+      row.map(cell => {
+        const s = String(cell ?? '').replace(/"/g, '""');
+        return s.includes(',') || s.includes('"') || s.includes('\n') ? `"${s}"` : s;
+      }).join(',')
+    ).join('\n');
+
+    return ContentService.createTextOutput(JSON.stringify({ ok:true, csv }))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch(err) {
+    return ContentService.createTextOutput(JSON.stringify({ ok:false, error: err.message }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
 }
 
 function doPost(e) {
@@ -8772,15 +8802,8 @@ const COLABS_LABELS = {
   tipo_desligamento:'Tipo Deslig.', num_ticket:'Nº Ticket', idade:'Idade',
 };
 
-// ── Buscar e parsear CSV do Google Sheets ──────────────────────────────
-async function colabsFetch(tipo) {
-  const gid = tipo === 'ativos' ? COLABS_GID_ATIVOS : COLABS_GID_INATIVOS;
-  const url = `https://docs.google.com/spreadsheets/d/${COLABS_SHEET_ID}/gviz/tq?tqx=out:csv&gid=${gid}`;
-  const resp = await fetch(url);
-  if (!resp.ok) throw new Error(`Erro ao acessar planilha (HTTP ${resp.status})`);
-  const text = await resp.text();
-  // Parsear CSV respeitando campos entre aspas
-  const linhas = text.trim().split(/\r?\n/);
+// ── Parsear CSV em array de objetos ────────────────────────────────────
+function colabsParseCSV(text, tipo) {
   const parseRow = row => {
     const cols = []; let cur = ''; let inQ = false;
     for (let i = 0; i < row.length; i++) {
@@ -8792,18 +8815,48 @@ async function colabsFetch(tipo) {
     cols.push(cur.trim());
     return cols;
   };
-  // Pular cabeçalho (linha 0) — usar mapeamento fixo de colunas
-  const cols = tipo === 'ativos' ? COLABS_COLS_ATIVOS : COLABS_COLS_INATIVOS;
+  const linhas = text.trim().split(/\r?\n/);
+  const colsMap = tipo === 'ativos' ? COLABS_COLS_ATIVOS : COLABS_COLS_INATIVOS;
   const registros = [];
   for (let i = 1; i < linhas.length; i++) {
     const row = parseRow(linhas[i]);
-    if (row.every(c => !c)) continue; // linha vazia
-    const obj = { _row: i + 1 }; // _row = número da linha na planilha (base 1, +1 pelo cabeçalho)
-    cols.forEach((c, idx) => { obj[c] = (row[idx] || '').trim(); });
+    if (row.every(c => !c)) continue;
+    const obj = { _row: i + 1 };
+    colsMap.forEach((c, idx) => { obj[c] = (row[idx] || '').trim(); });
     if (!obj.matricula && !obj.nome) continue;
     registros.push(obj);
   }
   return registros;
+}
+
+// ── Buscar via Apps Script (proxy) ─────────────────────────────────────
+async function colabsFetchViaProxy(tipo) {
+  const url = colabsWebAppUrl();
+  if (!url) throw new Error('Apps Script não configurado. Vá em Configurações > Template Base.');
+  const resp = await fetch(url + '?action=ler&tipo=' + tipo);
+  if (!resp.ok) throw new Error(`Erro HTTP ${resp.status} no Apps Script`);
+  const json = await resp.json();
+  if (!json.ok) throw new Error(json.error || 'Erro no Apps Script');
+  // Apps Script retorna CSV como string
+  return colabsParseCSV(json.csv, tipo);
+}
+
+// ── Buscar e parsear — tenta gviz direto, cai no proxy se falhar ───────
+async function colabsFetch(tipo) {
+  const gid = tipo === 'ativos' ? COLABS_GID_ATIVOS : COLABS_GID_INATIVOS;
+  const url = `https://docs.google.com/spreadsheets/d/${COLABS_SHEET_ID}/gviz/tq?tqx=out:csv&gid=${gid}`;
+  try {
+    const resp = await fetch(url);
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const text = await resp.text();
+    // Se retornou HTML de login, planilha não é pública — usar proxy
+    if (text.trim().startsWith('<!') || text.trim().startsWith('<h')) throw new Error('Requer autenticação');
+    return colabsParseCSV(text, tipo);
+  } catch(e) {
+    // Fallback: buscar via Apps Script como proxy de leitura
+    console.warn('gviz falhou (' + e.message + ') — tentando via Apps Script...');
+    return await colabsFetchViaProxy(tipo);
+  }
 }
 
 // ── Carregar e renderizar ──────────────────────────────────────────────
