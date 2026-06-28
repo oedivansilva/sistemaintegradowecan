@@ -2248,33 +2248,38 @@ function doPost(e) {
         <button class="btn btn-ghost btn-sm" onclick="COLABS_LOADED=false;colabsCarregar('ativos')">🔄 Atualizar</button>
       </div>
     </div>
-    <!-- Toolbar filtros -->
-    <div class="vt-filter-bar" style="margin-bottom:14px">
-      <div class="vt-filter-group">
-        <span class="vt-filter-ico">🔍</span>
-        <input type="text" id="colabs-ativos-busca" class="vt-filter-input" placeholder="Nome, matrícula, CPF…" oninput="colabsFiltrar('ativos')"/>
+    <div class="vagas-toolbar">
+      <div class="vt-search-row">
+        <div class="vt-search-wrap">
+          <span class="vt-search-ico">🔍</span>
+          <input type="text" id="colabs-ativos-busca" class="vt-search" placeholder="Buscar por nome, matrícula, CPF…" oninput="colabsFiltrar('ativos')"/>
+          <button class="vt-clear" onclick="document.getElementById('colabs-ativos-busca').value='';colabsFiltrar('ativos')" title="Limpar">✕</button>
+        </div>
       </div>
-      <div class="vt-filter-group">
-        <span class="vt-filter-ico">🏢</span>
-        <select id="colabs-ativos-filtro-cc" class="vt-filter-select" onchange="colabsFiltrar('ativos')">
-          <option value="">Todos os C.Custo</option>
-        </select>
+      <div class="vt-filters-row">
+        <span class="vt-filter-label">Filtrar:</span>
+        <div class="vt-filter-group">
+          <span class="vt-filter-ico">🏢</span>
+          <select id="colabs-ativos-filtro-cc" onchange="colabsFiltrar('ativos')">
+            <option value="">Todos os C.Custo</option>
+          </select>
+        </div>
+        <div class="vt-filter-group">
+          <span class="vt-filter-ico">💼</span>
+          <select id="colabs-ativos-filtro-cargo" onchange="colabsFiltrar('ativos')">
+            <option value="">Todos os cargos</option>
+          </select>
+        </div>
+        <div class="vt-filter-group">
+          <span class="vt-filter-ico">📝</span>
+          <select id="colabs-ativos-filtro-contrato" onchange="colabsFiltrar('ativos')">
+            <option value="">Todos os contratos</option>
+          </select>
+        </div>
+        <button class="vt-clear-all" onclick="colabsLimparFiltros('ativos')">✕ Limpar filtros</button>
       </div>
-      <div class="vt-filter-group">
-        <span class="vt-filter-ico">📋</span>
-        <select id="colabs-ativos-filtro-cargo" class="vt-filter-select" onchange="colabsFiltrar('ativos')">
-          <option value="">Todos os cargos</option>
-        </select>
-      </div>
-      <div class="vt-filter-group">
-        <span class="vt-filter-ico">📝</span>
-        <select id="colabs-ativos-filtro-contrato" class="vt-filter-select" onchange="colabsFiltrar('ativos')">
-          <option value="">Todos os contratos</option>
-        </select>
-      </div>
-      <button class="btn btn-ghost btn-sm" onclick="colabsLimparFiltros('ativos')">✕ Limpar</button>
     </div>
-    <div id="colabs-ativos-count" style="font-size:11px;color:var(--muted);margin-bottom:8px"></div>
+    <p class="text-muted" id="colabs-ativos-count" style="margin-bottom:8px;font-size:11px"></p>
     <div id="colabs-ativos-area"><div class="tkt-loading">Carregando…</div></div>
   </div>
 
@@ -2290,32 +2295,38 @@ function doPost(e) {
         <button class="btn btn-ghost btn-sm" onclick="COLABS_LOADED=false;colabsCarregar('inativos')">🔄 Atualizar</button>
       </div>
     </div>
-    <div class="vt-filter-bar" style="margin-bottom:14px">
-      <div class="vt-filter-group">
-        <span class="vt-filter-ico">🔍</span>
-        <input type="text" id="colabs-inativos-busca" class="vt-filter-input" placeholder="Nome, matrícula, CPF…" oninput="colabsFiltrar('inativos')"/>
+    <div class="vagas-toolbar">
+      <div class="vt-search-row">
+        <div class="vt-search-wrap">
+          <span class="vt-search-ico">🔍</span>
+          <input type="text" id="colabs-inativos-busca" class="vt-search" placeholder="Buscar por nome, matrícula, CPF…" oninput="colabsFiltrar('inativos')"/>
+          <button class="vt-clear" onclick="document.getElementById('colabs-inativos-busca').value='';colabsFiltrar('inativos')" title="Limpar">✕</button>
+        </div>
       </div>
-      <div class="vt-filter-group">
-        <span class="vt-filter-ico">🏢</span>
-        <select id="colabs-inativos-filtro-cc" class="vt-filter-select" onchange="colabsFiltrar('inativos')">
-          <option value="">Todos os C.Custo</option>
-        </select>
+      <div class="vt-filters-row">
+        <span class="vt-filter-label">Filtrar:</span>
+        <div class="vt-filter-group">
+          <span class="vt-filter-ico">🏢</span>
+          <select id="colabs-inativos-filtro-cc" onchange="colabsFiltrar('inativos')">
+            <option value="">Todos os C.Custo</option>
+          </select>
+        </div>
+        <div class="vt-filter-group">
+          <span class="vt-filter-ico">💼</span>
+          <select id="colabs-inativos-filtro-cargo" onchange="colabsFiltrar('inativos')">
+            <option value="">Todos os cargos</option>
+          </select>
+        </div>
+        <div class="vt-filter-group">
+          <span class="vt-filter-ico">🔴</span>
+          <select id="colabs-inativos-filtro-motivo" onchange="colabsFiltrar('inativos')">
+            <option value="">Todos os motivos</option>
+          </select>
+        </div>
+        <button class="vt-clear-all" onclick="colabsLimparFiltros('inativos')">✕ Limpar filtros</button>
       </div>
-      <div class="vt-filter-group">
-        <span class="vt-filter-ico">📋</span>
-        <select id="colabs-inativos-filtro-cargo" class="vt-filter-select" onchange="colabsFiltrar('inativos')">
-          <option value="">Todos os cargos</option>
-        </select>
-      </div>
-      <div class="vt-filter-group">
-        <span class="vt-filter-ico">🔴</span>
-        <select id="colabs-inativos-filtro-motivo" class="vt-filter-select" onchange="colabsFiltrar('inativos')">
-          <option value="">Todos os motivos</option>
-        </select>
-      </div>
-      <button class="btn btn-ghost btn-sm" onclick="colabsLimparFiltros('inativos')">✕ Limpar</button>
     </div>
-    <div id="colabs-inativos-count" style="font-size:11px;color:var(--muted);margin-bottom:8px"></div>
+    <p class="text-muted" id="colabs-inativos-count" style="margin-bottom:8px;font-size:11px"></p>
     <div id="colabs-inativos-area"><div class="tkt-loading">Carregando…</div></div>
   </div>
 
