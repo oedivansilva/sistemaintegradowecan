@@ -3977,14 +3977,7 @@ async function initApp() {
   await configCarregarGlobal();
   // Carregar Template automaticamente em segundo plano para Onsite/Folha
   if (temPermissao('adp_colabs_ver') && !COLABS_LOADED) {
-    setTimeout(async () => {
-      await colabsCarregar('ativos');
-      await colabsCarregar('inativos');
-      // Atualizar home se o Onsite estiver nela
-      if (document.getElementById('page-home')?.classList.contains('active')) {
-        renderHome();
-      }
-    }, 1500);
+    setTimeout(colabsCarregarBackground, 2500);
   }
   // Iniciar verificação de notificações após login
   setTimeout(solIniciarPolling, 3000);
@@ -8994,6 +8987,25 @@ async function colabsFetch(tipo) {
     // Fallback: buscar via Apps Script como proxy de leitura
     console.warn('gviz falhou (' + e.message + ') — tentando via Apps Script...');
     return await colabsFetchViaProxy(tipo);
+  }
+}
+
+// ── Carregar em background (sem renderizar, só popular variáveis) ────────
+async function colabsCarregarBackground() {
+  if (COLABS_LOADED || COLABS_LOADING) return;
+  COLABS_LOADING = true;
+  try {
+    COLABS_ATIVOS   = await colabsFetch('ativos');
+    COLABS_INATIVOS = await colabsFetch('inativos');
+    COLABS_LOADED   = true;
+    // Atualizar home se estiver nela
+    if (document.getElementById('page-home')?.classList.contains('active')) {
+      renderHome();
+    }
+  } catch(e) {
+    console.warn('Autoload Template falhou:', e.message);
+  } finally {
+    COLABS_LOADING = false;
   }
 }
 
