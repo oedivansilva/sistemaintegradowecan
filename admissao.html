@@ -3973,6 +3973,8 @@ async function initApp() {
   if (!s) { window.location.href = 'index.html'; return; }
   session = s;
   await iniciarSessao(s);
+  // Carregar configurações globais do banco (URL do Apps Script etc.)
+  await configCarregarGlobal();
   // Iniciar verificação de notificações após login
   setTimeout(solIniciarPolling, 3000);
   // Exibir modal de boas-vindas com pendências
@@ -9355,9 +9357,11 @@ async function colabsSalvar() {
 function salvarColabsWebAppUrl() {
   const url = document.getElementById('cfg-colabs-webapp-url')?.value.trim() || '';
   try { localStorage.setItem('wecan_colabs_webapp_url', url); } catch(e) {}
+  // Salvar também no banco para todos os usuários
+  if (url) configSalvarGlobal('colabs_webapp_url', url);
   const st = document.getElementById('cfg-colabs-status');
-  if (st) { st.textContent = url ? '✅ URL salva!' : '⚠️ URL removida'; st.style.color = url ? 'var(--success)' : 'var(--warning)'; }
-  toast('URL do Apps Script salva!', 'success');
+  if (st) { st.textContent = url ? '✅ URL salva para todos!' : '⚠️ URL removida'; st.style.color = url ? 'var(--success)' : 'var(--warning)'; }
+  toast('URL salva — todos os usuários vão usar automaticamente!', 'success');
 }
 
 async function testarColabsWebApp() {
@@ -9561,6 +9565,34 @@ solResumoCarregar = async function() {
 };
 
 // ════════════════ FIM SOLICITAÇÕES ════════════════
+
+// ════════════════ CONFIGURAÇÕES GLOBAIS ════════════════
+async function configCarregarGlobal() {
+  try {
+    const resp = await fetch(`${SUPABASE_URL}/rest/v1/rpc/wc_get_config`, {
+      method: 'POST',
+      headers: { 'Content-Type':'application/json', 'apikey':SUPABASE_ANON, 'Authorization':`Bearer ${SUPABASE_ANON}` },
+      body: JSON.stringify({ p_chave: 'colabs_webapp_url' })
+    });
+    const url = await resp.json();
+    if (url) {
+      // Salvar no localStorage para uso imediato
+      try { localStorage.setItem('wecan_colabs_webapp_url', url); } catch(e) {}
+    }
+  } catch(e) {}
+}
+
+// Salvar configuração global no banco (chamado ao salvar URL nas configurações)
+async function configSalvarGlobal(chave, valor) {
+  try {
+    await fetch(`${SUPABASE_URL}/rest/v1/rpc/wc_set_config`, {
+      method: 'POST',
+      headers: { 'Content-Type':'application/json', 'apikey':SUPABASE_ANON, 'Authorization':`Bearer ${SUPABASE_ANON}` },
+      body: JSON.stringify({ p_token: session?.token||'', p_chave: chave, p_valor: valor })
+    });
+  } catch(e) {}
+}
+// ════════════════ FIM CONFIGURAÇÕES GLOBAIS ════════════════
 
 // ════════════════ SINO DE NOTIFICAÇÕES ════════════════
 let _notifLista = [];
