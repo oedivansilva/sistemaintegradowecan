@@ -962,7 +962,6 @@
           <div class="ops-chips" id="home-ops-chips"></div>
         </div>
         <div style="display:flex;align-items:center;gap:10px">
-          <span class="home-time" id="home-hora">—</span>
           <div class="notif-wrap" id="notif-wrap">
             <div class="notif-sino" id="notif-sino" onclick="notifToggle()" title="Notificações">
               🔔
@@ -970,14 +969,14 @@
             </div>
             <div class="notif-dropdown" id="notif-dropdown">
               <div class="notif-drop-head">
-                <span>🔔 Notificações</span>
-                <button onclick="notifMarcarLidas()" style="background:none;border:none;color:var(--accent);font-size:11px;cursor:pointer">Marcar como lidas</button>
+                <button onclick="notifMarcarLidas()" style="background:none;border:none;color:var(--accent);font-size:11px;cursor:pointer;margin-left:auto">✓ Marcar como lidas</button>
               </div>
               <div class="notif-drop-body" id="notif-drop-body">
                 <div class="notif-empty">Nenhuma notificação</div>
               </div>
             </div>
           </div>
+          <span class="home-time" id="home-hora">—</span>
         </div>
       </div>
       <div id="home-painel-conteudo">
@@ -2030,6 +2029,26 @@ function doPost(e) { return doGet(e); }</pre>
       </div>
     </div>
   </div>
+
+<!-- MODAL BOAS-VINDAS -->
+<div id="modal-boasvindas" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:500;align-items:center;justify-content:center">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:18px;width:480px;max-width:95vw;max-height:85vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.5)">
+    <div style="padding:20px 24px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+      <div>
+        <div style="font-size:16px;font-weight:800" id="bv-titulo">👋 Bem-vindo!</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:3px" id="bv-sub">Aqui estão suas pendências de hoje</div>
+      </div>
+      <button onclick="fecharBoasVindas()" style="background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer;line-height:1">✕</button>
+    </div>
+    <div style="overflow-y:auto;flex:1;padding:16px 24px" id="bv-body">
+      <div style="text-align:center;padding:32px;color:var(--muted)">⏳ Carregando…</div>
+    </div>
+    <div style="padding:14px 24px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px">
+      <button onclick="fecharBoasVindas()" style="background:var(--surface2);border:1px solid var(--border);color:var(--muted);border-radius:10px;padding:8px 20px;font-size:13px;cursor:pointer">Fechar</button>
+      <button onclick="fecharBoasVindas();navTo('sol-resumo')" style="background:var(--accent);color:#0f0718;border:none;border-radius:10px;padding:8px 20px;font-size:13px;font-weight:700;cursor:pointer">Ver Solicitações →</button>
+    </div>
+  </div>
+</div>
 
 <!-- MODAL COLABORADOR INTEGRAÇÃO -->
 <div class="modal-backdrop" id="integ-modal-colab" onclick="if(event.target===this)fecharModal('integ-modal-colab')">
@@ -3960,6 +3979,8 @@ async function initApp() {
   await iniciarSessao(s);
   // Iniciar verificação de notificações após login
   setTimeout(solIniciarPolling, 3000);
+  // Exibir modal de boas-vindas com pendências
+  if (temPermissao('adp_sol_ver')) setTimeout(exibirBoasVindas, 2000);
 }
 
 async function logout() {
@@ -9660,6 +9681,83 @@ async function notifVerificar() {
 function solIniciarPolling() {
   notifVerificar();
   setInterval(notifVerificar, 2 * 60 * 1000);
+}
+// ── Modal de boas-vindas ──────────────────────────────────────
+async function exibirBoasVindas() {
+  if (!temPermissao('adp_sol_ver')) return;
+  const modal = document.getElementById('modal-boasvindas');
+  if (!modal) return;
+
+  // Título personalizado
+  const nome1 = session?.nome?.split(' ')?.[0] || '';
+  document.getElementById('bv-titulo').textContent = `👋 Olá, ${nome1}!`;
+  modal.style.display = 'flex';
+
+  const body = document.getElementById('bv-body');
+  try {
+    const bodyReq = { p_token: session.token };
+    if (session.perfil === 'onsite') {
+      bodyReq.p_onsite_nome = session.nome;
+    }
+    const resp = await fetch(`${SUPABASE_URL}/rest/v1/rpc/wc_listar_solicitacoes`, {
+      method:'POST',
+      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON,'Authorization':`Bearer ${SUPABASE_ANON}`},
+      body: JSON.stringify(bodyReq)
+    });
+    const data = await resp.json();
+    const lista = data.solicitacoes || [];
+
+    const pendentes  = lista.filter(s => s.status === 'pendente');
+    const devolvidas = lista.filter(s => s.status === 'devolvida');
+    const andamento  = lista.filter(s => s.status === 'em_andamento');
+
+    const TIPO_ICO = { AC:'🪪', TB:'🔄', TH:'🕐', RB:'💰', TLT:'📍' };
+
+    const secao = (titulo, cor, ico, items) => !items.length ? '' : `
+      <div style="margin-bottom:16px">
+        <div style="font-size:10px;font-weight:800;color:${cor};text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px">
+          ${ico} ${titulo} (${items.length})
+        </div>
+        ${items.slice(0,5).map(s=>`
+          <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;
+            padding:8px 12px;margin-bottom:6px;cursor:pointer;border-left:3px solid ${cor}"
+            onclick="fecharBoasVindas();navTo('sol-resumo')">
+            <div style="font-size:12.5px;font-weight:700">${s.nome||'—'}</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px">
+              ${TIPO_ICO[s.tipo]||''} ${s.tipo_label||s.tipo||'—'}
+              ${s.motivo_devolucao?`· <span style="color:${cor}">${s.motivo_devolucao.slice(0,50)}</span>`:''}
+            </div>
+          </div>`).join('')}
+        ${items.length>5?`<div style="font-size:11px;color:var(--muted);text-align:center">+${items.length-5} mais</div>`:''}
+      </div>`;
+
+    const ehOnsite = session?.perfil === 'onsite';
+
+    const html = devolvidas.length || pendentes.length || andamento.length
+      ? `${secao('Devolvidas para correção','#a855f7','↩️', devolvidas)}
+         ${ehOnsite ? '' : secao('Pendentes','var(--warning)','🕐', pendentes)}
+         ${ehOnsite ? '' : secao('Em Andamento','#4f7cff','⚙️', andamento)}`
+      : `<div style="text-align:center;padding:32px;color:var(--muted)">
+          <div style="font-size:32px;margin-bottom:8px">✅</div>
+          <div style="font-size:13px">Tudo em dia! Nenhuma pendência.</div>
+        </div>`;
+
+    body.innerHTML = html;
+
+    // Atualizar sub-título
+    const total = devolvidas.length + (ehOnsite ? 0 : pendentes.length);
+    document.getElementById('bv-sub').textContent = total > 0
+      ? `Você tem ${total} pendência(s) aguardando atenção`
+      : 'Nenhuma pendência no momento';
+
+  } catch(e) {
+    body.innerHTML = `<div style="text-align:center;padding:24px;color:var(--muted)">Não foi possível carregar as pendências</div>`;
+  }
+}
+
+function fecharBoasVindas() {
+  const modal = document.getElementById('modal-boasvindas');
+  if (modal) modal.style.display = 'none';
 }
 // ════════════════ FIM SINO ════════════════
 
