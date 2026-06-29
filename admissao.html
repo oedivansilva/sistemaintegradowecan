@@ -3982,7 +3982,7 @@ async function initApp() {
       await colabsCarregar('inativos');
       // Atualizar home se o Onsite estiver nela
       if (document.getElementById('page-home')?.classList.contains('active')) {
-        renderHomePanel();
+        renderHome();
       }
     }, 1500);
   }
@@ -9017,7 +9017,7 @@ async function colabsCarregar(tipo) {
     colabsFiltrar(tipo);
     // Se onsite está na home, atualizar os cards do Template
     if (session?.perfil === 'onsite' && document.getElementById('page-home')?.classList.contains('active')) {
-      renderHomePanel();
+      renderHome();
     }
     const agora = new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
     if (syncEl) syncEl.textContent = `Atualizado às ${agora} · ${dados.length} registros`;
