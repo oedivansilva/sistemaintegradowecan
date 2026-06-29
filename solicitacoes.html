@@ -125,6 +125,7 @@
   .badge-th{background:rgba(79,124,255,.14);color:#4f7cff;}
   .badge-rb{background:rgba(239,68,68,.14);color:var(--danger);}
   .badge-tlt{background:rgba(168,85,247,.14);color:#a855f7;}
+  .badge-corrigida{background:rgba(79,124,255,.14);color:#4f7cff;}
 
   /* Modal detalhe */
   .modal-back{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;
@@ -992,7 +993,10 @@ function painelRenderLista(tipo, lista) {
   const badgeLabel = {pendente:'Pendente',andamento:'Em Andamento',devolvida:'Devolvida',concluido:'Concluído'};
   el.innerHTML = lista.map(r => {
     const dt = r.created_at ? new Date(r.created_at).toLocaleDateString('pt-BR') : '—';
-    const badge = `<span class="badge badge-${tipo}">${badgeLabel[tipo]||tipo}</span>`;
+    const foiCorrigida = tipo === 'pendente' && (r.historico||[]).some(h => h.acao === 'Reenviada pelo Onsite');
+    const badge = foiCorrigida
+      ? `<span class="badge badge-corrigida">🔁 Corrigida</span>`
+      : `<span class="badge badge-${tipo}">${badgeLabel[tipo]||tipo}</span>`;
     const motDevol = tipo==='devolvida' && r.motivo_devolucao ? `<span title="${r.motivo_devolucao}">↩️ ${r.motivo_devolucao.slice(0,40)}${r.motivo_devolucao.length>40?'…':''}</span>` : '';
     const tipoBadge = `<span class="badge ${TIPO_BADGE[r.tipo]||''}">${TIPO_ICO[r.tipo]||''} ${r.tipo_label||r.tipo||'—'}</span>`;
     const responsavel = podeGerir() && r.onsite ? `<span>📤 ${r.onsite}</span>` : '';
