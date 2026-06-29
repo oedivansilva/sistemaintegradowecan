@@ -915,7 +915,13 @@
         <a onclick="abrirGaveta('tickets', event)" class="sb-has-sub" title="Tickets Shopee"><span class="sb-ico">🎫</span><span class="sb-txt">Tickets Shopee</span><span class="sb-arr sb-txt">›</span></a>
       </div>
       <div id="navgroup-adp-sol" style="display:none">
-        <a onclick="navTo('sol-resumo')" title="Central de Solicitações"><span class="sb-ico">📨</span><span class="sb-txt">Solicitações</span></a>
+        <a onclick="navTo('sol-resumo')" title="Central de Solicitações" style="position:relative">
+          <span class="sb-ico">📨</span>
+          <span class="sb-txt">Solicitações</span>
+          <span id="sol-badge-notif" style="display:none;position:absolute;top:6px;right:8px;
+            background:#ef4444;color:#fff;font-size:9px;font-weight:800;
+            border-radius:20px;padding:1px 6px;min-width:16px;text-align:center;line-height:14px">0</span>
+        </a>
       </div>
     </div>
 
@@ -955,7 +961,24 @@
           <p id="home-subtitulo">Carregando…</p>
           <div class="ops-chips" id="home-ops-chips"></div>
         </div>
-        <span class="home-time" id="home-hora">—</span>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span class="home-time" id="home-hora">—</span>
+          <div class="notif-wrap" id="notif-wrap">
+            <div class="notif-sino" id="notif-sino" onclick="notifToggle()" title="Notificações">
+              🔔
+              <span class="notif-count" id="notif-count">0</span>
+            </div>
+            <div class="notif-dropdown" id="notif-dropdown">
+              <div class="notif-drop-head">
+                <span>🔔 Notificações</span>
+                <button onclick="notifMarcarLidas()" style="background:none;border:none;color:var(--accent);font-size:11px;cursor:pointer">Marcar como lidas</button>
+              </div>
+              <div class="notif-drop-body" id="notif-drop-body">
+                <div class="notif-empty">Nenhuma notificação</div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
       <div id="home-painel-conteudo">
         <div style="color:var(--muted);padding:40px;text-align:center">⏳ Carregando painel…</div>
@@ -3935,6 +3958,8 @@ async function initApp() {
   if (!s) { window.location.href = 'index.html'; return; }
   session = s;
   await iniciarSessao(s);
+  // Iniciar verificação de notificações após login
+  setTimeout(solIniciarPolling, 3000);
 }
 
 async function logout() {
@@ -9418,10 +9443,29 @@ async function solResumoCarregar() {
         ${items.length>10?`<p style="font-size:11px;color:var(--muted);margin-top:6px">Mostrando 10 de ${items.length} — <a href="#" onclick="solAbrirPainel()" style="color:var(--accent)">ver todas no painel</a></p>`:''}
       </div>`;
 
+    const devolvidas = lista.filter(s => s.status === 'devolvida');
+    const bannerDevol = devolvidas.length > 0 && (session?.perfil === 'onsite' || session?.perfil === 'folha')
+      ? `<div style="background:rgba(168,85,247,.1);border:1px solid rgba(168,85,247,.4);border-radius:10px;
+           padding:12px 18px;margin-bottom:16px;display:flex;align-items:center;gap:12px;cursor:pointer"
+           onclick="solAbrirPainel()">
+          <span style="font-size:22px">↩️</span>
+          <div>
+            <div style="font-weight:700;color:#a855f7">
+              ${devolvidas.length} solicitação(ões) devolvida(s) para correção
+            </div>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px">
+              Clique para abrir o painel e corrigir
+            </div>
+          </div>
+          <span style="margin-left:auto;color:#a855f7;font-size:18px">›</span>
+        </div>` : '';
+
     area.innerHTML = `
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:24px">
+      ${bannerDevol}
+      <div style="display:grid;grid-template-columns:repeat(${devolvidas.length>0?4:3},1fr);gap:12px;margin-bottom:24px">
         ${homePainelCard('🕐','Pendentes',pendentes.length,'Aguardando atendimento','#f59e0b','sol-resumo')}
         ${homePainelCard('⚙️','Em Andamento',andamento.length,'Em atendimento','#4f7cff','sol-resumo')}
+        ${devolvidas.length>0?homePainelCard('↩️','Devolvidas',devolvidas.length,'Aguardando correção','#a855f7','sol-resumo'):''}
         ${homePainelCard('✅','Concluídas',concluidas.length,'Resolvidas','#22c55e','sol-resumo')}
       </div>
       ${tabela('🕐 Pendentes','var(--warning)',pendentes)}
@@ -9444,7 +9488,180 @@ function solIniciar() {
   solAbrirForm(_colabAtual);
   fecharModal('modal-colab');
 }
+// ── Verificar notificações de solicitações devolvidas ────────
+let _solNotifTimer = null;
+
+async function solVerificarNotificacoes() {
+  if (!session?.token) return;
+  if (!temPermissao('adp_sol_ver')) return;
+  try {
+    const body = { p_token: session.token };
+    // Onsite só vê as suas; outros veem tudo
+    if (session.perfil === 'onsite' || session.perfil === 'folha') {
+      body.p_onsite_nome = session.nome;
+      body.p_status = 'devolvida';
+    } else {
+      body.p_status = 'pendente'; // Analistas veem pendentes como alerta
+    }
+    const resp = await fetch(`${SUPABASE_URL}/rest/v1/rpc/wc_listar_solicitacoes`, {
+      method:'POST',
+      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON,'Authorization':`Bearer ${SUPABASE_ANON}`},
+      body: JSON.stringify(body)
+    });
+    const data = await resp.json();
+    if (data?.ok === false) return;
+    const lista = data.solicitacoes || [];
+    solAtualizarBadge(lista.length);
+  } catch(e) {}
+}
+
+function solAtualizarBadge(count) {
+  const badge = document.getElementById('sol-badge-notif');
+  if (!badge) return;
+  if (count > 0) {
+    badge.textContent = count > 99 ? '99+' : count;
+    badge.style.display = 'inline-block';
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+function solIniciarPolling() {
+  // Verificar imediatamente e depois a cada 2 minutos
+  solVerificarNotificacoes();
+  _solNotifTimer = setInterval(solVerificarNotificacoes, 2 * 60 * 1000);
+}
+
+function solPararPolling() {
+  if (_solNotifTimer) { clearInterval(_solNotifTimer); _solNotifTimer = null; }
+}
+
+// Zerar badge ao abrir a tela de solicitações
+const _solResumoCarregarOrig = solResumoCarregar;
+solResumoCarregar = async function() {
+  solAtualizarBadge(0); // limpar badge ao abrir
+  return _solResumoCarregarOrig();
+};
+
 // ════════════════ FIM SOLICITAÇÕES ════════════════
+
+// ════════════════ SINO DE NOTIFICAÇÕES ════════════════
+let _notifLista = [];
+let _notifLidas = new Set(JSON.parse(localStorage.getItem('wecan_notif_lidas')||'[]'));
+
+function notifToggle() {
+  const dd = document.getElementById('notif-dropdown');
+  if (!dd) return;
+  dd.classList.toggle('open');
+  if (dd.classList.contains('open')) notifRenderDropdown();
+  // Fechar ao clicar fora
+  if (dd.classList.contains('open')) {
+    setTimeout(() => document.addEventListener('click', notifFecharFora, {once:true}), 10);
+  }
+}
+
+function notifFecharFora(e) {
+  const wrap = document.getElementById('notif-wrap');
+  if (wrap && !wrap.contains(e.target)) {
+    document.getElementById('notif-dropdown')?.classList.remove('open');
+  }
+}
+
+function notifRenderDropdown() {
+  const body = document.getElementById('notif-drop-body');
+  if (!body) return;
+  if (!_notifLista.length) {
+    body.innerHTML = '<div class="notif-empty">✅ Tudo em dia!</div>';
+    return;
+  }
+  body.innerHTML = _notifLista.map(n => `
+    <div class="notif-item" onclick="notifClicar('${n.id}','${n.pagina||'sol-resumo'}')"
+      style="${_notifLidas.has(n.id)?'opacity:.6':''}">
+      <div class="notif-item-title">${n.ico} ${n.titulo}</div>
+      <div class="notif-item-sub">${n.sub}</div>
+    </div>`).join('');
+}
+
+function notifClicar(id, pagina) {
+  _notifLidas.add(id);
+  try { localStorage.setItem('wecan_notif_lidas', JSON.stringify([..._notifLidas])); } catch(e) {}
+  document.getElementById('notif-dropdown')?.classList.remove('open');
+  notifAtualizarBadge();
+  navTo(pagina);
+}
+
+function notifMarcarLidas() {
+  _notifLista.forEach(n => _notifLidas.add(n.id));
+  try { localStorage.setItem('wecan_notif_lidas', JSON.stringify([..._notifLidas])); } catch(e) {}
+  notifAtualizarBadge();
+  notifRenderDropdown();
+}
+
+function notifAtualizarBadge() {
+  const naoLidas = _notifLista.filter(n => !_notifLidas.has(n.id)).length;
+  const countEl  = document.getElementById('notif-count');
+  const badgeSol = document.getElementById('sol-badge-notif');
+  if (countEl) {
+    countEl.textContent = naoLidas > 99 ? '99+' : naoLidas;
+    countEl.style.display = naoLidas > 0 ? 'inline-block' : 'none';
+  }
+  // Sincronizar com badge da sidebar
+  if (badgeSol) {
+    const devol = _notifLista.filter(n => n.tipo === 'devolvida' && !_notifLidas.has(n.id)).length;
+    badgeSol.textContent = devol;
+    badgeSol.style.display = devol > 0 ? 'inline-block' : 'none';
+  }
+}
+
+async function notifVerificar() {
+  if (!session?.token || !temPermissao('adp_sol_ver')) return;
+  try {
+    const body = { p_token: session.token };
+    if (session.perfil === 'onsite') {
+      body.p_onsite_nome = session.nome;
+      body.p_status = 'devolvida';
+    } else {
+      body.p_status = 'pendente';
+    }
+    const resp = await fetch(`${SUPABASE_URL}/rest/v1/rpc/wc_listar_solicitacoes`, {
+      method:'POST',
+      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON,'Authorization':`Bearer ${SUPABASE_ANON}`},
+      body: JSON.stringify(body)
+    });
+    const data = await resp.json();
+    if (data?.ok === false) return;
+    const lista = data.solicitacoes || [];
+
+    // Montar lista de notificações
+    if (session.perfil === 'onsite') {
+      _notifLista = lista.map(s => ({
+        id:     `devol-${s.id}`,
+        tipo:   'devolvida',
+        ico:    '↩️',
+        titulo: `Solicitação devolvida — ${s.tipo_label}`,
+        sub:    `${s.nome} · ${s.motivo_devolucao?.slice(0,50)||'Veja os detalhes'}`,
+        pagina: 'sol-resumo',
+      }));
+    } else {
+      _notifLista = lista.map(s => ({
+        id:     `pend-${s.id}`,
+        tipo:   'pendente',
+        ico:    '🕐',
+        titulo: `Nova solicitação — ${s.tipo_label}`,
+        sub:    `${s.nome} · ${s.onsite||''}`,
+        pagina: 'sol-resumo',
+      }));
+    }
+    notifAtualizarBadge();
+  } catch(e) {}
+}
+
+// Substituir polling antigo pelo novo
+function solIniciarPolling() {
+  notifVerificar();
+  setInterval(notifVerificar, 2 * 60 * 1000);
+}
+// ════════════════ FIM SINO ════════════════
 
 // ════════════════ INTEGRAÇÃO RESCISÃO ════════════════
 function rescAbrirPainel() {
