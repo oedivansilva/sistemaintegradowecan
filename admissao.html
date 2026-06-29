@@ -9061,7 +9061,7 @@ function colabsRenderLinha(r, cols, tipo, podEditar) {
   const editBtn = podEditar
     ? `<td style="text-align:center"><button class="btn btn-ghost btn-sm" style="padding:2px 6px;font-size:10px;opacity:.7" onclick='event.stopPropagation();colabsAbrirModal(JSON.parse(this.dataset.r),"${tipo}")' data-r="${rJson}">✏️</button></td>`
     : `<td></td>`;
-  return `<tr onclick='colabsAbrirModal(JSON.parse(this.querySelector("[data-r]").dataset.r),"${tipo}")' style="cursor:pointer">${cells}${editBtn}</tr>`;
+  return `<tr onclick='colabsAbrirModal(JSON.parse(this.dataset.r),"${tipo}")' data-r="${rJson}" style="cursor:pointer">${cells}${editBtn}</tr>`;
 }
 
 // ── Controles de paginação ─────────────────────────────────────────────
