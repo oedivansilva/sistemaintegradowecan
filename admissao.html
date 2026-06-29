@@ -914,7 +914,9 @@
       <div id="navgroup-adp-tickets" style="display:none">
         <a onclick="abrirGaveta('tickets', event)" class="sb-has-sub" title="Tickets Shopee"><span class="sb-ico">🎫</span><span class="sb-txt">Tickets Shopee</span><span class="sb-arr sb-txt">›</span></a>
       </div>
-      <a style="opacity:.4;cursor:default"><span class="sb-ico">📨</span><span class="sb-txt">Solicitações <small>(em breve)</small></span></a>
+      <div id="navgroup-adp-sol" style="display:none">
+        <a onclick="navegarPara('sol-resumo')" title="Central de Solicitações"><span class="sb-ico">📨</span><span class="sb-txt">Solicitações</span></a>
+      </div>
     </div>
 
   </nav>
@@ -2341,6 +2343,22 @@ function doPost(e) { return doGet(e); }</pre>
     <div id="colabs-inativos-area"><div class="tkt-loading">Carregando…</div></div>
   </div>
 
+
+  <!-- ══ RESUMO SOLICITAÇÕES ══ -->
+  <div class="page" id="page-sol-resumo">
+    <div class="page-header">
+      <div>
+        <h1>📨 Solicitações</h1>
+        <p>Resumo das solicitações do Onsite para o RH/Folha</p>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-ghost btn-sm" onclick="solResumoCarregar()">🔄 Atualizar</button>
+        <button class="btn btn-primary btn-sm" onclick="solAbrirPainel()">↗️ Abrir Painel Completo</button>
+      </div>
+    </div>
+    <div id="sol-resumo-area"><div class="tkt-loading">Carregando…</div></div>
+  </div>
+
 </div><!-- /main -->
 
 
@@ -3607,6 +3625,10 @@ const PERMISSOES_GRUPOS = [
     { id:'adp_colabs_editar',nome:'Editar Colaboradores',descricao:'Pode editar dados diretamente na planilha via sistema' },
     { id:'adp_rescisao',     nome:'Iniciar Desligamento',descricao:'Pode abrir solicitação de rescisão a partir do Template' },
   ]},
+  { grupo: 'Solicitações', itens: [
+    { id:'adp_sol_ver',    nome:'Ver Solicitações',    descricao:'Consulta solicitações do Onsite' },
+    { id:'adp_sol_gerir',  nome:'Gerir Solicitações',  descricao:'Atende e conclui solicitações (Analista/Gestor)' },
+  ]},
   { grupo: 'Suporte', itens: [
     { id:'sup_configuracoes',   nome:'Configurações',      descricao:'Tema, foto de perfil e preferências' },
     { id:'sup_gestao_usuarios', nome:'Gestão de Usuários', descricao:'Criar e gerenciar acessos' },
@@ -3830,12 +3852,14 @@ async function iniciarSessao(conta) {
   const _algumTicket = ['adp_tickets_deslig','adp_tickets_movim','adp_tickets_voucher'].some(i=>temPermissao(i));
   const _algumColabs  = temPermissao('adp_colabs_ver');
   const _algumRescisao = temPermissao('adp_rescisao');
-  const _algumADP = _algumVoucher || _algumBen || _algumTicket || _algumColabs || _algumRescisao;
+  const _algumSol      = temPermissao('adp_sol_ver');
+  const _algumADP = _algumVoucher || _algumBen || _algumTicket || _algumColabs || _algumRescisao || _algumSol;
   // Folha sempre vê o grupo ADP
   if (session?.perfil === 'folha') showBlock('navgroup-admpessoal', true);
   showBlock('navgroup-admpessoal', _algumADP);
   showBlock('navgroup-adp-colabs', _algumColabs);
   showBlock('navgroup-adp-rescisao', _algumRescisao);
+  showBlock('navgroup-adp-sol', _algumSol);
 
   // Voucher Uber sub
   showBlock('navgroup-voucher-uber', _algumVoucher);
@@ -3946,6 +3970,7 @@ function navTo(id) {
   if (id==='tickets-deslig')   tktCarregar('tickets-deslig');
   if (id==='tickets-movim')    tktCarregar('tickets-movim');
   if (id==='tickets-voucher')  tktCarregar('tickets-voucher');
+  if (id==='sol-resumo')        solResumoCarregar();
   if (id==='colabs-ativos')    colabsCarregar('ativos');
   if (id==='colabs-inativos')  colabsCarregar('inativos');
   atualizarBadgeFila();
@@ -5428,7 +5453,7 @@ function renderPermissoesPorPerfil(perfil, perms) {
   if (!container) return;
 
   const GRUPOS_RS  = ['Seleção & Admissão'];
-  const GRUPOS_ADP = ['Administração de Pessoal — Voucher Uber','Administração de Pessoal — Benefícios','Administração de Pessoal — Tickets Shopee','Template — Colaboradores'];
+  const GRUPOS_ADP = ['Administração de Pessoal — Voucher Uber','Administração de Pessoal — Benefícios','Administração de Pessoal — Tickets Shopee','Template — Colaboradores','Solicitações'];
   const GRUPOS_SUP = ['Suporte','Cadastros'];
 
   // Filtra grupos por perfil
@@ -5475,7 +5500,7 @@ function renderPermissoesGestor(perms) {
   const container = document.getElementById('sistemas-permissoes');
   if (!container) return;
   const GRUPOS_RS  = ['Seleção & Admissão'];
-  const GRUPOS_ADP = ['Administração de Pessoal — Voucher Uber','Administração de Pessoal — Benefícios','Administração de Pessoal — Tickets Shopee','Template — Colaboradores'];
+  const GRUPOS_ADP = ['Administração de Pessoal — Voucher Uber','Administração de Pessoal — Benefícios','Administração de Pessoal — Tickets Shopee','Template — Colaboradores','Solicitações'];
   const GRUPOS_SUP = ['Suporte','Cadastros'];
 
   // Ler estado atual dos checkboxes ANTES de sobrescrever o DOM
@@ -9320,6 +9345,94 @@ function colabsCarregarCfg() {
 </script>
 
 <script>
+// ════════════════ SOLICITAÇÕES ════════════════
+function solAbrirPainel() {
+  const tok    = session?.token  || '';
+  const perfil = session?.perfil || '';
+  const nome   = encodeURIComponent(session?.nome || '');
+  const url    = `solicitacoes.html?tok=${tok}&perfil=${perfil}&nome=${nome}`;
+  window.open(url, 'sol_painel', 'width=1100,height=820,scrollbars=yes,resizable=yes,toolbar=no,menubar=no');
+}
+
+function solAbrirForm(colab) {
+  try { sessionStorage.setItem('sol_colab_data', JSON.stringify(colab)); } catch(e) {}
+  const tok    = session?.token  || '';
+  const perfil = session?.perfil || '';
+  const nome   = encodeURIComponent(session?.nome || '');
+  const url    = `solicitacoes.html?modo=form&tok=${tok}&perfil=${perfil}&nome=${nome}`;
+  const win    = window.open(url, 'sol_form', 'width=920,height=860,scrollbars=yes,resizable=yes,toolbar=no,menubar=no');
+  if (win) {
+    const t = setInterval(()=>{try{win.postMessage({tipo:'sol_colab',colab,session},'*');clearInterval(t);}catch(e){}},400);
+    setTimeout(()=>clearInterval(t),5000);
+  }
+}
+
+let _solResumoLoaded = false;
+async function solResumoCarregar() {
+  const area = document.getElementById('sol-resumo-area');
+  if (!area) return;
+  area.innerHTML = '<div class="tkt-loading">Carregando…</div>';
+  try {
+    const tok  = session?.token || '';
+    const body = { p_token: tok };
+    if (session?.perfil === 'onsite') body.p_onsite_nome = session.nome;
+    const resp = await fetch(`${SUPABASE_URL}/rest/v1/rpc/wc_listar_solicitacoes`, {
+      method:'POST', headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON,'Authorization':`Bearer ${SUPABASE_ANON}`},
+      body: JSON.stringify(body)
+    });
+    const data = await resp.json();
+    if (data?.ok === false) throw new Error(data.erro || 'Erro');
+    const lista = data.solicitacoes || [];
+    _solResumoLoaded = true;
+
+    const pendentes   = lista.filter(s => s.status === 'pendente');
+    const andamento   = lista.filter(s => s.status === 'em_andamento');
+    const concluidas  = lista.filter(s => s.status === 'concluido');
+
+    const TIPO_ICO = { AC:'🪪', TB:'🔄', TH:'🕐', RB:'💰', TLT:'📍' };
+    const cardRow = (s) => {
+      const dt = s.created_at ? new Date(s.created_at).toLocaleDateString('pt-BR') : '—';
+      return `<tr>
+        <td style="font-weight:700;font-size:12px;color:var(--accent)">${s.matricula||'—'}</td>
+        <td style="font-size:12.5px;font-weight:600">${s.nome||'—'}</td>
+        <td style="font-size:11px">${TIPO_ICO[s.tipo]||''} ${s.tipo_label||s.tipo||'—'}</td>
+        <td style="font-size:11px;color:var(--muted)">${s.onsite||'—'}</td>
+        <td style="font-size:11px;color:var(--muted)">${dt}</td>
+      </tr>`;
+    };
+    const tabela = (titulo, cor, items) => !items.length ? '' : `
+      <div style="margin-bottom:20px">
+        <div style="font-size:11px;font-weight:800;color:${cor};text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px">${titulo} (${items.length})</div>
+        <div class="table-wrap"><table class="main-table">
+          <thead><tr><th>Matrícula</th><th>Nome</th><th>Tipo</th><th>Onsite</th><th>Data</th></tr></thead>
+          <tbody>${items.slice(0,10).map(cardRow).join('')}</tbody>
+        </table></div>
+        ${items.length>10?`<p style="font-size:11px;color:var(--muted);margin-top:6px">Mostrando 10 de ${items.length} — <a href="#" onclick="solAbrirPainel()" style="color:var(--accent)">ver todas no painel</a></p>`:''}
+      </div>`;
+
+    area.innerHTML = `
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:24px">
+        ${homePainelCard('🕐','Pendentes',pendentes.length,'Aguardando atendimento','#f59e0b','sol-resumo')}
+        ${homePainelCard('⚙️','Em Andamento',andamento.length,'Em atendimento','#4f7cff','sol-resumo')}
+        ${homePainelCard('✅','Concluídas',concluidas.length,'Resolvidas','#22c55e','sol-resumo')}
+      </div>
+      ${tabela('🕐 Pendentes','var(--warning)',pendentes)}
+      ${tabela('⚙️ Em Andamento','#4f7cff',andamento)}
+      ${tabela('✅ Concluídas Recentes','var(--success)',concluidas.slice(0,5))}
+      ${!lista.length?'<div class="empty-state"><div class="empty-ico">📨</div><p>Nenhuma solicitação encontrada</p></div>':''}`;
+  } catch(e) {
+    if (area) area.innerHTML = `<div style="padding:24px;color:var(--danger)">❌ ${e.message}</div>`;
+  }
+}
+
+window.addEventListener('message', ev => {
+  if (ev.data?.tipo === 'sol_enviada') {
+    toast('✅ Solicitação enviada!', 'success');
+    if (_solResumoLoaded) solResumoCarregar();
+  }
+});
+// ════════════════ FIM SOLICITAÇÕES ════════════════
+
 // ════════════════ INTEGRAÇÃO RESCISÃO ════════════════
 function rescAbrirPainel() {
   const tok    = session?.token  || '';

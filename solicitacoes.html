@@ -1,0 +1,1009 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Central de Solicitações | WeSys</title>
+<style>
+  :root {
+    --bg:#0f0718;--surface:#1a0a2e;--surface2:#2a1045;--surface3:#3d1860;
+    --border:#432a5c;--accent:#63ccb0;--brand:#4f0672;--success:#22c55e;
+    --danger:#ef4444;--warning:#f59e0b;--text:#efe9f7;--muted:#a394bf;
+    --font:'Segoe UI',system-ui,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100vh;}
+  ::-webkit-scrollbar{width:6px;}::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+
+  /* Header */
+  .sol-header{background:#1e0b35;border-bottom:1px solid var(--border);padding:14px 28px;
+    display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;}
+  .sol-header-left{display:flex;align-items:center;gap:14px;}
+  .sol-logo{width:34px;height:34px;background:var(--brand);border-radius:8px;
+    display:flex;align-items:center;justify-content:center;font-size:16px;}
+  .sol-header h1{font-size:15px;font-weight:700;}
+  .sol-header p{font-size:11px;color:var(--muted);margin-top:1px;}
+  .btn-fechar{background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);
+    color:#ef4444;padding:6px 14px;border-radius:8px;font-size:12px;cursor:pointer;}
+
+  /* Layout */
+  .sol-body{max-width:900px;margin:0 auto;padding:28px 20px 80px;}
+
+  /* Tipo selector */
+  .tipo-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:28px;}
+  .tipo-card{background:var(--surface);border:2px solid var(--border);border-radius:14px;
+    padding:18px 14px;text-align:center;cursor:pointer;transition:all .15s;}
+  .tipo-card:hover{border-color:var(--accent);background:var(--surface2);}
+  .tipo-card.selected{border-color:var(--accent);background:rgba(99,204,176,.08);}
+  .tipo-card .tipo-ico{font-size:26px;margin-bottom:8px;}
+  .tipo-card .tipo-nome{font-size:12px;font-weight:700;color:var(--text);}
+
+  /* Seções do formulário */
+  .form-section{background:var(--surface);border:1px solid var(--border);border-radius:14px;
+    margin-bottom:16px;overflow:hidden;display:none;}
+  .form-section.active{display:block;}
+  .form-section-head{background:var(--surface2);padding:12px 20px;
+    display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border);}
+  .form-section-head h2{font-size:12px;font-weight:800;text-transform:uppercase;
+    letter-spacing:.6px;color:var(--accent);}
+  .badge-auto{font-size:9px;background:rgba(99,204,176,.15);color:var(--accent);
+    border:1px solid rgba(99,204,176,.3);padding:2px 8px;border-radius:20px;font-weight:700;}
+  .form-section-body{padding:20px;}
+
+  /* Campos */
+  .form-grid{display:grid;gap:14px;}
+  .form-grid.cols-2{grid-template-columns:1fr 1fr;}
+  .form-grid.cols-3{grid-template-columns:1fr 1fr 1fr;}
+  @media(max-width:600px){.form-grid.cols-2,.form-grid.cols-3{grid-template-columns:1fr;}}
+  .form-group{display:flex;flex-direction:column;gap:5px;}
+  .form-group label{font-size:10px;font-weight:700;text-transform:uppercase;
+    letter-spacing:.5px;color:var(--muted);}
+  .form-group label .req{color:var(--danger);margin-left:2px;}
+  .form-group label .hint{font-size:9px;color:var(--muted);font-weight:400;
+    text-transform:none;letter-spacing:0;display:block;margin-top:1px;}
+  .form-group input,.form-group select,.form-group textarea{
+    background:var(--surface2);border:1px solid var(--border);border-radius:9px;
+    color:var(--text);font-family:var(--font);font-size:13px;padding:9px 12px;
+    transition:border-color .15s;outline:none;}
+  .form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--accent);}
+  .form-group input.auto-filled{background:rgba(99,204,176,.06);border-color:rgba(99,204,176,.3);color:var(--accent);}
+  .form-group input[readonly]{opacity:.6;cursor:default;}
+  .form-group textarea{resize:vertical;min-height:72px;}
+  .form-group select option{background:var(--surface2);}
+  .span-2{grid-column:span 2;}
+
+  /* Radio / Checkbox group */
+  .radio-group{display:flex;flex-wrap:wrap;gap:8px;}
+  .radio-item{display:flex;align-items:center;gap:6px;background:var(--surface2);
+    border:1px solid var(--border);border-radius:8px;padding:7px 12px;cursor:pointer;
+    font-size:12.5px;transition:border-color .15s;}
+  .radio-item:hover{border-color:var(--accent);}
+  .radio-item input{accent-color:var(--accent);}
+  .radio-item.selected{border-color:var(--accent);background:rgba(99,204,176,.08);}
+
+  /* Upload */
+  .upload-area{border:2px dashed var(--border);border-radius:10px;padding:16px;
+    text-align:center;cursor:pointer;transition:all .15s;background:var(--surface2);}
+  .upload-area:hover{border-color:var(--accent);}
+  .upload-area.has-file{border-color:var(--success);background:rgba(34,197,94,.06);}
+  .upload-area input[type=file]{display:none;}
+  .upload-txt{font-size:11.5px;color:var(--muted);}
+  .upload-name{font-size:12px;color:var(--success);font-weight:600;margin-top:4px;}
+
+  /* Painel de gestão */
+  .painel-wrap{max-width:1100px;margin:0 auto;padding:24px 20px 80px;}
+  .painel-tabs{display:flex;gap:6px;margin-bottom:20px;flex-wrap:wrap;}
+  .painel-tab{padding:8px 18px;border-radius:10px;font-size:12.5px;font-weight:700;
+    cursor:pointer;border:1px solid var(--border);background:var(--surface2);
+    color:var(--muted);transition:all .15s;display:flex;align-items:center;gap:6px;}
+  .painel-tab.active{background:var(--accent);color:#0f0718;border-color:var(--accent);}
+  .painel-tab .tab-count{background:rgba(255,255,255,.2);border-radius:20px;padding:1px 7px;font-size:10px;}
+  .painel-tab:not(.active) .tab-count{background:var(--surface3);color:var(--text);}
+  .painel-section{display:none;}
+  .painel-section.active{display:block;}
+
+  /* Cards de solicitação */
+  .sol-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;
+    padding:14px 18px;margin-bottom:10px;cursor:pointer;transition:all .15s;
+    display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;}
+  .sol-card:hover{border-color:var(--accent);background:var(--surface2);}
+  .sol-card-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+  .sol-card-nome{font-size:13.5px;font-weight:700;}
+  .sol-card-meta{font-size:11px;color:var(--muted);margin-top:3px;display:flex;gap:10px;flex-wrap:wrap;}
+  .sol-card-right{text-align:right;flex-shrink:0;}
+  .sol-card-data{font-size:11px;color:var(--muted);}
+  .badge{font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;margin-top:4px;display:inline-block;}
+  .badge-pendente{background:rgba(245,158,11,.14);color:var(--warning);}
+  .badge-andamento{background:rgba(79,124,255,.14);color:#4f7cff;}
+  .badge-concluido{background:rgba(34,197,94,.14);color:var(--success);}
+  .badge-cancelado{background:rgba(239,68,68,.14);color:var(--danger);}
+
+  /* Tipo badge colorido */
+  .badge-ac{background:rgba(99,204,176,.14);color:var(--accent);}
+  .badge-tb{background:rgba(245,158,11,.14);color:var(--warning);}
+  .badge-th{background:rgba(79,124,255,.14);color:#4f7cff;}
+  .badge-rb{background:rgba(239,68,68,.14);color:var(--danger);}
+  .badge-tlt{background:rgba(168,85,247,.14);color:#a855f7;}
+
+  /* Modal detalhe */
+  .modal-back{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;
+    overflow-y:auto;padding:20px;}
+  .modal-inner{background:var(--surface);border:1px solid var(--border);border-radius:16px;
+    max-width:680px;margin:0 auto;display:flex;flex-direction:column;max-height:90vh;}
+  .modal-head{padding:16px 20px;border-bottom:1px solid var(--border);
+    display:flex;justify-content:space-between;align-items:center;flex-shrink:0;}
+  .modal-body-scroll{overflow-y:auto;flex:1;padding:18px 20px;}
+  .modal-foot{padding:14px 20px;border-top:1px solid var(--border);
+    display:flex;gap:8px;justify-content:flex-end;flex-shrink:0;flex-wrap:wrap;}
+  .det-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .det-item .det-label{font-size:9.5px;font-weight:800;text-transform:uppercase;
+    letter-spacing:.5px;color:var(--muted);margin-bottom:3px;}
+  .det-item .det-val{font-size:12.5px;font-weight:600;}
+  .det-full{grid-column:span 2;}
+  .sec-title{font-size:10px;font-weight:800;color:var(--accent);text-transform:uppercase;
+    letter-spacing:.5px;margin:14px 0 8px;padding-bottom:4px;border-bottom:1px solid var(--border);}
+
+  /* Conclusão */
+  .concl-form{background:var(--surface2);border:1px solid var(--border);
+    border-radius:10px;padding:16px;margin-top:14px;}
+  .concl-form h4{font-size:11px;font-weight:800;color:var(--accent);
+    text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px;}
+
+  /* Footer fixo */
+  .sol-footer{position:fixed;bottom:0;left:0;right:0;background:#1e0b35;
+    border-top:1px solid var(--border);padding:12px 28px;
+    display:flex;align-items:center;justify-content:space-between;z-index:50;}
+  .sol-footer-info{font-size:11px;color:var(--muted);}
+  .btn-enviar{background:var(--accent);color:#0f0718;border:none;border-radius:10px;
+    padding:10px 28px;font-size:13.5px;font-weight:700;cursor:pointer;
+    display:flex;align-items:center;gap:8px;}
+  .btn-enviar:disabled{opacity:.5;cursor:default;}
+  .btn-cancel{background:var(--surface2);border:1px solid var(--border);
+    color:var(--muted);border-radius:10px;padding:10px 18px;font-size:13px;cursor:pointer;}
+
+  /* Toolbar */
+  .sol-toolbar{display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap;}
+  .sol-search{flex:1;min-width:200px;background:var(--surface2);
+    border:1px solid var(--border);border-radius:10px;padding:8px 14px;
+    color:var(--text);font-family:var(--font);font-size:13px;outline:none;}
+  .sol-search:focus{border-color:var(--accent);}
+  .sol-filter-tipo{background:var(--surface2);border:1px solid var(--border);
+    border-radius:10px;padding:8px 12px;color:var(--text);font-family:var(--font);
+    font-size:12px;outline:none;}
+
+  .empty-state{text-align:center;padding:48px 24px;color:var(--muted);}
+  .empty-state .empty-ico{font-size:36px;margin-bottom:10px;}
+
+  #toast{position:fixed;bottom:72px;left:50%;transform:translateX(-50%);
+    background:var(--surface3);color:var(--text);padding:10px 20px;border-radius:10px;
+    font-size:13px;border:1px solid var(--border);display:none;z-index:999;}
+  #toast.success{background:rgba(34,197,94,.15);border-color:var(--success);color:var(--success);}
+  #toast.error{background:rgba(239,68,68,.15);border-color:var(--danger);color:var(--danger);}
+</style>
+</head>
+<body>
+
+<!-- ══ MODO PAINEL ══ -->
+<div id="modo-painel" style="display:none">
+  <div class="sol-header">
+    <div class="sol-header-left">
+      <div class="sol-logo">📋</div>
+      <div>
+        <h1>Central de Solicitações</h1>
+        <p id="painel-sub">Solicitações do Onsite para o RH/Folha</p>
+      </div>
+    </div>
+    <button class="btn-fechar" onclick="window.close()">✕ Fechar</button>
+  </div>
+
+  <div class="painel-wrap">
+    <div class="sol-toolbar">
+      <input class="sol-search" type="text" id="painel-busca" placeholder="🔍  Buscar por nome, matrícula…" oninput="painelFiltrar()"/>
+      <select class="sol-filter-tipo" id="painel-filtro-tipo" onchange="painelFiltrar()">
+        <option value="">Todos os tipos</option>
+        <option value="AJUSTE CADASTRAL">Ajuste Cadastral</option>
+        <option value="TROCA DE BENEFICIO">Troca de Benefício</option>
+        <option value="TROCA DE HORARIO">Troca de Horário</option>
+        <option value="REEMBOLSO DE BENEFICIOS">Reembolso de Benefícios</option>
+        <option value="TROCA DE LOCAL DE TRABALHO">Troca de Local de Trabalho</option>
+      </select>
+      <button class="btn-enviar" style="font-size:12px;padding:8px 16px" onclick="painelCarregar()">🔄 Atualizar</button>
+    </div>
+
+    <div class="painel-tabs">
+      <button class="painel-tab active" onclick="painelAba('pendente',this)">🕐 Pendentes <span class="tab-count" id="cnt-pendente">0</span></button>
+      <button class="painel-tab" onclick="painelAba('andamento',this)">⚙️ Em Andamento <span class="tab-count" id="cnt-andamento">0</span></button>
+      <button class="painel-tab" onclick="painelAba('concluido',this)">✅ Concluídas <span class="tab-count" id="cnt-concluido">0</span></button>
+    </div>
+
+    <div class="painel-section active" id="sec-pendente"><div id="lista-pendente"></div></div>
+    <div class="painel-section" id="sec-andamento"><div id="lista-andamento"></div></div>
+    <div class="painel-section" id="sec-concluido"><div id="lista-concluido"></div></div>
+  </div>
+</div>
+
+<!-- ══ MODO FORM ══ -->
+<div id="modo-form" style="display:none">
+  <div class="sol-header">
+    <div class="sol-header-left">
+      <div class="sol-logo">📋</div>
+      <div>
+        <h1>Nova Solicitação</h1>
+        <p id="form-sub">Selecione o tipo de solicitação</p>
+      </div>
+    </div>
+    <button class="btn-fechar" onclick="solFechar()">✕ Fechar</button>
+  </div>
+
+  <div class="sol-body">
+
+    <!-- Dados do colaborador -->
+    <div class="form-section active">
+      <div class="form-section-head"><span>👤</span><h2>Dados do Colaborador</h2><span class="badge-auto">✦ Auto</span></div>
+      <div class="form-section-body">
+        <div class="form-grid cols-3">
+          <div class="form-group">
+            <label>Matrícula <span class="req">*</span><span class="hint">Sem WE, sem pontos/vírgulas</span></label>
+            <input type="text" id="s-matricula" placeholder="798836" oninput="solBuscarColab()"/>
+          </div>
+          <div class="form-group span-2" style="grid-column:span 2">
+            <label>Nome Completo <span class="req">*</span><span class="hint">Em maiúsculo</span></label>
+            <input type="text" id="s-nome" class="auto-filled" readonly/>
+          </div>
+          <div class="form-group">
+            <label>Operação / Hub</label>
+            <input type="text" id="s-operacao" class="auto-filled" readonly/>
+          </div>
+          <div class="form-group">
+            <label>Centro de Custo</label>
+            <input type="text" id="s-cc" class="auto-filled" readonly/>
+          </div>
+          <div class="form-group">
+            <label>Onsite Responsável</label>
+            <input type="text" id="s-onsite" class="auto-filled" readonly/>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tipo de solicitação -->
+    <div class="form-section active">
+      <div class="form-section-head"><span>📋</span><h2>Tipo de Solicitação</h2></div>
+      <div class="form-section-body">
+        <div class="tipo-grid">
+          <div class="tipo-card" onclick="solSelecionarTipo('AC')"><div class="tipo-ico">🪪</div><div class="tipo-nome">Ajuste Cadastral</div></div>
+          <div class="tipo-card" onclick="solSelecionarTipo('TB')"><div class="tipo-ico">🔄</div><div class="tipo-nome">Troca de Benefício</div></div>
+          <div class="tipo-card" onclick="solSelecionarTipo('TH')"><div class="tipo-ico">🕐</div><div class="tipo-nome">Troca de Horário</div></div>
+          <div class="tipo-card" onclick="solSelecionarTipo('RB')"><div class="tipo-ico">💰</div><div class="tipo-nome">Reembolso de Benefícios</div></div>
+          <div class="tipo-card" onclick="solSelecionarTipo('TLT')"><div class="tipo-ico">📍</div><div class="tipo-nome">Troca de Local de Trabalho</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ AJUSTE CADASTRAL ══ -->
+    <div class="form-section" id="sec-AC">
+      <div class="form-section-head"><span>🪪</span><h2>Ajuste Cadastral</h2></div>
+      <div class="form-section-body">
+        <div class="form-grid cols-2">
+          <div class="form-group span-2">
+            <label>O que deseja alterar? <span class="req">*</span></label>
+            <div class="radio-group" id="ac-campos"></div>
+          </div>
+          <div class="form-group" id="grp-ac-pix" style="display:none">
+            <label>Chave PIX</label>
+            <select id="ac-pix">
+              <option value="">— Selecione —</option>
+              <option>CPF</option><option>E-mail</option><option>Telefone</option><option>Chave Aleatória</option>
+            </select>
+          </div>
+          <div class="form-group span-2">
+            <label>Alterar Para <span class="req">*</span></label>
+            <textarea id="ac-alterar-para" placeholder="Informe o novo valor…"></textarea>
+          </div>
+          <div class="form-group span-2">
+            <label>Anexo</label>
+            <div class="upload-area" id="ua-ac" onclick="document.getElementById('file-ac').click()">
+              <input type="file" id="file-ac" onchange="solArquivo(this,'ua-ac','nome-ac')"/>
+              <div class="upload-txt">📎 Clique para anexar documento</div>
+              <div class="upload-name" id="nome-ac"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ TROCA DE BENEFÍCIO ══ -->
+    <div class="form-section" id="sec-TB">
+      <div class="form-section-head"><span>🔄</span><h2>Troca de Benefício</h2></div>
+      <div class="form-section-body">
+        <div class="form-grid cols-2">
+          <div class="form-group span-2">
+            <label>Benefício <span class="req">*</span></label>
+            <select id="tb-beneficio">
+              <option value="">— Selecione —</option>
+              <option>ATUALIZAR Valor de VT DIÁRIO</option>
+              <option>VT para FRETADO</option>
+              <option>VT para VT + VOUCHER</option>
+              <option>VT para MOBILIDADE</option>
+              <option>MOBILIDADE para VT + VOUCHER</option>
+              <option>MOBILIDADE para VT</option>
+              <option>MOBILIDADE para FRETADO</option>
+              <option>VT + VOUCHER para VT</option>
+              <option>VT + VOUCHER para FRETADO</option>
+              <option>VT + VOUCHER para VT + FRETADO</option>
+              <option>VT + VOUCHER para MOBILIDADE</option>
+              <option>FRETADO para VT</option>
+              <option>FRETADO para VT + VOUCHER</option>
+              <option>FRETADO para MOBILIDADE</option>
+              <option>FRETADO para VT + FRETADO</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Novo VT Diário (R$) <span class="hint">Apenas o valor do VT. De: R$ 16,80</span></label>
+            <input type="text" id="tb-novo-vt" placeholder="Ex: 14,50"/>
+          </div>
+          <div class="form-group">
+            <label>A partir de <span class="req">*</span></label>
+            <input type="date" id="tb-a-partir"/>
+          </div>
+          <div class="form-group">
+            <label>Precisa pagar DIF? <span class="hint">Pagamento de DIF só ocorre dentro da competência até dia 20</span></label>
+            <div class="radio-group">
+              <label class="radio-item"><input type="radio" name="tb-dif" value="Sim"/> Sim</label>
+              <label class="radio-item"><input type="radio" name="tb-dif" value="Não"/> Não</label>
+            </div>
+          </div>
+          <div class="form-group span-2">
+            <label>Anexo</label>
+            <div class="upload-area" id="ua-tb" onclick="document.getElementById('file-tb').click()">
+              <input type="file" id="file-tb" onchange="solArquivo(this,'ua-tb','nome-tb')"/>
+              <div class="upload-txt">📎 Clique para anexar documento</div>
+              <div class="upload-name" id="nome-tb"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ TROCA DE HORÁRIO ══ -->
+    <div class="form-section" id="sec-TH">
+      <div class="form-section-head"><span>🕐</span><h2>Troca de Horário</h2></div>
+      <div class="form-section-body">
+        <div class="form-grid cols-2">
+          <div class="form-group">
+            <label>Ticket Jira <span class="req">*</span></label>
+            <input type="text" id="th-jira" placeholder="VWF-000000"/>
+          </div>
+          <div class="form-group">
+            <label>Usuário Voucher? <span class="req">*</span></label>
+            <div class="radio-group">
+              <label class="radio-item"><input type="radio" name="th-voucher" value="Sim" onchange="solToggle('grp-th-matricula-voucher','Sim')"/> Sim</label>
+              <label class="radio-item"><input type="radio" name="th-voucher" value="Não" onchange="solToggle('grp-th-matricula-voucher','Não')"/> Não</label>
+            </div>
+          </div>
+          <div class="form-group" id="grp-th-matricula-voucher" style="display:none">
+            <label>Matrícula do Usuário Voucher <span class="hint">Caso o colaborador use voucher, informe a matrícula</span></label>
+            <input type="text" id="th-matricula-voucher" placeholder="798836"/>
+          </div>
+          <div class="form-group">
+            <label>Ponto já alterado no Pontomais? <span class="req">*</span></label>
+            <div class="radio-group">
+              <label class="radio-item"><input type="radio" name="th-ponto" value="Sim"/> Sim</label>
+              <label class="radio-item"><input type="radio" name="th-ponto" value="Não"/> Não</label>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Escala <span class="req">*</span></label>
+            <div class="radio-group">
+              <label class="radio-item"><input type="radio" name="th-escala" value="6X1"/> 6X1</label>
+              <label class="radio-item"><input type="radio" name="th-escala" value="5X2"/> 5X2</label>
+            </div>
+          </div>
+          <div class="form-group span-2">
+            <label>Novo Horário <span class="req">*</span><span class="hint">Ex: 24hs: 2460 → SEG A SÁB 05:25 às 13:45 C/ 1 HORA INTERVALO — Escreva APENAS a Gestão do Horário</span></label>
+            <input type="text" id="th-novo-horario" placeholder="SEG A SÁB 05:25 às 13:45 C/ 1H INTERVALO"/>
+          </div>
+          <div class="form-group">
+            <label>Precisa pagar DIF? <span class="hint">Pagamento de DIF só ocorre dentro da competência até dia 20</span></label>
+            <div class="radio-group">
+              <label class="radio-item"><input type="radio" name="th-dif" value="Sim"/> Sim</label>
+              <label class="radio-item"><input type="radio" name="th-dif" value="Não"/> Não</label>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ REEMBOLSO DE BENEFÍCIOS ══ -->
+    <div class="form-section" id="sec-RB">
+      <div class="form-section-head"><span>💰</span><h2>Reembolso de Benefícios</h2></div>
+      <div class="form-section-body">
+        <div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.3);border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:11.5px;color:var(--warning)">
+          ⚠️ Este forms NÃO é para reembolso de VT Refaturados. É SIM para reembolso de outras espécies pagas à menor na programação do mês.
+        </div>
+        <div class="form-grid cols-2">
+          <div class="form-group">
+            <label>Benefício <span class="req">*</span><span class="hint">Marcar 1 ou mais benefícios a serem reembolsados</span></label>
+            <div class="radio-group">
+              <label class="radio-item"><input type="checkbox" name="rb-beneficio" value="VALE TRANSPORTE"/> Vale Transporte</label>
+              <label class="radio-item"><input type="checkbox" name="rb-beneficio" value="VALE REFEIÇÃO"/> Vale Refeição</label>
+              <label class="radio-item"><input type="checkbox" name="rb-beneficio" value="VALE COMBUSTÍVEL"/> Vale Combustível</label>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Motivo <span class="req">*</span></label>
+            <textarea id="rb-motivo" placeholder="Descreva o motivo do reembolso…"></textarea>
+          </div>
+          <div class="form-group">
+            <label>Ticket Jira <span class="req">*</span></label>
+            <input type="text" id="rb-jira" placeholder="VWF-000000"/>
+          </div>
+          <div class="form-group">
+            <label>Competência <span class="req">*</span></label>
+            <select id="rb-competencia"></select>
+          </div>
+          <div class="form-group">
+            <label>Solicitado em <span class="req">*</span><span class="hint">Data que o colaborador efetuou o evento</span></label>
+            <input type="date" id="rb-solicitado-em"/>
+          </div>
+          <div class="form-group">
+            <label>Troca de Horário? <span class="hint">O benefício é por troca de horário? Trocou a escala e ficou faltando pagar algum dia?</span></label>
+            <div class="radio-group">
+              <label class="radio-item"><input type="radio" name="rb-troca-horario" value="Sim"/> Sim</label>
+              <label class="radio-item"><input type="radio" name="rb-troca-horario" value="Não"/> Não</label>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Ponto Corrigido <span class="req">*</span><span class="hint">PDF apenas</span></label>
+            <div class="upload-area" id="ua-rb-ponto" onclick="document.getElementById('file-rb-ponto').click()">
+              <input type="file" id="file-rb-ponto" accept=".pdf" onchange="solArquivo(this,'ua-rb-ponto','nome-rb-ponto')"/>
+              <div class="upload-txt">📄 PDF do ponto corrigido</div>
+              <div class="upload-name" id="nome-rb-ponto"></div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Evidência <span class="req">*</span><span class="hint">Print da conversa</span></label>
+            <div class="upload-area" id="ua-rb-evidencia" onclick="document.getElementById('file-rb-evidencia').click()">
+              <input type="file" id="file-rb-evidencia" onchange="solArquivo(this,'ua-rb-evidencia','nome-rb-evidencia')"/>
+              <div class="upload-txt">📎 Print como evidência</div>
+              <div class="upload-name" id="nome-rb-evidencia"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ TROCA DE LOCAL DE TRABALHO ══ -->
+    <div class="form-section" id="sec-TLT">
+      <div class="form-section-head"><span>📍</span><h2>Troca de Local de Trabalho</h2></div>
+      <div class="form-section-body">
+        <div class="form-grid cols-2">
+          <div class="form-group">
+            <label>Ticket Jira <span class="req">*</span></label>
+            <input type="text" id="tlt-jira" placeholder="VWF-000000"/>
+          </div>
+          <div class="form-group">
+            <label>Tipo de Operação <span class="req">*</span></label>
+            <div class="radio-group">
+              <label class="radio-item"><input type="radio" name="tlt-tipo" value="First Mile HUB"/> First Mile HUB</label>
+              <label class="radio-item"><input type="radio" name="tlt-tipo" value="Last Mile HUB"/> Last Mile HUB</label>
+              <label class="radio-item"><input type="radio" name="tlt-tipo" value="SOC"/> SOC</label>
+            </div>
+          </div>
+          <div class="form-group span-2">
+            <label>Novo Local de Trabalho <span class="req">*</span><span class="hint">Ex: LM Hub_SP_Jundiaí</span></label>
+            <input type="text" id="tlt-novo-local" placeholder="LM Hub_SP_Jundiaí"/>
+          </div>
+          <div class="form-group span-2">
+            <label>Novo Horário <span class="req">*</span></label>
+            <input type="text" id="tlt-novo-horario" placeholder="SEG A SÁB 05:25 às 13:45 C/ 1H INTERVALO"/>
+          </div>
+          <div class="form-group">
+            <label>A partir de <span class="req">*</span><span class="hint">A partir de qual data o colaborador solicita a troca?</span></label>
+            <input type="date" id="tlt-a-partir"/>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="height:64px"></div>
+  </div>
+
+  <div class="sol-footer">
+    <div class="sol-footer-info">
+      <b id="footer-nome">—</b><br>
+      <span id="footer-info" style="font-size:10px">Preencha todos os campos obrigatórios</span>
+    </div>
+    <div style="display:flex;gap:10px">
+      <button class="btn-cancel" onclick="solFechar()">Cancelar</button>
+      <button class="btn-enviar" id="btn-enviar" onclick="solEnviar()">📤 Enviar Solicitação</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de detalhe -->
+<div class="modal-back" id="modal-sol">
+  <div class="modal-inner">
+    <div class="modal-head">
+      <div>
+        <div style="font-size:15px;font-weight:800" id="det-nome">—</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px" id="det-sub">—</div>
+      </div>
+      <button onclick="fecharDetalhe()" style="background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer">✕</button>
+    </div>
+    <div class="modal-body-scroll" id="det-body"></div>
+    <div class="modal-foot" id="det-acoes"></div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════════
+//  solicitacoes.html — WeSys | Integrado
+// ══════════════════════════════════════════════
+const SUPABASE_URL  = 'https://omwilcuzcvgzyzqqrbkh.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9td2lsY3V6Y3Znenl6cXFyYmtoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIxMzI1MTIsImV4cCI6MjA5NzcwODUxMn0.S1pbFqZ4B5_TWMBq_r8BeQ9OOFzkj73aOoI6g3Y987Q';
+
+let session = null;
+let _solAll = [];
+let _solAtual = null;
+let _tipoSelecionado = null;
+let _colabData = null;
+
+// ── Init ──────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  const params = new URLSearchParams(location.search);
+  const modo   = params.get('modo') || 'painel';
+  const tok    = params.get('tok')  || '';
+  const perfil = params.get('perfil') || '';
+  const nome   = decodeURIComponent(params.get('nome') || '');
+
+  // Recuperar sessão
+  try {
+    session = window.opener?.session || null;
+    if (!session && tok) {
+      session = { token: tok, perfil, nome };
+    }
+    if (!session) {
+      const raw = localStorage.getItem('wecan_session_v1');
+      if (raw) { const p = JSON.parse(raw); session = p?.session || null; }
+    }
+  } catch(e) {}
+
+  if (modo === 'form') {
+    document.getElementById('modo-form').style.display = 'block';
+    // Receber dados do colaborador via sessionStorage ou postMessage
+    try {
+      const raw = sessionStorage.getItem('sol_colab_data');
+      if (raw) { _colabData = JSON.parse(raw); solPreencherColab(); }
+    } catch(e) {}
+    window.addEventListener('message', ev => {
+      if (ev.data?.tipo === 'sol_colab') { _colabData = ev.data.colab; session = ev.data.session; solPreencherColab(); }
+    });
+    solPopularCompetencia('rb-competencia');
+    solPopularAcCampos();
+  } else {
+    document.getElementById('modo-painel').style.display = 'block';
+    painelInit();
+  }
+});
+
+function solFechar() { if (window.opener) window.close(); else window.history.back(); }
+function ehOnsite()  { return session?.perfil === 'onsite'; }
+function ehFolha()   { return session?.perfil === 'folha'; }
+function podeGerir() { return ['master','gestor','gestor_adm','folha'].includes(session?.perfil); }
+
+// ── Preencher colaborador ──────────────────────
+function solPreencherColab() {
+  const c = _colabData; if (!c) return;
+  const set = (id, v) => { const el = document.getElementById(id); if (el && v) el.value = v; };
+  // Matrícula sem WE
+  const mat = (c.matricula||'').replace(/^WE/i,'');
+  set('s-matricula', mat);
+  set('s-nome',      c.nome);
+  set('s-operacao',  c.nickname || c.operacao || c.cc);
+  set('s-cc',        c.cc);
+  set('s-onsite',    session?.nome || '');
+  document.getElementById('footer-nome').textContent = c.nome || '—';
+  document.getElementById('footer-info').textContent = `${c.matricula||''} · ${c.cc||''}`;
+}
+
+// Buscar colaborador pela matrícula (via Template já carregado)
+let _buscarTimer = null;
+function solBuscarColab() {
+  clearTimeout(_buscarTimer);
+  _buscarTimer = setTimeout(() => {
+    const mat = document.getElementById('s-matricula').value.trim();
+    if (!mat || mat.length < 4) return;
+    // Tentar pegar do opener (Template já carregado)
+    try {
+      const lista = window.opener?.COLABS_ATIVOS || [];
+      const found = lista.find(r => (r.matricula||'').replace(/^WE/i,'') === mat || r.matricula === 'WE'+mat);
+      if (found) { _colabData = found; solPreencherColab(); }
+    } catch(e) {}
+  }, 600);
+}
+
+// ── Tipo de solicitação ────────────────────────
+const TIPOS_LABEL = { AC:'Ajuste Cadastral', TB:'Troca de Benefício', TH:'Troca de Horário', RB:'Reembolso de Benefícios', TLT:'Troca de Local de Trabalho' };
+const TIPOS_BADGE = { AC:'badge-ac', TB:'badge-tb', TH:'badge-th', RB:'badge-rb', TLT:'badge-tlt' };
+
+function solSelecionarTipo(tipo) {
+  _tipoSelecionado = tipo;
+  document.querySelectorAll('.tipo-card').forEach(c => c.classList.remove('selected'));
+  event.currentTarget.classList.add('selected');
+  document.querySelectorAll('.form-section[id^="sec-"]').forEach(s => s.classList.remove('active'));
+  const sec = document.getElementById('sec-' + tipo);
+  if (sec) sec.classList.add('active');
+  document.getElementById('form-sub').textContent = TIPOS_LABEL[tipo] || tipo;
+}
+
+// ── Campos de Ajuste Cadastral ─────────────────
+function solPopularAcCampos() {
+  const opcoes = ['CELULAR','E-MAIL','ENDEREÇO','CONTA BANCÁRIA','PIX','INCLUSÃO DE DEPENDENTES'];
+  const container = document.getElementById('ac-campos');
+  container.innerHTML = opcoes.map(o =>
+    `<label class="radio-item" onclick="solAcTogglePix('${o}')">
+      <input type="checkbox" name="ac-campo" value="${o}"/> ${o}
+    </label>`).join('');
+}
+
+function solAcTogglePix(campo) {
+  setTimeout(() => {
+    const temPix = [...document.querySelectorAll('input[name="ac-campo"]:checked')].some(i => i.value === 'PIX');
+    document.getElementById('grp-ac-pix').style.display = temPix ? 'block' : 'none';
+  }, 50);
+}
+
+// ── Toggle condicional ─────────────────────────
+function solToggle(grupoId, valorTrigger) {
+  setTimeout(() => {
+    const val = document.querySelector(`input[name="${grupoId.replace('grp-','').replace('-','_')}"]:checked`)?.value;
+    document.getElementById(grupoId).style.display = (val === valorTrigger) ? 'block' : 'none';
+  }, 50);
+}
+
+// ── Competência ────────────────────────────────
+function solPopularCompetencia(id) {
+  const sel = document.getElementById(id); if (!sel) return;
+  const meses = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho',
+                  'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  sel.innerHTML = '<option value="">— Selecione —</option>';
+  const hoje = new Date();
+  for (let i = -3; i <= 1; i++) {
+    const d = new Date(hoje.getFullYear(), hoje.getMonth()+i, 1);
+    const opt = document.createElement('option');
+    opt.value = `${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+    opt.textContent = `${meses[d.getMonth()]} ${d.getFullYear()}`;
+    if (i === 0) opt.selected = true;
+    sel.appendChild(opt);
+  }
+}
+
+// ── Upload ─────────────────────────────────────
+function solArquivo(input, areaId, nomeId) {
+  const area = document.getElementById(areaId);
+  const nome = document.getElementById(nomeId);
+  if (input.files?.[0]) { area.classList.add('has-file'); nome.textContent = '✅ ' + input.files[0].name; }
+  else { area.classList.remove('has-file'); nome.textContent = ''; }
+}
+
+async function solUpload(file, path) {
+  if (!file) return null;
+  const ab = await file.arrayBuffer();
+  const resp = await fetch(`${SUPABASE_URL}/storage/v1/object/solicitacoes/${path}`, {
+    method: 'POST',
+    headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}`,
+      'Content-Type': file.type || 'application/octet-stream', 'x-upsert': 'true', 'cache-control': 'max-age=3600' },
+    body: ab
+  });
+  if (!resp.ok) { const e = await resp.json().catch(()=>({})); throw new Error(e.error || e.message || resp.status); }
+  return `${SUPABASE_URL}/storage/v1/object/public/solicitacoes/${path}`;
+}
+
+// ── Coletar dados por tipo ─────────────────────
+function solColetarDados() {
+  const g = id => document.getElementById(id)?.value || '';
+  const radio = name => document.querySelector(`input[name="${name}"]:checked`)?.value || '';
+  const checks = name => [...document.querySelectorAll(`input[name="${name}"]:checked`)].map(i=>i.value).join(', ');
+
+  const base = {
+    matricula: 'WE' + g('s-matricula').replace(/^WE/i,''),
+    nome:      g('s-nome'),
+    operacao:  g('s-operacao'),
+    cc:        g('s-cc'),
+    onsite:    session?.nome || '',
+    tipo:      _tipoSelecionado,
+    tipo_label: TIPOS_LABEL[_tipoSelecionado] || '',
+  };
+
+  const especifico = {
+    AC: { campo_alterar: checks('ac-campo'), chave_pix: g('ac-pix'), alterar_para: g('ac-alterar-para') },
+    TB: { beneficio: g('tb-beneficio'), novo_vt: g('tb-novo-vt'), a_partir: g('tb-a-partir'), dif: radio('tb-dif') },
+    TH: { jira: g('th-jira'), usuario_voucher: radio('th-voucher'), matricula_voucher: g('th-matricula-voucher'), ponto_alterado: radio('th-ponto'), escala: radio('th-escala'), novo_horario: g('th-novo-horario'), dif: radio('th-dif') },
+    RB: { beneficio: checks('rb-beneficio'), motivo: g('rb-motivo'), jira: g('rb-jira'), competencia: g('rb-competencia'), solicitado_em: g('rb-solicitado-em'), troca_horario: radio('rb-troca-horario') },
+    TLT: { jira: g('tlt-jira'), tipo_operacao: radio('tlt-tipo'), novo_local: g('tlt-novo-local'), novo_horario: g('tlt-novo-horario'), a_partir: g('tlt-a-partir') },
+  }[_tipoSelecionado] || {};
+
+  return { ...base, dados: especifico };
+}
+
+// ── Validar ────────────────────────────────────
+function solValidar(payload) {
+  if (!payload.matricula || payload.matricula === 'WE') { toast('Informe a matrícula', 'error'); return false; }
+  if (!payload.nome) { toast('Colaborador não identificado', 'error'); return false; }
+  if (!_tipoSelecionado) { toast('Selecione o tipo de solicitação', 'error'); return false; }
+  const d = payload.dados;
+  const erros = {
+    AC:  !d.campo_alterar ? 'Selecione o que deseja alterar' : (!d.alterar_para ? 'Preencha "Alterar Para"' : null),
+    TB:  !d.beneficio ? 'Selecione o benefício' : (!d.a_partir ? 'Informe a data "A partir de"' : null),
+    TH:  !d.jira ? 'Informe o Ticket Jira' : (!d.novo_horario ? 'Informe o novo horário' : (!d.escala ? 'Selecione a escala' : null)),
+    RB:  !d.beneficio ? 'Selecione o benefício' : (!d.motivo ? 'Informe o motivo' : (!d.jira ? 'Informe o Ticket Jira' : null)),
+    TLT: !d.jira ? 'Informe o Ticket Jira' : (!d.novo_local ? 'Informe o novo local' : (!d.a_partir ? 'Informe a data "A partir de"' : null)),
+  }[_tipoSelecionado];
+  if (erros) { toast(erros, 'error'); return false; }
+  return true;
+}
+
+// ── Enviar ─────────────────────────────────────
+async function solEnviar() {
+  const payload = solColetarDados();
+  if (!solValidar(payload)) return;
+  const btn = document.getElementById('btn-enviar');
+  btn.disabled = true; btn.innerHTML = '⏳ Enviando…';
+  try {
+    const tok = session?.token || '';
+    const mat = payload.matricula;
+    const ts  = Date.now();
+
+    // Uploads por tipo
+    let urlAnexo1 = null, urlAnexo2 = null;
+    const fileMap = { AC:'file-ac', TB:'file-tb', RB_ponto:'file-rb-ponto', RB_evidencia:'file-rb-evidencia' };
+    if (_tipoSelecionado === 'AC' && document.getElementById('file-ac')?.files?.[0]) {
+      const f = document.getElementById('file-ac').files[0];
+      urlAnexo1 = await solUpload(f, `${mat}_${ts}_ac.${f.name.split('.').pop()}`);
+    }
+    if (_tipoSelecionado === 'TB' && document.getElementById('file-tb')?.files?.[0]) {
+      const f = document.getElementById('file-tb').files[0];
+      urlAnexo1 = await solUpload(f, `${mat}_${ts}_tb.${f.name.split('.').pop()}`);
+    }
+    if (_tipoSelecionado === 'RB') {
+      const fp = document.getElementById('file-rb-ponto')?.files?.[0];
+      const fe = document.getElementById('file-rb-evidencia')?.files?.[0];
+      if (fp) urlAnexo1 = await solUpload(fp, `${mat}_${ts}_rb_ponto.pdf`);
+      if (fe) urlAnexo2 = await solUpload(fe, `${mat}_${ts}_rb_evidencia.${fe.name.split('.').pop()}`);
+    }
+
+    const resp = await fetch(`${SUPABASE_URL}/rest/v1/rpc/wc_criar_solicitacao`, {
+      method: 'POST',
+      headers: { 'Content-Type':'application/json', 'apikey':SUPABASE_ANON, 'Authorization':`Bearer ${SUPABASE_ANON}` },
+      body: JSON.stringify({ p_token: tok, p_payload: { ...payload, url_anexo1: urlAnexo1, url_anexo2: urlAnexo2 } })
+    });
+    const data = await resp.json();
+    if (!resp.ok || data?.ok === false) throw new Error(data?.erro || data?.message || 'Erro ao salvar');
+
+    toast('✅ Solicitação enviada!', 'success');
+    try { window.opener?.postMessage?.({ tipo:'sol_enviada', mat }, '*'); } catch(e) {}
+    setTimeout(() => solFechar(), 2000);
+  } catch(e) {
+    toast('Erro: ' + e.message, 'error');
+    btn.disabled = false; btn.innerHTML = '📤 Enviar Solicitação';
+  }
+}
+
+// ══ PAINEL ════════════════════════════════════
+async function painelInit() {
+  const params = new URLSearchParams(location.search);
+  const tok = params.get('tok') || '';
+  if (!session && tok) session = { token: tok, perfil: params.get('perfil') || '', nome: decodeURIComponent(params.get('nome')||'') };
+  if (!session) {
+    try { const raw = localStorage.getItem('wecan_session_v1'); if(raw){const p=JSON.parse(raw);session=p?.session||null;} } catch(e){}
+  }
+  if (podeGerir()) {
+    document.getElementById('painel-sub').textContent = 'Todas as solicitações — acompanhamento e resolução';
+  } else {
+    document.getElementById('painel-sub').textContent = 'Minhas solicitações';
+  }
+  await painelCarregar();
+}
+
+async function painelCarregar() {
+  ['pendente','andamento','concluido'].forEach(s =>
+    document.getElementById('lista-'+s).innerHTML = '<div class="empty-state"><div class="empty-ico">⏳</div><p>Carregando…</p></div>');
+  try {
+    const tok = session?.token || '';
+    const body = { p_token: tok };
+    if (!podeGerir()) body.p_onsite_nome = session?.nome || '';
+    const resp = await fetch(`${SUPABASE_URL}/rest/v1/rpc/wc_listar_solicitacoes`, {
+      method:'POST', headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON,'Authorization':`Bearer ${SUPABASE_ANON}`},
+      body: JSON.stringify(body)
+    });
+    const data = await resp.json();
+    if (data?.ok === false) throw new Error(data.erro || 'Erro');
+    _solAll = data.solicitacoes || [];
+    painelFiltrar();
+  } catch(e) {
+    ['pendente','andamento','concluido'].forEach(s =>
+      document.getElementById('lista-'+s).innerHTML = `<div class="empty-state"><div class="empty-ico">❌</div><p>${e.message}</p></div>`);
+  }
+}
+
+function painelFiltrar() {
+  const busca = (document.getElementById('painel-busca')?.value||'').toLowerCase();
+  const tipo  = document.getElementById('painel-filtro-tipo')?.value||'';
+  let lista = _solAll;
+  if (busca) lista = lista.filter(r => [r.nome,r.matricula,r.cc].some(f=>(f||'').toLowerCase().includes(busca)));
+  if (tipo)  lista = lista.filter(r => r.tipo_label === tipo);
+
+  const grupos = { pendente:[], andamento:[], concluido:[] };
+  lista.forEach(r => {
+    const s = r.status === 'em_andamento' ? 'andamento' : (r.status||'pendente');
+    if (grupos[s]) grupos[s].push(r);
+  });
+  Object.entries(grupos).forEach(([k,v]) => { const el=document.getElementById('cnt-'+k); if(el) el.textContent=v.length; });
+  painelRenderLista('pendente',  grupos.pendente);
+  painelRenderLista('andamento', grupos.andamento);
+  painelRenderLista('concluido', grupos.concluido);
+}
+
+const TIPO_BADGE = { AC:'badge-ac', TB:'badge-tb', TH:'badge-th', RB:'badge-rb', TLT:'badge-tlt' };
+const TIPO_ICO   = { AC:'🪪', TB:'🔄', TH:'🕐', RB:'💰', TLT:'📍' };
+
+function painelRenderLista(tipo, lista) {
+  const el = document.getElementById('lista-'+tipo);
+  if (!el) return;
+  if (!lista.length) {
+    const m={pendente:'Nenhuma pendente',andamento:'Nenhuma em andamento',concluido:'Nenhuma concluída'};
+    const i={pendente:'🕐',andamento:'⚙️',concluido:'✅'};
+    el.innerHTML=`<div class="empty-state"><div class="empty-ico">${i[tipo]}</div><p>${m[tipo]}</p></div>`;
+    return;
+  }
+  const cor={pendente:'var(--warning)',andamento:'#4f7cff',concluido:'var(--success)'};
+  el.innerHTML = lista.map(r => {
+    const dt = r.created_at ? new Date(r.created_at).toLocaleDateString('pt-BR') : '—';
+    const badge = `<span class="badge badge-${tipo}">${tipo==='pendente'?'Pendente':tipo==='andamento'?'Em Andamento':'Concluído'}</span>`;
+    const tipoBadge = `<span class="badge ${TIPO_BADGE[r.tipo]||''}">${TIPO_ICO[r.tipo]||''} ${r.tipo_label||r.tipo||'—'}</span>`;
+    const responsavel = podeGerir() && r.onsite ? `<span>📤 ${r.onsite}</span>` : '';
+    return `<div class="sol-card" onclick='painelAbrirDetalhe(${JSON.stringify(r).replace(/'/g,"&#39;")})'>
+      <div class="sol-card-dot" style="background:${cor[tipo]}"></div>
+      <div>
+        <div class="sol-card-nome">${r.nome||'—'}</div>
+        <div class="sol-card-meta">
+          <span>🪪 ${r.matricula||'—'}</span>
+          <span>🏢 ${r.cc||'—'}</span>
+          ${responsavel}
+        </div>
+      </div>
+      <div class="sol-card-right">
+        <div class="sol-card-data">${dt}</div>
+        ${tipoBadge}
+        ${badge}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function painelAba(aba, btn) {
+  document.querySelectorAll('.painel-tab').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.painel-section').forEach(s=>s.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('sec-'+aba).classList.add('active');
+}
+
+// ── Modal de detalhe ───────────────────────────
+function painelAbrirDetalhe(r) {
+  _solAtual = r;
+  document.getElementById('det-nome').textContent = r.nome || '—';
+  document.getElementById('det-sub').textContent  = `${r.matricula||''} · ${r.cc||''} · ${r.tipo_label||r.tipo||''}`;
+
+  const campo = (label, val, full) =>
+    `<div class="det-item${full?' det-full':''}">
+      <div class="det-label">${label}</div>
+      <div class="det-val">${val||'—'}</div>
+    </div>`;
+
+  const d = r.dados || {};
+  let especifico = '';
+  if (r.tipo === 'AC') especifico = `${campo('O que alterar',d.campo_alterar,true)}${campo('Chave PIX',d.chave_pix)}${campo('Alterar para',d.alterar_para,true)}`;
+  if (r.tipo === 'TB') especifico = `${campo('Benefício',d.beneficio,true)}${campo('Novo VT Diário',d.novo_vt)}${campo('A partir de',d.a_partir)}${campo('Precisa DIF?',d.dif)}`;
+  if (r.tipo === 'TH') especifico = `${campo('Ticket Jira',d.jira)}${campo('Usuário Voucher?',d.usuario_voucher)}${campo('Matrícula Voucher',d.matricula_voucher)}${campo('Ponto alterado?',d.ponto_alterado)}${campo('Escala',d.escala)}${campo('Novo Horário',d.novo_horario,true)}${campo('Precisa DIF?',d.dif)}`;
+  if (r.tipo === 'RB') especifico = `${campo('Benefício',d.beneficio,true)}${campo('Motivo',d.motivo,true)}${campo('Ticket Jira',d.jira)}${campo('Competência',d.competencia)}${campo('Solicitado em',d.solicitado_em)}${campo('Troca Horário?',d.troca_horario)}`;
+  if (r.tipo === 'TLT') especifico = `${campo('Ticket Jira',d.jira)}${campo('Tipo Operação',d.tipo_operacao)}${campo('Novo Local',d.novo_local,true)}${campo('Novo Horário',d.novo_horario,true)}${campo('A partir de',d.a_partir)}`;
+
+  const anexos = [r.url_anexo1, r.url_anexo2].filter(Boolean).map((u,i) =>
+    `<a href="${u}" target="_blank" style="font-size:11px;color:var(--accent);text-decoration:none;background:var(--surface2);border:1px solid var(--border);padding:4px 10px;border-radius:6px">📎 Anexo ${i+1}</a>`
+  ).join('');
+
+  const concluido = r.status === 'concluido';
+  const conclInfo = concluido ? `
+    <div style="margin-top:14px;padding:12px 14px;background:rgba(34,197,94,.07);border:1px solid rgba(34,197,94,.2);border-radius:10px">
+      <div style="font-size:10px;font-weight:800;color:var(--success);text-transform:uppercase;margin-bottom:10px">✅ Conclusão</div>
+      <div class="det-grid">
+        ${campo('Resolvido por',r.resolvido_por)}${campo('Data resolução',r.data_resolucao)}
+        ${campo('Observações',r.obs_resolucao,true)}
+      </div>
+    </div>` : '';
+
+  const formConcl = r.status === 'em_andamento' ? `
+    <div class="concl-form">
+      <h4>✅ Registrar Conclusão</h4>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="form-group" style="grid-column:span 2">
+          <label>Observações / Resolução</label>
+          <textarea id="concl-obs" placeholder="Descreva como foi resolvida a solicitação…"></textarea>
+        </div>
+      </div>
+    </div>` : '';
+
+  document.getElementById('det-body').innerHTML = `
+    <div class="sec-title">👤 Colaborador</div>
+    <div class="det-grid">
+      ${campo('Matrícula',r.matricula)}${campo('Operação',r.operacao)}
+      ${campo('C.Custo',r.cc,true)}
+      ${campo('Onsite',r.onsite,true)}
+    </div>
+    <div class="sec-title">📋 ${r.tipo_label||r.tipo}</div>
+    <div class="det-grid">${especifico}</div>
+    ${anexos ? `<div class="sec-title">📎 Anexos</div><div style="display:flex;gap:8px;flex-wrap:wrap">${anexos}</div>` : ''}
+    ${conclInfo}${formConcl}`;
+
+  // Botões por status e perfil
+  let acoes = `<button onclick="fecharDetalhe()" class="btn-cancel">Fechar</button>`;
+  if (!podeGerir()) {
+    const statusTxt = {pendente:'🕐 Aguardando atendimento',em_andamento:'⚙️ Em atendimento',concluido:'✅ Concluído'}[r.status]||'';
+    acoes = `<span style="font-size:12px;color:var(--muted)">${statusTxt}</span><button onclick="fecharDetalhe()" class="btn-cancel">Fechar</button>`;
+  } else {
+    if (r.status === 'pendente') acoes += `<button class="btn-enviar" style="background:#4f7cff;font-size:12px;padding:8px 18px" onclick="solMudarStatus('em_andamento')">⚙️ Iniciar Atendimento</button>`;
+    else if (r.status === 'em_andamento') acoes += `<button class="btn-enviar" style="font-size:12px;padding:8px 18px" onclick="solConcluir()">✅ Concluir</button>`;
+  }
+  document.getElementById('det-acoes').innerHTML = acoes;
+  document.getElementById('modal-sol').style.display = 'block';
+}
+
+function fecharDetalhe() { document.getElementById('modal-sol').style.display='none'; _solAtual=null; }
+
+async function solMudarStatus(novoStatus) {
+  if (!_solAtual) return;
+  const btn = document.querySelector('#det-acoes .btn-enviar');
+  if (btn) { btn.disabled=true; btn.textContent='⏳ Salvando…'; }
+  try {
+    const resp = await fetch(`${SUPABASE_URL}/rest/v1/rpc/wc_atualizar_solicitacao_status`, {
+      method:'POST', headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON,'Authorization':`Bearer ${SUPABASE_ANON}`},
+      body: JSON.stringify({ p_token: session?.token||'', p_id: _solAtual.id, p_status: novoStatus })
+    });
+    const data = await resp.json();
+    if (data?.ok===false) throw new Error(data.erro||'Erro');
+    fecharDetalhe(); await painelCarregar();
+    painelAba('andamento', document.querySelectorAll('.painel-tab')[1]);
+    toast('Atendimento iniciado!','success');
+  } catch(e) { toast(e.message,'error'); if(btn){btn.disabled=false;btn.textContent='⚙️ Iniciar Atendimento';} }
+}
+
+async function solConcluir() {
+  const obs = document.getElementById('concl-obs')?.value||'';
+  const btn = document.querySelector('#det-acoes .btn-enviar');
+  if (btn) { btn.disabled=true; btn.textContent='⏳ Salvando…'; }
+  try {
+    const resp = await fetch(`${SUPABASE_URL}/rest/v1/rpc/wc_concluir_solicitacao`, {
+      method:'POST', headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON,'Authorization':`Bearer ${SUPABASE_ANON}`},
+      body: JSON.stringify({ p_token: session?.token||'', p_id: _solAtual.id, p_obs: obs })
+    });
+    const data = await resp.json();
+    if (data?.ok===false) throw new Error(data.erro||'Erro');
+    fecharDetalhe(); await painelCarregar();
+    painelAba('concluido', document.querySelectorAll('.painel-tab')[2]);
+    toast('Solicitação concluída!','success');
+  } catch(e) { toast(e.message,'error'); if(btn){btn.disabled=false;btn.textContent='✅ Concluir';} }
+}
+
+// ── Toast ──────────────────────────────────────
+function toast(msg, tipo) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.className = tipo||''; el.style.display='block';
+  clearTimeout(window._toastTimer);
+  window._toastTimer = setTimeout(()=>el.style.display='none', 4000);
+}
+</script>
+</body>
+</html>
