@@ -244,8 +244,11 @@
       <div class="form-section-body">
         <div class="form-grid cols-3">
           <div class="form-group">
-            <label>Matrícula <span class="req">*</span><span class="hint">Sem WE, sem pontos/vírgulas</span></label>
-            <input type="text" id="s-matricula" placeholder="798836" oninput="solBuscarColab()"/>
+            <label>Matrícula <span class="req">*</span><span class="hint">Sem WE — digite e aguarde buscar automaticamente no Template</span></label>
+            <div style="position:relative">
+              <input type="text" id="s-matricula" placeholder="Ex: 798836" oninput="solBuscarColab()" style="padding-right:36px"/>
+              <span id="s-mat-ico" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:14px;pointer-events:none"></span>
+            </div>
           </div>
           <div class="form-group span-2" style="grid-column:span 2">
             <label>Nome Completo <span class="req">*</span><span class="hint">Em maiúsculo</span></label>
@@ -574,10 +577,12 @@ window.addEventListener('DOMContentLoaded', () => {
 
   if (modo === 'form') {
     document.getElementById('modo-form').style.display = 'block';
-    // Receber dados do colaborador via sessionStorage ou postMessage
+    // Receber dados do colaborador via sessionStorage (só se veio do Template)
+    const viaTemplate = new URLSearchParams(location.search).get('via') === 'template';
     try {
       const raw = sessionStorage.getItem('sol_colab_data');
-      if (raw) { _colabData = JSON.parse(raw); solPreencherColab(); }
+      if (raw && viaTemplate) { _colabData = JSON.parse(raw); solPreencherColab(); }
+      else if (!viaTemplate) sessionStorage.removeItem('sol_colab_data'); // limpar se veio direto
     } catch(e) {}
     window.addEventListener('message', ev => {
       if (ev.data?.tipo === 'sol_colab') { _colabData = ev.data.colab; session = ev.data.session; solPreencherColab(); }
@@ -597,7 +602,7 @@ function abrirFormNovo() {
   const tok    = params.get('tok') || session?.token || '';
   const perfil = params.get('perfil') || session?.perfil || '';
   const nome   = encodeURIComponent(params.get('nome') || session?.nome || '');
-  const url    = `solicitacoes.html?modo=form&tok=${tok}&perfil=${perfil}&nome=${nome}`;
+  const url    = `solicitacoes.html?modo=form&via=painel&tok=${tok}&perfil=${perfil}&nome=${nome}`;
   window.open(url, 'sol_form_novo', 'width=920,height=860,scrollbars=yes,resizable=yes,toolbar=no,menubar=no');
 }
 function ehOnsite()  { return session?.perfil === 'onsite'; }
@@ -623,16 +628,44 @@ function solPreencherColab() {
 let _buscarTimer = null;
 function solBuscarColab() {
   clearTimeout(_buscarTimer);
+  const mat = document.getElementById('s-matricula').value.trim();
+  if (!mat) { solLimparColab(); return; }
   _buscarTimer = setTimeout(() => {
-    const mat = document.getElementById('s-matricula').value.trim();
-    if (!mat || mat.length < 4) return;
-    // Tentar pegar do opener (Template já carregado)
     try {
       const lista = window.opener?.COLABS_ATIVOS || [];
-      const found = lista.find(r => (r.matricula||'').replace(/^WE/i,'') === mat || r.matricula === 'WE'+mat);
-      if (found) { _colabData = found; solPreencherColab(); }
-    } catch(e) {}
-  }, 600);
+      const matNorm = mat.toUpperCase().replace(/^WE/i,'');
+      const found = lista.find(r => {
+        const rMat = (r.matricula||'').replace(/^WE/i,'');
+        return rMat === matNorm;
+      });
+      if (found) {
+        _colabData = found;
+        solPreencherColab();
+        document.getElementById('s-matricula').style.borderColor = 'var(--success)';
+        const ico = document.getElementById('s-mat-ico'); if(ico) ico.textContent = '✅';
+      } else {
+        solLimparColab();
+        if (mat.length >= 4) {
+          document.getElementById('s-matricula').style.borderColor = 'var(--danger)';
+          document.getElementById('s-nome').placeholder = '⚠️ Matrícula não encontrada no Template';
+          const ico = document.getElementById('s-mat-ico'); if(ico) ico.textContent = '❌';
+        }
+      }
+    } catch(e) { solLimparColab(); }
+  }, 500);
+}
+
+function solLimparColab() {
+  _colabData = null;
+  const campos = ['s-nome','s-operacao','s-cc','s-onsite'];
+  campos.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.value = ''; el.placeholder = ''; }
+  });
+  document.getElementById('s-matricula').style.borderColor = '';
+  const ico = document.getElementById('s-mat-ico'); if(ico) ico.textContent = '';
+  document.getElementById('footer-nome').textContent = '—';
+  document.getElementById('footer-info').textContent = 'Preencha todos os campos obrigatórios';
 }
 
 // ── Tipo de solicitação ────────────────────────
