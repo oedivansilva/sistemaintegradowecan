@@ -757,19 +757,19 @@ function rescArquivoSelecionado(input, areaId, nomeId) {
 async function rescUploadArquivo(file, path) {
   if (!file) return null;
 
-  // Usar FormData com método POST — padrão correto do Supabase Storage
-  const formData = new FormData();
-  formData.append('', file, file.name);
+  // Ler o arquivo como ArrayBuffer e enviar com Content-Type correto
+  const arrayBuffer = await file.arrayBuffer();
 
   const resp = await fetch(`${SUPABASE_URL}/storage/v1/object/rescisoes/${path}`, {
     method: 'POST',
     headers: {
-      'apikey':        SUPABASE_ANON,
-      'Authorization': `Bearer ${SUPABASE_ANON}`,
-      'x-upsert':      'true',
-      'cache-control': '3600',
+      'apikey':          SUPABASE_ANON,
+      'Authorization':   `Bearer ${SUPABASE_ANON}`,
+      'Content-Type':    file.type || 'application/octet-stream',
+      'x-upsert':        'true',
+      'cache-control':   'max-age=3600',
     },
-    body: formData,
+    body: arrayBuffer,
   });
 
   if (!resp.ok) {
