@@ -2055,9 +2055,8 @@ function doPost(e) { return doGet(e); }</pre>
     <div style="overflow-y:auto;flex:1;padding:16px 24px" id="bv-body">
       <div style="text-align:center;padding:32px;color:var(--muted)">⏳ Carregando…</div>
     </div>
-    <div style="padding:14px 24px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px">
+    <div style="padding:14px 24px;border-top:1px solid var(--border);display:flex;justify-content:flex-end">
       <button onclick="fecharBoasVindas()" style="background:var(--surface2);border:1px solid var(--border);color:var(--muted);border-radius:10px;padding:8px 20px;font-size:13px;cursor:pointer">Fechar</button>
-      <button onclick="fecharBoasVindas();navTo('sol-resumo')" style="background:var(--accent);color:#0f0718;border:none;border-radius:10px;padding:8px 20px;font-size:13px;font-weight:700;cursor:pointer">Ver Solicitações →</button>
     </div>
   </div>
 </div>
@@ -4007,7 +4006,9 @@ async function initApp() {
   // Iniciar verificação de notificações após login
   setTimeout(solIniciarPolling, 3000);
   // Exibir modal de boas-vindas com pendências
-  if (temPermissao('adp_sol_ver') || temPermissao('adp_beneficios')) setTimeout(exibirBoasVindas, 2000);
+  if (temPermissao('adp_sol_ver') || temPermissao('adp_beneficios') || temPermissao('adp_rescisao')
+      || temPermissao('adp_tickets_deslig') || temPermissao('adp_tickets_movim') || temPermissao('adp_tickets_voucher')
+      || temPermissao('rs_voucher')) setTimeout(exibirBoasVindas, 2000);
 }
 
 async function logout() {
@@ -10089,9 +10090,12 @@ function solIniciarPolling() {
 }
 // ── Modal de boas-vindas ──────────────────────────────────────
 async function exibirBoasVindas() {
-  const temSol = temPermissao('adp_sol_ver');
-  const temBen = temPermissao('adp_beneficios');
-  if (!temSol && !temBen) return;
+  const temSol   = temPermissao('adp_sol_ver');
+  const temBen   = temPermissao('adp_beneficios');
+  const temResc  = temPermissao('adp_rescisao');
+  const temTkt   = temPermissao('adp_tickets_deslig') || temPermissao('adp_tickets_movim') || temPermissao('adp_tickets_voucher');
+  const temVchr  = temPermissao('rs_voucher');
+  if (!temSol && !temBen && !temResc && !temTkt && !temVchr) return;
   const modal = document.getElementById('modal-boasvindas');
   if (!modal) return;
 
@@ -10136,9 +10140,45 @@ async function exibirBoasVindas() {
           status: st.status, cor: st.cor, ico: st.ico,
         });
       });
-      // Ordenar: atrasado/vence-hoje primeiro
       const ordem = { atrasado:0, vence_hoje:1, vence_amanha:2, proximo:3, ok:4, sem_prazo:5 };
       lotesBenef.sort((a,b) => (ordem[a.status]??9) - (ordem[b.status]??9));
+    }
+
+    // ── Rescisões pendentes/em andamento ──
+    let rescPendentes = [];
+    if (temResc) {
+      try {
+        const bodyResc = { p_token: session.token };
+        const resp = await fetch(`${SUPABASE_URL}/rest/v1/rpc/wc_listar_rescisoes`, {
+          method:'POST',
+          headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON,'Authorization':`Bearer ${SUPABASE_ANON}`},
+          body: JSON.stringify(bodyResc)
+        });
+        const data = await resp.json();
+        const lista = data.rescisoes || [];
+        // Onsite vê só as próprias; analista/gestor vê todas pendentes/andamento
+        const minhas = session.perfil === 'onsite'
+          ? lista.filter(r => r.onsite_nome === session.nome)
+          : lista;
+        rescPendentes = minhas.filter(r => ['pendente','em_andamento'].includes(r.status));
+      } catch(e) {}
+    }
+
+    // ── Tickets Shopee pendentes (só conta o que já estiver em memória, sem forçar carga pesada) ──
+    let tktPendentes = 0;
+    if (temTkt) {
+      try {
+        tktPendentes = Object.values(TKT_NOTAS||{}).filter(n => n.status === 'pendente').length;
+      } catch(e) {}
+    }
+
+    // ── Fila de Voucher pendente ──
+    let vchrPendente = 0;
+    if (temVchr) {
+      try {
+        const r = await rpc('wc_home_resumo', {});
+        vchrPendente = r?.voucher_pendente || 0;
+      } catch(e) {}
     }
 
     const TIPO_ICO = { AC:'🪪', TB:'🔄', TH:'🕐', RB:'💰', TLT:'📍' };
@@ -10180,16 +10220,62 @@ async function exibirBoasVindas() {
         ${lotesBenef.length>5?`<div style="font-size:11px;color:var(--muted);text-align:center">+${lotesBenef.length-5} mais</div>`:''}
       </div>`;
 
+    const secaoRescisoes = !rescPendentes.length ? '' : `
+      <div style="margin-bottom:16px">
+        <div style="font-size:10px;font-weight:800;color:#ef4444;text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px">
+          📋 Rescisões (${rescPendentes.length})
+        </div>
+        ${rescPendentes.slice(0,5).map(r=>`
+          <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;
+            padding:8px 12px;margin-bottom:6px;cursor:pointer;border-left:3px solid #ef4444"
+            onclick="fecharBoasVindas();rescAbrirPainel()">
+            <div style="font-size:12.5px;font-weight:700">${r.nome||'—'}</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px">
+              ${r.status==='em_andamento'?'⚙️ Em andamento':'🕐 Aguardando cálculo'} · ${r.matricula||''}
+            </div>
+          </div>`).join('')}
+        ${rescPendentes.length>5?`<div style="font-size:11px;color:var(--muted);text-align:center">+${rescPendentes.length-5} mais</div>`:''}
+      </div>`;
+
+    const secaoTickets = !tktPendentes ? '' : `
+      <div style="margin-bottom:16px">
+        <div onclick="fecharBoasVindas();navTo('tickets-todos')"
+          style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;
+          padding:10px 12px;cursor:pointer;border-left:3px solid #f59e0b;display:flex;align-items:center;gap:10px">
+          <span style="font-size:18px">🎫</span>
+          <div>
+            <div style="font-size:12.5px;font-weight:700;color:#f59e0b">Tickets Shopee — ${tktPendentes} pendente(s)</div>
+            <div style="font-size:11px;color:var(--muted)">Notas internas aguardando resolução</div>
+          </div>
+        </div>
+      </div>`;
+
+    const secaoVoucher = !vchrPendente ? '' : `
+      <div style="margin-bottom:16px">
+        <div onclick="fecharBoasVindas();navTo('voucher')"
+          style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;
+          padding:10px 12px;cursor:pointer;border-left:3px solid #4f7cff;display:flex;align-items:center;gap:10px">
+          <span style="font-size:18px">⇄</span>
+          <div>
+            <div style="font-size:12.5px;font-weight:700;color:#4f7cff">Fila de Voucher — ${vchrPendente} pendente(s)</div>
+            <div style="font-size:11px;color:var(--muted)">Aguardando aprovação</div>
+          </div>
+        </div>
+      </div>`;
+
     const ehOnsite = session?.perfil === 'onsite';
 
-    // Para Onsite: devolvidas + benefícios. Para outros: devolvidas + pendentes + andamento + benefícios
     const totalAlerta = devolvidas.length + lotesBenef.reduce((s,l)=>s+l.pend,0)
+      + rescPendentes.length + tktPendentes + vchrPendente
       + (ehOnsite ? 0 : pendentes.length + andamento.length);
 
     // Nada para alertar — fechar silenciosamente
     if (totalAlerta === 0) { fecharBoasVindas(); return; }
 
     body.innerHTML = secaoBeneficios
+      + secaoRescisoes
+      + secaoVoucher
+      + secaoTickets
       + secao('Devolvidas para correção','#a855f7','↩️', devolvidas)
       + (ehOnsite ? '' : secao('Pendentes','var(--warning)','🕐', pendentes))
       + (ehOnsite ? '' : secao('Em Andamento','#4f7cff','⚙️', andamento));
