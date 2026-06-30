@@ -4007,7 +4007,7 @@ async function initApp() {
   // Iniciar verificação de notificações após login
   setTimeout(solIniciarPolling, 3000);
   // Exibir modal de boas-vindas com pendências
-  if (temPermissao('adp_sol_ver')) setTimeout(exibirBoasVindas, 2000);
+  if (temPermissao('adp_sol_ver') || temPermissao('adp_beneficios')) setTimeout(exibirBoasVindas, 2000);
 }
 
 async function logout() {
@@ -10089,7 +10089,9 @@ function solIniciarPolling() {
 }
 // ── Modal de boas-vindas ──────────────────────────────────────
 async function exibirBoasVindas() {
-  if (!temPermissao('adp_sol_ver')) return;
+  const temSol = temPermissao('adp_sol_ver');
+  const temBen = temPermissao('adp_beneficios');
+  if (!temSol && !temBen) return;
   const modal = document.getElementById('modal-boasvindas');
   if (!modal) return;
 
@@ -10100,21 +10102,44 @@ async function exibirBoasVindas() {
 
   const body = document.getElementById('bv-body');
   try {
-    const bodyReq = { p_token: session.token };
-    if (session.perfil === 'onsite') {
-      bodyReq.p_onsite_nome = session.nome;
-    }
-    const resp = await fetch(`${SUPABASE_URL}/rest/v1/rpc/wc_listar_solicitacoes`, {
-      method:'POST',
-      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON,'Authorization':`Bearer ${SUPABASE_ANON}`},
-      body: JSON.stringify(bodyReq)
-    });
-    const data = await resp.json();
-    const lista = data.solicitacoes || [];
+    let pendentes = [], devolvidas = [], andamento = [];
 
-    const pendentes  = lista.filter(s => s.status === 'pendente');
-    const devolvidas = lista.filter(s => s.status === 'devolvida');
-    const andamento  = lista.filter(s => s.status === 'em_andamento');
+    if (temSol) {
+      const bodyReq = { p_token: session.token };
+      if (session.perfil === 'onsite') bodyReq.p_onsite_nome = session.nome;
+      const resp = await fetch(`${SUPABASE_URL}/rest/v1/rpc/wc_listar_solicitacoes`, {
+        method:'POST',
+        headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON,'Authorization':`Bearer ${SUPABASE_ANON}`},
+        body: JSON.stringify(bodyReq)
+      });
+      const data = await resp.json();
+      const lista = data.solicitacoes || [];
+      pendentes  = lista.filter(s => s.status === 'pendente');
+      devolvidas = lista.filter(s => s.status === 'devolvida');
+      andamento  = lista.filter(s => s.status === 'em_andamento');
+    }
+
+    // ── Benefícios pendentes de confirmação ──
+    let lotesBenef = [];
+    if (temBen) {
+      if (!INTEG_COLMEIAS?.length) { try { await integCarregarColmeias(); } catch(e) {} }
+      const colmeias = integFiltrarPorOnsite(INTEG_COLMEIAS || []);
+      const datas = [...new Set(colmeias.map(c => c.data_admissao))];
+      datas.forEach(data => {
+        const colsDt = colmeias.filter(c => c.data_admissao === data);
+        const pend = colsDt.reduce((s,c)=>s+Number(c.pendentes),0);
+        if (pend === 0) return;
+        const st = integStatusPrazo(colsDt[0]);
+        lotesBenef.push({
+          data, pend,
+          prazoLabel: colsDt[0]?.prazo ? integFormatarDataBR(colsDt[0].prazo) : '—',
+          status: st.status, cor: st.cor, ico: st.ico,
+        });
+      });
+      // Ordenar: atrasado/vence-hoje primeiro
+      const ordem = { atrasado:0, vence_hoje:1, vence_amanha:2, proximo:3, ok:4, sem_prazo:5 };
+      lotesBenef.sort((a,b) => (ordem[a.status]??9) - (ordem[b.status]??9));
+    }
 
     const TIPO_ICO = { AC:'🪪', TB:'🔄', TH:'🕐', RB:'💰', TLT:'📍' };
 
@@ -10136,15 +10161,36 @@ async function exibirBoasVindas() {
         ${items.length>5?`<div style="font-size:11px;color:var(--muted);text-align:center">+${items.length-5} mais</div>`:''}
       </div>`;
 
+    const secaoBeneficios = !lotesBenef.length ? '' : `
+      <div style="margin-bottom:16px">
+        <div style="font-size:10px;font-weight:800;color:var(--warning);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px">
+          🐝 Programação de Benefícios (${lotesBenef.reduce((s,l)=>s+l.pend,0)} confirmações)
+        </div>
+        ${lotesBenef.slice(0,5).map(l=>`
+          <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;
+            padding:8px 12px;margin-bottom:6px;cursor:pointer;border-left:3px solid ${l.cor}"
+            onclick="fecharBoasVindas();navTo('integracao')">
+            <div style="font-size:12.5px;font-weight:700">
+              ${l.ico} Admissão ${integFormatarDataBR(l.data)} — ${l.pend} pendente(s)
+            </div>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px">
+              Prazo para confirmação: <span style="color:${l.cor};font-weight:600">${l.prazoLabel}</span>
+            </div>
+          </div>`).join('')}
+        ${lotesBenef.length>5?`<div style="font-size:11px;color:var(--muted);text-align:center">+${lotesBenef.length-5} mais</div>`:''}
+      </div>`;
+
     const ehOnsite = session?.perfil === 'onsite';
 
-    // Para Onsite: só alerta devolvidas. Para outros: devolvidas + pendentes + andamento
-    const totalAlerta = devolvidas.length + (ehOnsite ? 0 : pendentes.length + andamento.length);
+    // Para Onsite: devolvidas + benefícios. Para outros: devolvidas + pendentes + andamento + benefícios
+    const totalAlerta = devolvidas.length + lotesBenef.reduce((s,l)=>s+l.pend,0)
+      + (ehOnsite ? 0 : pendentes.length + andamento.length);
 
     // Nada para alertar — fechar silenciosamente
     if (totalAlerta === 0) { fecharBoasVindas(); return; }
 
-    body.innerHTML = secao('Devolvidas para correção','#a855f7','↩️', devolvidas)
+    body.innerHTML = secaoBeneficios
+      + secao('Devolvidas para correção','#a855f7','↩️', devolvidas)
       + (ehOnsite ? '' : secao('Pendentes','var(--warning)','🕐', pendentes))
       + (ehOnsite ? '' : secao('Em Andamento','#4f7cff','⚙️', andamento));
 
