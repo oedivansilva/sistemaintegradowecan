@@ -7575,9 +7575,22 @@ function integLerPlanilha(input) {
           dataStr = admiss.toISOString().split('T')[0];
         } else {
           const s = String(admiss).trim();
-          const m = s.match(/(\d{2})\/(\d{2})\/(\d{4})/);
-          if (m) dataStr = `${m[3]}-${m[2]}-${m[1]}`;
-          else dataStr = s;
+          // dd/mm/aaaa (formato BR)
+          let m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+          if (m && Number(m[1]) <= 31 && Number(m[2]) <= 12) {
+            dataStr = `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;
+          } else {
+            // m/d/aaaa ou m/d/aa (formato US — fallback)
+            m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+            if (m) {
+              const ano = m[3].length === 2 ? '20'+m[3] : m[3];
+              dataStr = `${ano}-${m[1].padStart(2,'0')}-${m[2].padStart(2,'0')}`;
+            } else {
+              // aaaa-mm-dd já no formato certo
+              const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+              dataStr = iso ? iso[0] : s;
+            }
+          }
         }
 
         const depto_cod  = iDepto  >= 0 ? (row[iDepto]  || '').toString().trim() : '';
@@ -7606,6 +7619,25 @@ function integLerPlanilha(input) {
   reader.readAsArrayBuffer(file);
 }
 
+// Converte qualquer formato de data (ISO, BR, serial Excel, m/d/aa) para DD/MM/AAAA legível
+function integFormatarDataBR(data) {
+  if (!data) return '—';
+  const s = String(data).trim();
+  // aaaa-mm-dd
+  let m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (m) return `${m[3]}/${m[2]}/${m[1]}`;
+  // dd/mm/aaaa
+  m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (m) return `${m[1].padStart(2,'0')}/${m[2].padStart(2,'0')}/${m[3]}`;
+  // m/d/aa ou m/d/aaaa (formato americano)
+  m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+  if (m) {
+    let ano = m[3].length === 2 ? '20'+m[3] : m[3];
+    return `${m[2].padStart(2,'0')}/${m[1].padStart(2,'0')}/${ano}`;
+  }
+  return s;
+}
+
 function integMostrarPreview() {
   const wrap  = document.getElementById('integ-preview-wrap');
   const titulo = document.getElementById('integ-preview-titulo');
@@ -7613,10 +7645,10 @@ function integMostrarPreview() {
   const totalCol = INTEG_LOTE.reduce((s,g) => s + g.colaboradores.length, 0);
   titulo.textContent = `${INTEG_LOTE.length} grupo(s) encontrado(s) · ${totalCol} colaborador(es) admitido(s)`;
   lista.innerHTML = INTEG_LOTE.map(g => {
-    const [a,m,d] = g.data_admissao.split('-');
+    const dLabel = integFormatarDataBR(g.data_admissao);
     return `<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px">
       <div>
-        <strong>${d}/${m}/${a}</strong>
+        <strong>${dLabel}</strong>
         <span style="color:var(--muted);margin-left:8px">${g.cli_nome ? g.cli_nome+' — ' : ''}${g.depto_nome || g.depto_cod || 'Sem depto'}</span>
       </div>
       <span style="color:var(--accent);font-weight:600">${g.colaboradores.length} pessoa(s)</span>
