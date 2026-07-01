@@ -479,7 +479,7 @@ async function iniciarApp() {
   await Promise.all([carregarSolicitacoes(), carregarColabs(), indCarregarDeptos()]);
 }
 
-// ── Colaboradores do Template (Google Sheets gviz) ───────────
+// ── Colaboradores do Template (via Apps Script proxy) ────────
 const COLABS_SHEET_ID    = '1WBYOF9AkoS7NpzhqFyqm5PzQRP13yUF2p5ZY8FfZp_c';
 const COLABS_GID_ATIVOS  = '690743947';
 const COLABS_COLS = [
@@ -490,6 +490,27 @@ const COLABS_COLS = [
   'tam_calca','tam_blusa','tam_calcado','tam_luva','status_colaborador',
   'sexo','status_operacao','trintidio','categoria'
 ];
+
+let _appsScriptUrl = '';
+
+async function carregarAppsScriptUrl() {
+  // 1. tenta localStorage (já carregado antes)
+  try { _appsScriptUrl = localStorage.getItem('wecan_colabs_webapp_url') || ''; } catch(e) {}
+  if (_appsScriptUrl) return;
+  // 2. busca do Supabase
+  try {
+    const resp = await fetch(`${SUPABASE_URL}/rest/v1/rpc/wc_get_config`, {
+      method:'POST',
+      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON,'Authorization':`Bearer ${SUPABASE_ANON}`},
+      body: JSON.stringify({ p_chave:'colabs_webapp_url' })
+    });
+    const url = await resp.json();
+    if (url) {
+      _appsScriptUrl = url;
+      try { localStorage.setItem('wecan_colabs_webapp_url', url); } catch(e) {}
+    }
+  } catch(e) {}
+}
 
 function colabsParseCSV(text) {
   const parseRow = row => {
@@ -516,35 +537,49 @@ function colabsParseCSV(text) {
   return registros;
 }
 
+function colabsFiltrarPorCC(todos) {
+  const ops = session._operacoes || session.operacoes || [];
+  if (!ops.length) return todos;
+  const ccLider = ops.map(o => (o.cc_cod || o.nome || o || '').toUpperCase().replace(/[-_\s]/g,'')).filter(Boolean);
+  return todos.filter(c => {
+    const ccColab = (c.cc       || '').toUpperCase().replace(/[-_\s]/g,'');
+    const opColab = (c.operacao || '').toUpperCase().replace(/[-_\s]/g,'');
+    return ccLider.some(cc =>
+      ccColab.includes(cc) || cc.includes(ccColab) ||
+      opColab.includes(cc) || cc.includes(opColab)
+    );
+  });
+}
+
 async function carregarColabs() {
+  await carregarAppsScriptUrl();
+  let todos = [];
+
+  // Tenta gviz direto primeiro
   try {
     const url = `https://docs.google.com/spreadsheets/d/${COLABS_SHEET_ID}/gviz/tq?tqx=out:csv&gid=${COLABS_GID_ATIVOS}`;
     const resp = await fetch(url);
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
     const text = await resp.text();
-    if (text.trim().startsWith('<!') || text.trim().startsWith('<h')) throw new Error('Planilha requer autenticação');
-    const todos = colabsParseCSV(text);
-
-    // Filtra pelo CC do líder — compara campo 'cc' da planilha com as operações da sessão
-    const ops = session._operacoes || session.operacoes || [];
-    const ccLider = ops.map(o => (o.cc_cod || o.nome || o || '').toUpperCase().trim()).filter(Boolean);
-
-    if (ccLider.length === 0) {
-      COLABS = todos; // sem CC definido: mostra todos (só Master/fallback)
-    } else {
-      COLABS = todos.filter(c => {
-        const ccColab = (c.cc || '').toUpperCase().trim();
-        const opColab = (c.operacao || '').toUpperCase().trim();
-        return ccLider.some(cc =>
-          ccColab.includes(cc) || cc.includes(ccColab) ||
-          opColab.includes(cc) || cc.includes(opColab)
-        );
-      });
-    }
+    if (text.trim().startsWith('<!') || text.trim().startsWith('<h')) throw new Error('auth');
+    todos = colabsParseCSV(text);
   } catch(e) {
-    console.warn('Erro ao carregar colaboradores:', e.message);
-    COLABS = [];
+    // Fallback: Apps Script como proxy
+    if (!_appsScriptUrl) { console.warn('Apps Script URL não configurada'); COLABS = []; return; }
+    try {
+      const resp = await fetch(_appsScriptUrl + '?action=ler&tipo=ativos');
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const json = await resp.json();
+      if (!json.ok) throw new Error(json.error || 'Erro Apps Script');
+      todos = colabsParseCSV(json.csv);
+    } catch(e2) {
+      console.warn('Erro ao carregar colaboradores:', e2.message);
+      COLABS = []; return;
+    }
   }
+
+  COLABS = colabsFiltrarPorCC(todos);
+  console.log(`Colaboradores carregados: ${COLABS.length} (de ${todos.length} totais)`);
 }
 
 // ── Busca de colaborador ─────────────────────
