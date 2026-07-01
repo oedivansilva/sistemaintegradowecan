@@ -9468,6 +9468,32 @@ async function nsSalvarConsultor() {
 }
 
 
+
+function toggleSidebar() {
+  const sb = document.getElementById('sidebar');
+  const collapsed = sb.classList.toggle('sb-col');
+  document.body.classList.toggle('sb-collapsed', collapsed);
+  try { localStorage.setItem('wecan_sb_col', collapsed ? '1' : '0'); } catch(e) {}
+}
+function restaurarSidebar() {
+  try {
+    if (localStorage.getItem('wecan_sb_col') === '1') {
+      document.getElementById('sidebar')?.classList.add('sb-col');
+      document.body.classList.add('sb-collapsed');
+    }
+  } catch(e) {}
+}
+function toggleSidebarMobile() {
+  const sb  = document.getElementById('sidebar');
+  const ov  = document.getElementById('sidebar-overlay');
+  const open = sb.classList.toggle('open');
+  ov.classList.toggle('visible', open);
+}
+function fecharSidebarMobile() {
+  document.getElementById('sidebar')?.classList.remove('open');
+  document.getElementById('sidebar-overlay')?.classList.remove('visible');
+}
+
 // ── Stubs para funções R&S não presentes em ADP ──
 async function carregarVagas() {}
 async function carregarFilaVoucher() {}
