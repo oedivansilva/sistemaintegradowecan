@@ -185,8 +185,10 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:1
 
     <!-- TABS -->
     <div class="tabs">
-      <button class="tab ativa" onclick="trocarTab('minhas')" id="tab-minhas">📋 Minhas Solicitações</button>
+      <button class="tab ativa" onclick="trocarTab('minhas')" id="tab-minhas">📋 Solicitações</button>
       <button class="tab"       onclick="trocarTab('nova')"   id="tab-nova">+ Nova Solicitação</button>
+      <button class="tab"       onclick="trocarTab('indicar')" id="tab-indicar">👥 Indicar Candidato</button>
+      <button class="tab"       onclick="trocarTab('indicacoes')" id="tab-indicacoes">🔍 Minhas Indicações</button>
     </div>
 
     <!-- ══ ABA: MINHAS SOLICITAÇÕES ══ -->
@@ -289,7 +291,77 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:1
           <button class="btn btn-primary" onclick="enviarSolicitacao()">📤 Enviar Solicitação</button>
         </div>
       </div>
-    </div>
+    </div><!-- /pg-nova -->
+
+    <!-- ══ ABA: INDICAR CANDIDATO ══ -->
+    <div id="pg-indicar" style="display:none">
+      <div class="card">
+        <div class="card-title">👥 Indicar Candidato</div>
+
+        <div id="ind-sucesso" style="display:none;text-align:center;padding:32px 0">
+          <div style="font-size:40px;margin-bottom:12px">✅</div>
+          <div style="font-size:16px;font-weight:800;margin-bottom:6px">Indicação enviada!</div>
+          <div style="font-size:13px;color:var(--muted);margin-bottom:20px">Recebemos o currículo de <strong id="ind-suc-nome"></strong>.<br/>Acompanhe na aba Minhas Indicações.</div>
+          <button class="btn btn-primary" onclick="novaIndicacao()">+ Indicar outro candidato</button>
+        </div>
+
+        <div id="ind-form">
+          <div class="form-group">
+            <label>Nome Completo do Candidato *</label>
+            <input type="text" id="ind-candidato" placeholder="Nome do candidato indicado"/>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Operação *</label>
+              <select id="ind-operacao"><option value="">Carregando operações…</option></select>
+            </div>
+            <div class="form-group">
+              <label>Cargo Indicado *</label>
+              <input type="text" id="ind-cargo" placeholder="Ex: Auxiliar de Logística"/>
+            </div>
+          </div>
+
+          <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:14px">
+            <div style="font-size:10.5px;color:var(--muted);text-transform:uppercase;font-weight:700;letter-spacing:.4px;margin-bottom:6px">Responsável pela indicação</div>
+            <div style="font-size:13px;font-weight:700" id="ind-lider-nome-txt"></div>
+            <div style="font-size:12px;color:var(--muted);margin-top:2px" id="ind-lider-email-txt"></div>
+          </div>
+
+          <div class="form-group"><label>Currículo do candidato *</label></div>
+          <div class="upload-area" id="ind-upload-zone"
+            ondragover="event.preventDefault();this.classList.add('dragover')"
+            ondragleave="this.classList.remove('dragover')"
+            ondrop="event.preventDefault();this.classList.remove('dragover');indArquivoSelecionado(event.dataTransfer.files[0])"
+            onclick="document.getElementById('ind-arquivo').click()">
+            <input type="file" id="ind-arquivo" accept=".pdf,.jpg,.jpeg,.png,.webp" style="display:none" onchange="indArquivoSelecionado(this.files[0])"/>
+            <div style="font-size:28px;margin-bottom:6px">📎</div>
+            <div style="font-size:13px;font-weight:600" id="ind-upload-titulo">Clique ou arraste o arquivo aqui</div>
+            <div style="font-size:11.5px;color:var(--muted);margin-top:4px">PDF, JPG ou PNG — máximo 5 MB</div>
+          </div>
+          <div id="ind-file-info" style="display:none;align-items:center;gap:8px;margin-top:8px;font-size:12px;background:var(--surface2);border-radius:8px;padding:8px 12px">
+            <span id="ind-fi-ico">📄</span>
+            <span id="ind-fi-nome" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+            <span id="ind-fi-size" style="color:var(--muted)"></span>
+            <button onclick="indRemoverArquivo()" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:18px;line-height:1">×</button>
+          </div>
+
+          <div id="ind-erro" style="display:none;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:var(--danger);padding:9px 12px;border-radius:8px;font-size:12.5px;margin-top:12px"></div>
+          <div id="ind-info" style="display:none;background:rgba(99,204,176,.08);border:1px solid rgba(99,204,176,.2);color:var(--accent);padding:9px 12px;border-radius:8px;font-size:12.5px;margin-top:12px">⏳ Fazendo upload do currículo, aguarde…</div>
+
+          <div style="display:flex;justify-content:flex-end;margin-top:16px">
+            <button class="btn btn-primary" onclick="enviarIndicacao()">📤 Enviar Indicação</button>
+          </div>
+        </div>
+      </div>
+    </div><!-- /pg-indicar -->
+
+    <!-- ══ ABA: MINHAS INDICAÇÕES ══ -->
+    <div id="pg-indicacoes" style="display:none">
+      <div style="display:flex;justify-content:flex-end;margin-bottom:14px">
+        <button class="btn btn-ghost btn-sm" onclick="carregarIndicacoes()">🔄 Atualizar</button>
+      </div>
+      <div id="ind-lista"><div class="empty">Carregando…</div></div>
+    </div><!-- /pg-indicacoes -->
 
   </main>
 </div>
@@ -402,7 +474,7 @@ async function iniciarApp() {
   document.getElementById('pg-app').style.display   = 'flex';
   document.getElementById('user-chip').textContent   = session.nome || 'Líder';
   document.getElementById('f-data').value = new Date().toISOString().substring(0,10);
-  await Promise.all([carregarSolicitacoes(), carregarColabs()]);
+  await Promise.all([carregarSolicitacoes(), carregarColabs(), indCarregarDeptos()]);
 }
 
 // ── Carregar colaboradores ───────────────────
@@ -477,11 +549,13 @@ function calcularRetorno() {
 
 // ── Tabs ─────────────────────────────────────
 function trocarTab(id) {
-  ['minhas','nova'].forEach(t => {
+  ['minhas','nova','indicar','indicacoes'].forEach(t => {
     document.getElementById('pg-'+t).style.display      = t===id ? 'block' : 'none';
     document.getElementById('tab-'+t).classList.toggle('ativa', t===id);
   });
-  if (id === 'minhas') carregarSolicitacoes();
+  if (id === 'minhas')      carregarSolicitacoes();
+  if (id === 'indicacoes')  carregarIndicacoes();
+  if (id === 'indicar')     indIniciarAba();
 }
 
 // ── Enviar solicitação ───────────────────────
@@ -653,6 +727,175 @@ function abrirDetalhe(s) {
   document.getElementById('modal-bg').style.display = 'flex';
 }
 function fecharModal() { document.getElementById('modal-bg').style.display = 'none'; }
+
+// ════════════════════════════════════════════════════════════
+//  INDICAÇÕES — integrado do indicacao.html
+// ════════════════════════════════════════════════════════════
+const BUCKET_CURRICULOS = 'curriculos';
+let _indArquivo = null;
+let _indDeptoId = null;
+
+async function indCarregarDeptos() {
+  const sel = document.getElementById('ind-operacao');
+  try {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/wc_listar_deptos_publico`, {
+      method:'POST', headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON,'Authorization':`Bearer ${SUPABASE_ANON}`}, body:'{}'
+    });
+    let dados = await r.json();
+    if (typeof dados === 'string') dados = JSON.parse(dados);
+    const lista = Array.isArray(dados) ? dados : [];
+    sel.innerHTML = '<option value="">Selecione a operação…</option>' +
+      lista.map(d => `<option value="${d.id}">${d.nome}</option>`).join('');
+    sel.disabled = false;
+
+    // Tenta pré-selecionar pelo CC do líder (operacoes[0])
+    const ccLider = (session._operacoes?.[0]?.nome || session._operacoes?.[0] || '').toUpperCase();
+    if (ccLider) {
+      const match = lista.find(d => d.nome.toUpperCase().includes(ccLider) || ccLider.includes(d.nome.toUpperCase()));
+      if (match) { sel.value = match.id; _indDeptoId = match.id; }
+    }
+  } catch(e) {
+    sel.innerHTML = '<option value="">Erro ao carregar operações</option>';
+    sel.disabled = false;
+  }
+  sel.addEventListener('change', function() { _indDeptoId = this.value || null; });
+}
+
+function indIniciarAba() {
+  document.getElementById('ind-lider-nome-txt').textContent  = session.nome  || '—';
+  document.getElementById('ind-lider-email-txt').textContent = session.email || '—';
+  document.getElementById('ind-erro').style.display = 'none';
+  document.getElementById('ind-info').style.display = 'none';
+}
+
+function indArquivoSelecionado(file) {
+  if (!file) return;
+  _indArquivo = file;
+  const ext = file.name.split('.').pop().toLowerCase();
+  document.getElementById('ind-fi-ico').textContent = ext === 'pdf' ? '📄' : '🖼️';
+  document.getElementById('ind-fi-nome').textContent = file.name;
+  document.getElementById('ind-fi-size').textContent = indFmtTamanho(file.size);
+  document.getElementById('ind-file-info').style.display = 'flex';
+  document.getElementById('ind-upload-titulo').textContent = 'Arquivo selecionado ✓';
+  document.getElementById('ind-upload-zone').style.borderColor = 'var(--success)';
+}
+function indRemoverArquivo() {
+  _indArquivo = null;
+  document.getElementById('ind-arquivo').value = '';
+  document.getElementById('ind-file-info').style.display = 'none';
+  document.getElementById('ind-upload-titulo').textContent = 'Clique ou arraste o arquivo aqui';
+  document.getElementById('ind-upload-zone').style.borderColor = '';
+}
+function indFmtTamanho(b) { return b < 1024*1024 ? (b/1024).toFixed(0)+'KB' : (b/1024/1024).toFixed(1)+'MB'; }
+
+async function indUploadArquivo(file) {
+  const ext  = file.name.split('.').pop().toLowerCase();
+  const nome = `${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+  const resp = await fetch(`${SUPABASE_URL}/storage/v1/object/${BUCKET_CURRICULOS}/${nome}`, {
+    method:'POST',
+    headers:{'apikey':SUPABASE_ANON,'Authorization':`Bearer ${SUPABASE_ANON}`,'Content-Type':file.type||'application/octet-stream','x-upsert':'true'},
+    body: file
+  });
+  if (!resp.ok) throw new Error('Erro ao enviar o arquivo. Tente novamente.');
+  return { url:`${SUPABASE_URL}/storage/v1/object/public/${BUCKET_CURRICULOS}/${nome}`, nome:file.name };
+}
+
+async function enviarIndicacao() {
+  const candidato = document.getElementById('ind-candidato').value.trim();
+  const cargo     = document.getElementById('ind-cargo').value.trim();
+  const erroEl    = document.getElementById('ind-erro');
+  const infoEl    = document.getElementById('ind-info');
+  erroEl.style.display = 'none';
+
+  const mostrarErro = msg => { erroEl.textContent = msg; erroEl.style.display = 'block'; };
+
+  if (!candidato)    return mostrarErro('Informe o nome do candidato.');
+  if (!cargo)        return mostrarErro('Informe o cargo indicado.');
+  if (!_indDeptoId)  return mostrarErro('Selecione a operação.');
+  if (!_indArquivo)  return mostrarErro('Anexe o currículo do candidato.');
+  if (_indArquivo.size > 5*1024*1024) return mostrarErro('Arquivo muito grande. Máximo 5MB.');
+
+  infoEl.style.display = 'block';
+  try {
+    const upload = await indUploadArquivo(_indArquivo);
+    await rpc('wc_criar_indicacao', {
+      p_nome_candidato: candidato,
+      p_cargo_indicado: cargo,
+      p_nome_lider:     session.nome  || '',
+      p_email_lider:    session.email || '',
+      p_anexo_url:      upload.url,
+      p_anexo_nome:     upload.nome,
+      p_depto_id:       _indDeptoId
+    });
+    infoEl.style.display = 'none';
+    document.getElementById('ind-suc-nome').textContent = candidato;
+    document.getElementById('ind-form').style.display   = 'none';
+    document.getElementById('ind-sucesso').style.display = 'block';
+  } catch(e) {
+    infoEl.style.display = 'none';
+    mostrarErro(e.message);
+  }
+}
+
+function novaIndicacao() {
+  _indArquivo = null; _indDeptoId = null;
+  document.getElementById('ind-candidato').value = '';
+  document.getElementById('ind-cargo').value     = '';
+  document.getElementById('ind-arquivo').value   = '';
+  document.getElementById('ind-file-info').style.display  = 'none';
+  document.getElementById('ind-upload-titulo').textContent = 'Clique ou arraste o arquivo aqui';
+  document.getElementById('ind-upload-zone').style.borderColor = '';
+  document.getElementById('ind-erro').style.display    = 'none';
+  document.getElementById('ind-sucesso').style.display = 'none';
+  document.getElementById('ind-form').style.display    = 'block';
+}
+
+async function carregarIndicacoes() {
+  const wrap = document.getElementById('ind-lista');
+  wrap.innerHTML = '<div class="empty">Carregando…</div>';
+  if (!session?.email) { wrap.innerHTML = '<div class="empty">E-mail não encontrado na sessão.</div>'; return; }
+  try {
+    const resp = await rpc('wc_indicacoes_lider', { p_email: session.email });
+    const lista = resp.indicacoes || [];
+    if (!lista.length) { wrap.innerHTML = '<div class="empty">Você ainda não fez nenhuma indicação.</div>'; return; }
+
+    const cnt = { pendente:0, recebido:0, concluido:0, rejeitado:0 };
+    lista.forEach(i => { if (cnt[i.status]!==undefined) cnt[i.status]++; });
+    const lbl = { pendente:'Pendente', recebido:'Recebido', concluido:'Concluído', rejeitado:'Rejeitado' };
+    const corPill = { pendente:'rgba(245,158,11,.15);color:var(--warning)', recebido:'rgba(99,204,176,.15);color:var(--accent)', concluido:'rgba(34,197,94,.15);color:var(--success)', rejeitado:'rgba(239,68,68,.1);color:var(--danger)' };
+
+    wrap.innerHTML = `
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:10px;margin-bottom:20px">
+        ${Object.entries(cnt).map(([k,v]) => `
+          <div class="card" style="text-align:center;padding:12px">
+            <div style="font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase">${lbl[k]}</div>
+            <div style="font-size:22px;font-weight:900;margin-top:4px">${v}</div>
+          </div>`).join('')}
+      </div>
+      ${lista.map(i => {
+        const ext = (i.anexo_nome||'').toLowerCase();
+        const ico = ext.endsWith('.pdf') ? '📄' : '🖼️';
+        const feedbackHtml = i.motivo
+          ? `<div style="margin-top:8px;font-size:12px;background:rgba(99,204,176,.07);border:1px solid rgba(99,204,176,.15);border-radius:8px;padding:8px 10px"><b>Feedback:</b> ${i.motivo}</div>`
+          : i.status === 'pendente'
+          ? `<div style="margin-top:8px;font-size:12px;background:rgba(245,158,11,.07);border:1px solid rgba(245,158,11,.15);border-radius:8px;padding:8px 10px">⏳ Aguardando análise da equipe de admissão.</div>` : '';
+        return `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:10px">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap">
+            <div>
+              <div style="font-size:14px;font-weight:700">${i.nome_candidato}</div>
+              <div style="font-size:11.5px;color:var(--muted);margin-top:2px">${i.cargo_indicado||'—'} · ${i.operacao||'—'}</div>
+            </div>
+            <span style="background:${corPill[i.status]||'var(--surface3);color:var(--muted)'};font-size:10px;font-weight:700;padding:2px 9px;border-radius:20px;flex-shrink:0">${lbl[i.status]||i.status}</span>
+          </div>
+          ${feedbackHtml}
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;font-size:11.5px">
+            <span style="color:var(--muted)">Enviado em ${i.criado_em}</span>
+            ${i.anexo_url ? `<a href="${i.anexo_url}" target="_blank" style="color:var(--accent);text-decoration:none">${ico} Ver currículo ↗</a>` : ''}
+          </div>
+        </div>`;
+      }).join('')}`;
+  } catch(e) { wrap.innerHTML = `<div class="empty" style="color:var(--danger)">${e.message}</div>`; }
+}
 
 // ── Boot ─────────────────────────────────────
 window.addEventListener('DOMContentLoaded', () => {
