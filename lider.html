@@ -359,7 +359,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:1
 <script>
 const SUPABASE_URL  = 'https://omwilcuzcvgzyzqqrbkh.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9td2lsY3V6Y3Znenl6cXFyYmtoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIxMzI1MTIsImV4cCI6MjA5NzcwODUxMn0.S1pbFqZ4B5_TWMBq_r8BeQ9OOFzkj73aOoI6g3Y987Q';
-const SESSION_KEY   = 'wecan_lider_session_v1';
+const SESSION_KEY   = 'wecan_session_v1'; // mesma chave do shared.js / index.html
 
 let session = null;
 let COLABS  = [];
@@ -400,7 +400,7 @@ function toast(msg, tipo='') {
   _toastTimer = setTimeout(() => el.style.display='none', 3500);
 }
 
-function salvarSessao(s) { try { localStorage.setItem(SESSION_KEY, JSON.stringify({session:s, savedAt:Date.now()})); } catch(e){} }
+function salvarSessao(s) { try { localStorage.setItem(SESSION_KEY, JSON.stringify({ session:s, savedAt:Date.now() })); } catch(e){} }
 function limparSessao()   { try { localStorage.removeItem(SESSION_KEY); } catch(e){} }
 function carregarSessao() {
   try {
