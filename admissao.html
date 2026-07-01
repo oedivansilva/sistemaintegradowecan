@@ -1473,32 +1473,28 @@
           </div>
         </div>
 
-        <!-- Opções de resolução (quando não é desistência) -->
+        <!-- Opção única de resolução (quando não é desistência) -->
         <div id="cham-cons-resolvido-wrap" style="display:flex;flex-direction:column;gap:8px">
-
-          <!-- Opção 1: Presente no Onboarding Shopee -->
-          <div id="cham-cons-opt-shopee"
-            onclick="chamadasSelecionarResolucao('shopee')"
-            style="display:flex;align-items:center;gap:12px;background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:12px 14px;cursor:pointer;transition:.15s">
-            <div style="flex:1">
-              <div style="font-size:13px;font-weight:700">🟠 Presente no Onboarding Shopee</div>
-              <div style="font-size:11.5px;color:var(--muted);margin-top:2px">Não participou da integração WeCan, mas compareceu ao Onboarding da Shopee à tarde — admissão validada</div>
-            </div>
-            <span id="cham-cons-opt-shopee-ico" style="font-size:18px;flex-shrink:0">⬜</span>
-          </div>
-
-          <!-- Opção 2: Resolvido (justificativa simples) -->
           <div id="cham-cons-opt-resolvido"
             onclick="chamadasSelecionarResolucao('resolvido')"
             style="display:flex;align-items:center;gap:12px;background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:12px 14px;cursor:pointer;transition:.15s">
             <div style="flex:1">
               <div style="font-size:13px;font-weight:700">✅ Marcar como Resolvido</div>
-              <div style="font-size:11.5px;color:var(--muted);margin-top:2px">Ausência tratada — sem necessidade de reabrir vaga</div>
+              <div style="font-size:11.5px;color:var(--muted);margin-top:2px">Ausência tratada — admissão segue normalmente, sem necessidade de reabrir vaga</div>
             </div>
             <span id="cham-cons-opt-resolvido-ico" style="font-size:18px;flex-shrink:0">⬜</span>
           </div>
 
-          <!-- Nenhum (pendente) -->
+          <!-- Sub-opção: participou do Onboarding Shopee (aparece só quando Resolvido está marcado) -->
+          <label id="cham-cons-shopee-wrap" onclick="event.stopPropagation()"
+            style="display:none;align-items:center;gap:10px;background:rgba(249,115,22,.07);border:1px solid rgba(249,115,22,.3);border-radius:8px;padding:10px 14px;cursor:pointer;margin-left:12px">
+            <input type="checkbox" id="cham-cons-shopee-chk" style="width:15px;height:15px;cursor:pointer;accent-color:#f97316"/>
+            <div>
+              <div style="font-size:12.5px;font-weight:700;color:#fb923c">🟠 Participou do Onboarding Shopee à tarde</div>
+              <div style="font-size:11px;color:var(--muted);margin-top:1px">Ausente na integração WeCan, mas compareceu ao Onboarding da Shopee — admissão validada</div>
+            </div>
+          </label>
+
           <input type="hidden" id="cham-cons-resolucao" value=""/>
         </div>
       </div>
@@ -7305,9 +7301,8 @@ async function chamadasAbrirConsultor(r) {
 
   // Restaurar seleção de resolução
   document.getElementById('cham-cons-resolucao').value = '';
-  chamadasSelecionarResolucao(
-    r.onboarding_shopee ? 'shopee' : r.resolvido ? 'resolvido' : ''
-  );
+  chamadasSelecionarResolucao(r.resolvido ? 'resolvido' : '');
+  if (r.onboarding_shopee) document.getElementById('cham-cons-shopee-chk').checked = true;
 
   abrirModal('modal-chamada-consultor');
 
@@ -7321,26 +7316,20 @@ function chamadasToggleDesistencia(ativo) {
 }
 
 function chamadasSelecionarResolucao(opcao) {
-  // toggle: clique de novo na mesma opção desmarca
   const atual = document.getElementById('cham-cons-resolucao').value;
   const novo  = atual === opcao ? '' : opcao;
   document.getElementById('cham-cons-resolucao').value = novo;
 
-  // visual shopee
-  const optShopee    = document.getElementById('cham-cons-opt-shopee');
-  const icoShopee    = document.getElementById('cham-cons-opt-shopee-ico');
-  const ativoShopee  = novo === 'shopee';
-  optShopee.style.borderColor = ativoShopee ? '#f97316' : 'var(--border)';
-  optShopee.style.background  = ativoShopee ? 'rgba(249,115,22,.1)' : 'var(--surface2)';
-  icoShopee.textContent       = ativoShopee ? '🟠' : '⬜';
+  const ativo = novo === 'resolvido';
+  const optEl = document.getElementById('cham-cons-opt-resolvido');
+  const icoEl = document.getElementById('cham-cons-opt-resolvido-ico');
+  const shopeeWrap = document.getElementById('cham-cons-shopee-wrap');
 
-  // visual resolvido
-  const optResolvido   = document.getElementById('cham-cons-opt-resolvido');
-  const icoResolvido   = document.getElementById('cham-cons-opt-resolvido-ico');
-  const ativoResolvido = novo === 'resolvido';
-  optResolvido.style.borderColor = ativoResolvido ? 'var(--success)' : 'var(--border)';
-  optResolvido.style.background  = ativoResolvido ? 'rgba(34,197,94,.08)' : 'var(--surface2)';
-  icoResolvido.textContent       = ativoResolvido ? '✅' : '⬜';
+  optEl.style.borderColor = ativo ? 'var(--success)' : 'var(--border)';
+  optEl.style.background  = ativo ? 'rgba(34,197,94,.08)' : 'var(--surface2)';
+  icoEl.textContent       = ativo ? '✅' : '⬜';
+  shopeeWrap.style.display = ativo ? 'flex' : 'none';
+  if (!ativo) document.getElementById('cham-cons-shopee-chk').checked = false;
 }
 
 async function chamadasBuscarVagaAuto(nome, matricula) {
@@ -7404,15 +7393,15 @@ async function chamadasSalvar() {
       });
       showToast('Desistência confirmada' + (vaga ? ' e vaga reaberta!' : '.'), 'success');
     } else {
-      const resolucao       = document.getElementById('cham-cons-resolucao').value;
-      const resolvido       = resolucao === 'resolvido' || resolucao === 'shopee';
-      const onboarding_shopee = resolucao === 'shopee';
+      const resolucao         = document.getElementById('cham-cons-resolucao').value;
+      const resolvido         = resolucao === 'resolvido';
+      const onboarding_shopee = resolvido && document.getElementById('cham-cons-shopee-chk').checked;
       await rpc('wc_chamada_salvar_consultor', {
         p_id: id, p_obs_consultor: obs,
         p_resolvido: resolvido, p_onboarding_shopee: onboarding_shopee
       });
       showToast(
-        onboarding_shopee ? '🟠 Registrado: presente no Onboarding Shopee!' :
+        onboarding_shopee ? '🟠 Resolvido — Onboarding Shopee registrado!' :
         resolvido ? '✅ Acompanhamento resolvido!' : 'Observação salva.',
         'success'
       );
