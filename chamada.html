@@ -48,10 +48,10 @@
 
   /* Filtro estilo planilha (checkbox list) */
   .ch-filtro-popup {
-    display:none; position:absolute; top:44px; left:0; z-index:80;
+    display:none; position:fixed; z-index:9999;
     background:var(--surface); border:1px solid var(--border); border-radius:10px;
-    box-shadow:0 10px 30px rgba(0,0,0,.5); width:280px; max-height:360px;
-    display:flex; flex-direction:column;
+    box-shadow:0 10px 30px rgba(0,0,0,.6); width:280px; max-height:360px;
+    flex-direction:column;
   }
   .ch-filtro-popup.aberto { display:flex; }
   .ch-filtro-head { padding:10px 12px; border-bottom:1px solid var(--border); display:flex; gap:8px; }
@@ -131,7 +131,7 @@
       <option value="">Selecione a data da integração…</option>
     </select>
     <div style="position:relative">
-      <button class="btn-ghost" id="ch-filtro-btn" onclick="chFiltroToggle()">🔽 Filtrar CC / Operação</button>
+      <button class="btn-ghost" id="ch-filtro-btn" onclick="chFiltroToggle(event)">🔽 Filtrar CC / Operação</button>
       <div class="ch-filtro-popup" id="ch-filtro-popup">
         <div class="ch-filtro-head"><input type="text" id="ch-filtro-busca" placeholder="Buscar…" oninput="chFiltroRenderLista()"/></div>
         <div class="ch-filtro-acoes">
@@ -203,9 +203,16 @@ function chLabelColmeia(c) {
   return cli && dep ? `${cli} · ${dep}` : (cli || dep || '—');
 }
 
-function chFiltroToggle() {
+function chFiltroToggle(evt) {
   const pop = document.getElementById('ch-filtro-popup');
-  if (pop.classList.contains('aberto')) { pop.classList.remove('aberto'); return; }
+  const isAberto = pop.classList.contains('aberto');
+  if (isAberto) { pop.classList.remove('aberto'); return; }
+
+  const btn = document.getElementById('ch-filtro-btn');
+  const rect = btn.getBoundingClientRect();
+  pop.style.top  = (rect.bottom + 6) + 'px';
+  pop.style.left = rect.left + 'px';
+
   CH_FILTRO_TEMP = new Set(CH_FILTRO_OCULTOS);
   document.getElementById('ch-filtro-busca').value = '';
   chFiltroRenderLista();
@@ -214,10 +221,10 @@ function chFiltroToggle() {
 document.addEventListener('click', (ev) => {
   const pop = document.getElementById('ch-filtro-popup');
   const btn = document.getElementById('ch-filtro-btn');
-  if (pop && pop.classList.contains('aberto') && !pop.contains(ev.target) && ev.target !== btn) {
-    pop.classList.remove('aberto');
-  }
-});
+  if (!pop || !pop.classList.contains('aberto')) return;
+  if (pop.contains(ev.target) || btn.contains(ev.target)) return;
+  pop.classList.remove('aberto');
+}, true);
 
 function chFiltroRenderLista() {
   const busca = (document.getElementById('ch-filtro-busca')?.value || '').toLowerCase();
