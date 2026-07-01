@@ -3922,8 +3922,9 @@ const PERMISSOES_GRUPOS = [
   { grupo: 'Template — Colaboradores', itens: [
     { id:'adp_colabs_ver',   nome:'Ver Colaboradores',   descricao:'Consulta o Template Base de ativos e inativos' },
     { id:'adp_colabs_editar',nome:'Editar Colaboradores',descricao:'Pode editar dados diretamente na planilha via sistema' },
-    { id:'adp_rescisao',     nome:'Iniciar Desligamento',descricao:'Pode abrir solicitação de rescisão a partir do Template' },
-    { id:'adp_chamada',      nome:'Chamada de Integração',descricao:'Fazer a chamada de presença dos colaboradores na integração online' },
+    { id:'adp_rescisao',        nome:'Iniciar Desligamento',    descricao:'Pode abrir solicitação de rescisão a partir do Template' },
+    { id:'adp_chamada',         nome:'Chamada de Integração',   descricao:'Fazer a chamada de presença dos colaboradores na integração online (popup)' },
+    { id:'adp_onboarding',      nome:'Controle de Onboarding',  descricao:'Gerenciar a fila rotativa e a escala de quem apresenta a integração' },
   ]},
   { grupo: 'Solicitações', itens: [
     { id:'adp_sol_ver',    nome:'Ver Solicitações',    descricao:'Consulta solicitações do Onsite' },
@@ -4152,9 +4153,9 @@ async function iniciarSessao(conta) {
   const _algumBen = temPermissao('adp_beneficios') || temPermissao('adp_beneficios_pagar');
   const _algumTicket = ['adp_tickets_deslig','adp_tickets_movim','adp_tickets_voucher'].some(i=>temPermissao(i));
   const _algumColabs  = temPermissao('adp_colabs_ver');
-  const _algumRescisao = temPermissao('adp_rescisao');
-  const _algumChamada  = temPermissao('adp_chamada');
-  const _algumSol      = temPermissao('adp_sol_ver');
+  const _algumRescisao  = temPermissao('adp_rescisao');
+  const _algumChamada   = temPermissao('adp_chamada') || temPermissao('adp_onboarding');
+  const _algumSol       = temPermissao('adp_sol_ver');
   const _algumADP = _algumVoucher || _algumBen || _algumTicket || _algumColabs || _algumRescisao || _algumChamada || _algumSol;
   // Folha sempre vê o grupo ADP
   if (session?.perfil === 'folha') showBlock('navgroup-admpessoal', true);
@@ -4332,8 +4333,8 @@ const GAVETA_MENUS = {
   'chamada': {
     titulo: 'Chamada de Integração',
     items: [
-      { label:'🙋 Fazer Chamada',          action:'chamadaAbrirPainel()' },
-      { label:'📅 Controle de Onboarding', page:'onboarding-controle', perm:'adp_chamada' },
+      { label:'🙋 Fazer Chamada',          action:'chamadaAbrirPainel()', perm:'adp_chamada' },
+      { label:'📅 Controle de Onboarding', page:'onboarding-controle',    perm:'adp_onboarding' },
     ]
   },
   'tickets': {
@@ -7376,7 +7377,7 @@ let ONB_FILA   = [];
 let ONB_ESCALA = [];
 
 async function onbCarregar() {
-  const admin = podeAdmin();
+  const admin = temPermissao('adp_onboarding');
   document.getElementById('onb-fila-card').style.display = admin ? 'block' : 'none';
   document.getElementById('onb-nova-data-card').style.display = admin ? 'block' : 'none';
 
@@ -7487,7 +7488,7 @@ function onbRenderEscalaTabela() {
   }[st] || st);
 
   tbody.innerHTML = ONB_ESCALA.map(e => {
-    const podeAgir = e.status === 'agendado' && (podeAdmin() || session?.nome === e.onsite_atual);
+    const podeAgir = e.status === 'agendado' && (temPermissao('adp_onboarding') || session?.nome === e.onsite_atual);
     const hist = (e.historico || []).length
       ? `<div style="font-size:11px;color:var(--muted)">${e.historico.map(h => `${h.onsite}: "${h.motivo}"`).join(' · ')}</div>`
       : '<span style="color:var(--muted);font-size:11px">—</span>';
