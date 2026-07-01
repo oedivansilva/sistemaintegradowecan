@@ -6040,10 +6040,15 @@ async function salvarUsuario() {
   const id    = document.getElementById('u-id').value;
   const nome  = document.getElementById('u-nome').value.trim();
   const email = document.getElementById('u-email').value.trim().toLowerCase();
-  const senha = document.getElementById('u-senha').value;
+  let   senha = document.getElementById('u-senha').value;
   const perf  = document.getElementById('u-perfil').value;
   const btn   = document.getElementById('btn-salvar-usuario');
   if (!nome||!email) { toast('Informe nome e e-mail.','error'); return; }
+
+  // Novo usuário sem senha → define temporária automaticamente
+  const isNovo         = !id;
+  const senhaTem       = isNovo && !senha;
+  if (senhaTem) senha = 'WeCan@2026';
 
   // Operações selecionadas
   const operacoes = [...document.querySelectorAll('#ops-grid input[data-op-id]:checked')]
@@ -6058,11 +6063,16 @@ async function salvarUsuario() {
 
   btn.disabled=true; btn.textContent='Salvando…';
   try {
-    await rpc('wc_salvar_usuario', { p_usuario:{ id:id||undefined, nome, email, senha:senha||undefined, perfil:perf, permissoes, operacoes } });
+    await rpc('wc_salvar_usuario', { p_usuario:{
+      id:id||undefined, nome, email,
+      senha: senha||undefined,
+      senha_temporaria: senhaTem,
+      perfil:perf, permissoes, operacoes
+    }});
     fecharModal('modal-usuario');
     await renderUsuarios('tbody-usuarios');
     await renderUsuarios('tbody-suporte-usuarios');
-    toast('Usuário salvo!','success');
+    toast(senhaTem ? 'Usuário criado com senha temporária WeCan@2026' : 'Usuário salvo!', 'success');
   } catch(e) { toast(e.message,'error'); }
   finally { btn.disabled=false; btn.textContent='Salvar'; }
 }
