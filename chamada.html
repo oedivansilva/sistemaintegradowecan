@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Chamada de Integração | WeSys</title>
+<style>
+  :root {
+    --bg:       #0f0718; --surface:  #1a0a2e; --surface2: #2a1045;
+    --surface3: #3d1860; --border:   #432a5c; --accent:   #63ccb0;
+    --brand:    #4f0672; --success:  #22c55e; --danger:   #ef4444;
+    --warning:  #f59e0b; --text:     #efe9f7; --muted:    #a394bf;
+    --font: 'Segoe UI', system-ui, sans-serif;
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { background:var(--bg); color:var(--text); font-family:var(--font); min-height:100vh; }
+  ::-webkit-scrollbar { width:6px; } ::-webkit-scrollbar-thumb { background:var(--border); border-radius:3px; }
+
+  .ch-header {
+    background:#1e0b35; border-bottom:1px solid var(--border);
+    padding:14px 28px; display:flex; align-items:center; justify-content:space-between;
+    position:sticky; top:0; z-index:50;
+  }
+  .ch-header-left { display:flex; align-items:center; gap:14px; }
+  .ch-logo { width:34px; height:34px; background:var(--brand); border-radius:8px;
+    display:flex; align-items:center; justify-content:center; font-size:16px; }
+  .ch-header h1 { font-size:15px; font-weight:700; }
+  .ch-header p  { font-size:11px; color:var(--muted); margin-top:1px; }
+  .btn-fechar { background:rgba(239,68,68,.12); border:1px solid rgba(239,68,68,.3);
+    color:#ef4444; padding:6px 14px; border-radius:8px; font-size:12px; cursor:pointer; }
+  .btn-fechar:hover { background:rgba(239,68,68,.22); }
+
+  .ch-body { max-width:920px; margin:0 auto; padding:24px 20px 60px; }
+
+  .ch-toolbar { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:16px; }
+  .ch-toolbar select, .ch-toolbar input[type=text] {
+    background:var(--surface2); border:1px solid var(--border); color:var(--text);
+    border-radius:8px; padding:8px 12px; font-size:13px; font-family:var(--font); outline:none;
+  }
+  .ch-toolbar select { min-width:200px; cursor:pointer; }
+  .ch-toolbar input[type=text] { flex:1; min-width:180px; }
+  .btn-ghost {
+    background:var(--surface2); border:1px solid var(--border); color:var(--text);
+    border-radius:8px; padding:8px 14px; font-size:12.5px; cursor:pointer; font-family:var(--font);
+  }
+  .btn-ghost:hover { border-color:var(--accent); }
+
+  .ch-kpis { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:18px; }
+  .ch-kpi {
+    background:var(--surface); border:1px solid var(--border); border-radius:10px;
+    padding:12px 18px; min-width:100px; flex:1;
+  }
+  .ch-kpi .lbl { font-size:11px; color:var(--muted); margin-bottom:4px; }
+  .ch-kpi .val { font-size:22px; font-weight:800; }
+
+  .ch-table-wrap { background:var(--surface); border:1px solid var(--border); border-radius:12px; overflow:hidden; }
+  table.ch-table { width:100%; border-collapse:collapse; }
+  table.ch-table th {
+    text-align:left; font-size:10.5px; text-transform:uppercase; letter-spacing:.4px;
+    color:var(--muted); background:var(--surface2); padding:10px 14px; border-bottom:1px solid var(--border);
+  }
+  table.ch-table td { padding:10px 14px; border-bottom:1px solid var(--border); font-size:13px; vertical-align:middle; }
+  table.ch-table tr:last-child td { border-bottom:none; }
+  .ch-nome { font-weight:600; }
+  .ch-sub  { font-size:11px; color:var(--muted); margin-top:2px; }
+  .ch-btns { display:flex; gap:6px; }
+  .ch-btn {
+    padding:5px 12px; border-radius:6px; font-size:11.5px; cursor:pointer; font-weight:700;
+    font-family:var(--font); background:transparent;
+  }
+  .ch-btn.presente { border:1.5px solid var(--success); color:var(--success); }
+  .ch-btn.presente.ativo { background:var(--success); color:#0f0718; }
+  .ch-btn.ausente { border:1.5px solid var(--danger); color:var(--danger); }
+  .ch-btn.ausente.ativo { background:var(--danger); color:#fff; }
+  .ch-empty { text-align:center; padding:40px; color:var(--muted); }
+  .ch-obs-input {
+    width:100%; margin-top:6px; background:var(--surface2); border:1px solid var(--border);
+    color:var(--text); border-radius:6px; padding:5px 8px; font-size:11.5px; font-family:var(--font); outline:none;
+  }
+
+  #toast {
+    display:none; position:fixed; bottom:20px; left:50%; transform:translateX(-50%);
+    background:var(--surface2); border:1px solid var(--border); border-radius:10px;
+    padding:10px 18px; font-size:13px; z-index:999; box-shadow:0 6px 24px rgba(0,0,0,.4);
+  }
+  #toast.success { border-color:var(--success); color:var(--success); }
+  #toast.error   { border-color:var(--danger);  color:var(--danger); }
+</style>
+</head>
+<body>
+
+<div class="ch-header">
+  <div class="ch-header-left">
+    <div class="ch-logo">🙋</div>
+    <div>
+      <h1>Chamada de Integração</h1>
+      <p>Confirme a presença de cada colaborador na integração online — como uma chamada</p>
+    </div>
+  </div>
+  <button class="btn-fechar" onclick="window.close()">✕ Fechar</button>
+</div>
+
+<div class="ch-body">
+
+  <div class="ch-toolbar">
+    <select id="ch-data" onchange="chSelecionarData(this.value)">
+      <option value="">Selecione a data da integração…</option>
+    </select>
+    <input type="text" id="ch-busca" placeholder="🔍 Buscar por nome…" oninput="chRenderTabela()"/>
+    <button class="btn-ghost" onclick="chCarregarColmeias()">🔄 Atualizar</button>
+  </div>
+
+  <div class="ch-kpis" id="ch-kpis"></div>
+
+  <div class="ch-table-wrap">
+    <table class="ch-table">
+      <thead>
+        <tr>
+          <th style="width:36px">#</th>
+          <th>Colaborador</th>
+          <th>CC / Cliente</th>
+          <th style="width:220px">Presença</th>
+        </tr>
+      </thead>
+      <tbody id="ch-tbody">
+        <tr><td colspan="4" class="ch-empty">Selecione uma data de integração acima.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════════
+//  chamada.html — WeSys | Integrado
+//  Comunicação com admissao.html via window.opener
+// ══════════════════════════════════════════════
+
+const SUPABASE_URL  = 'https://omwilcuzcvgzyzqqrbkh.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9td2lsY3V6Y3Znenl6cXFyYmtoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIxMzI1MTIsImV4cCI6MjA5NzcwODUxMn0.S1pbFqZ4B5_TWMBq_r8BeQ9OOFzkj73aOoI6g3Y987Q';
+
+let session = null;
+let CH_COLMEIAS = [];   // colmeias filtradas para este onsite
+let CH_COLABS   = [];   // colaboradores da data selecionada (flat)
+let CH_STATUS   = {};   // colab_id -> {status, obs}
+
+function toast(msg, tipo) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className   = tipo || '';
+  el.style.display = 'block';
+  clearTimeout(window._toastTimer);
+  window._toastTimer = setTimeout(() => el.style.display='none', 3500);
+}
+
+async function rpc(fn, args) {
+  const tok = session?.token || '';
+  if (args.p_token === undefined) args.p_token = tok;
+  const resp = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`, {
+    method: 'POST',
+    headers: { 'Content-Type':'application/json', 'apikey':SUPABASE_ANON, 'Authorization':`Bearer ${SUPABASE_ANON}` },
+    body: JSON.stringify(args)
+  });
+  let data;
+  try { data = await resp.json(); } catch(e) { throw new Error('Erro de comunicação com o banco.'); }
+  if (!resp.ok) throw new Error((data && (data.message || data.hint)) || `Erro HTTP ${resp.status}`);
+  if (data && data.ok === false) throw new Error(data.erro || 'Erro desconhecido.');
+  return data;
+}
+
+// ── Sessão: janela pai → params da URL → localStorage ──
+window.addEventListener('DOMContentLoaded', () => {
+  try {
+    session = window.opener?.session || window.opener?.carregarSessaoSalva?.() || null;
+  } catch(e) { session = null; }
+
+  if (!session) {
+    const p = new URLSearchParams(location.search);
+    const tok = p.get('tok');
+    if (tok) session = { token: tok, perfil: p.get('perfil') || '', nome: decodeURIComponent(p.get('nome') || '') };
+  }
+  if (!session) {
+    try {
+      const raw = localStorage.getItem('wecan_session_v1');
+      if (raw) { const parsed = JSON.parse(raw); session = parsed?.session || parsed || null; }
+    } catch(e) {}
+  }
+  if (!session) {
+    try { session = window.opener?._operacoesFallback || null; } catch(e) {}
+  }
+  // Tentar puxar _operacoes da janela pai (não vem no localStorage por ser recarregado no login)
+  try {
+    const opSession = window.opener?.session;
+    if (opSession && opSession.token === session?.token && opSession._operacoes) {
+      session._operacoes = opSession._operacoes;
+    }
+  } catch(e) {}
+
+  if (!session || !session.token) {
+    document.getElementById('ch-tbody').innerHTML =
+      '<tr><td colspan="4" class="ch-empty">❌ Não foi possível identificar sua sessão. Feche esta janela e abra novamente pelo menu.</td></tr>';
+    return;
+  }
+
+  chCarregarColmeias();
+});
+
+function podeVerTudo() { return session && ['gestor','gestor_adm','master'].includes(session.perfil); }
+
+// ── Mesmo filtro usado em admissao.html: só as colmeias das operações do Onsite ──
+function chFiltrarPorOnsite(colmeias) {
+  if (podeVerTudo()) return colmeias;
+  if (session?.perfil === 'onsite' && session._operacoes?.length) {
+    const opsNomes    = new Set(session._operacoes.map(o => (o.nome||'').toUpperCase()));
+    const opsCods     = new Set(session._operacoes.map(o => (o.cc_cod||o.regional||o.codigo||'').toUpperCase()).filter(Boolean));
+    const opsRegional = new Set(session._operacoes.map(o => (o.regional||'').toUpperCase()).filter(Boolean));
+    return colmeias.filter(c => {
+      const cod       = (c.depto_cod || '').toUpperCase();
+      const nomeDepto  = (c.depto_nome || '').toUpperCase();
+      const cli        = (c.cli_nome || '').toUpperCase();
+      if (!opsCods.size && !opsNomes.size && !opsRegional.size) return true;
+      return opsCods.has(cod) || opsNomes.has(nomeDepto) || opsNomes.has(cli)
+          || opsNomes.has(cod) || opsRegional.has(cod) || opsRegional.has(nomeDepto);
+    });
+  }
+  return colmeias;
+}
+
+function chNormalizarData(d) {
+  if (!d) return '';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(d)) {
+    const [y,m,dd] = d.split('-');
+    return `${dd}/${m}/${y}`;
+  }
+  return d;
+}
+function chParaISO(d) {
+  if (!d) return '';
+  const p = d.split('/');
+  return p.length === 3 ? `${p[2]}-${p[1]}-${p[0]}` : d;
+}
+
+async function chCarregarColmeias() {
+  document.getElementById('ch-tbody').innerHTML = '<tr><td colspan="4" class="ch-empty">Carregando…</td></tr>';
+  try {
+    const r = await rpc('wc_integ_listar_colmeias', {});
+    CH_COLMEIAS = chFiltrarPorOnsite(r.colmeias || []);
+    const datas = [...new Set(CH_COLMEIAS.map(c => c.data_admissao))]
+      .sort((a,b) => chParaISO(b).localeCompare(chParaISO(a)));
+    const sel = document.getElementById('ch-data');
+    const valorAtual = sel.value;
+    sel.innerHTML = '<option value="">Selecione a data da integração…</option>' +
+      datas.map(d => `<option value="${d}">${d}</option>`).join('');
+    if (valorAtual && datas.includes(valorAtual)) {
+      sel.value = valorAtual;
+      chSelecionarData(valorAtual);
+    } else if (datas.length) {
+      sel.value = datas[0];
+      chSelecionarData(datas[0]);
+    } else {
+      document.getElementById('ch-tbody').innerHTML =
+        '<tr><td colspan="4" class="ch-empty">Nenhuma integração encontrada para suas operações.</td></tr>';
+      document.getElementById('ch-kpis').innerHTML = '';
+    }
+  } catch(e) {
+    document.getElementById('ch-tbody').innerHTML = `<tr><td colspan="4" class="ch-empty">❌ ${e.message}</td></tr>`;
+  }
+}
+
+async function chSelecionarData(data) {
+  if (!data) { document.getElementById('ch-tbody').innerHTML = '<tr><td colspan="4" class="ch-empty">Selecione uma data.</td></tr>'; return; }
+  document.getElementById('ch-tbody').innerHTML = '<tr><td colspan="4" class="ch-empty">Carregando colaboradores…</td></tr>';
+  const colmeias = CH_COLMEIAS.filter(c => c.data_admissao === data);
+  if (!colmeias.length) { CH_COLABS = []; chRenderTabela(); chRenderKpis(); return; }
+
+  try {
+    const [resultados, statusPorColmeia] = await Promise.all([
+      Promise.all(colmeias.map(col => rpc('wc_integ_abrir_colmeia', { p_colmeia_id: col.id }))),
+      Promise.all(colmeias.map(col => rpc('wc_chamada_listar_colmeia', { p_colmeia_id: col.id })))
+    ]);
+
+    CH_COLABS = [];
+    CH_STATUS = {};
+    resultados.forEach((r, i) => {
+      const col = colmeias[i];
+      (statusPorColmeia[i].itens || []).forEach(it => { CH_STATUS[it.colab_id] = it; });
+      (r.colaboradores || []).forEach(c => {
+        let clienteLabel = col.cli_nome || '';
+        let deptoLabel   = col.depto_nome || col.depto_cod || '';
+        if (!clienteLabel && deptoLabel.includes(' — ')) {
+          const parts = deptoLabel.split(' — ');
+          clienteLabel = parts[0].trim();
+          deptoLabel   = parts.slice(1).join(' — ').trim();
+        }
+        CH_COLABS.push({
+          ...c,
+          _colmeia_id: col.id,
+          _depto_cod:  col.depto_cod,
+          _depto_nome: deptoLabel || col.depto_cod || '',
+          _cli_nome:   clienteLabel,
+          _data_admissao: data,
+        });
+      });
+    });
+    chRenderKpis();
+    chRenderTabela();
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+function chRenderKpis() {
+  const total    = CH_COLABS.length;
+  const presente = CH_COLABS.filter(c => CH_STATUS[c.id]?.status === 'PRESENTE').length;
+  const ausente  = CH_COLABS.filter(c => CH_STATUS[c.id]?.status === 'AUSENTE').length;
+  const pend     = total - presente - ausente;
+  document.getElementById('ch-kpis').innerHTML = [
+    { lbl:'Total',      val: total,    cor:'var(--text)' },
+    { lbl:'✅ Presentes', val: presente, cor:'var(--success)' },
+    { lbl:'❌ Ausentes',  val: ausente,  cor:'var(--danger)' },
+    { lbl:'⏳ Pendentes', val: pend,     cor:'var(--warning)' },
+  ].map(k => `<div class="ch-kpi"><div class="lbl">${k.lbl}</div><div class="val" style="color:${k.cor}">${k.val}</div></div>`).join('');
+}
+
+function chRenderTabela() {
+  const busca = (document.getElementById('ch-busca')?.value || '').toLowerCase();
+  let lista = [...CH_COLABS];
+  if (busca) lista = lista.filter(c => (c.nome||'').toLowerCase().includes(busca));
+
+  const tbody = document.getElementById('ch-tbody');
+  if (!lista.length) {
+    tbody.innerHTML = `<tr><td colspan="4" class="ch-empty">${CH_COLABS.length===0 ? 'Nenhum colaborador nesta data.' : 'Nenhum resultado para essa busca.'}</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = lista.map((c, i) => {
+    const st = CH_STATUS[c.id]?.status || '';
+    return `<tr>
+      <td style="color:var(--muted)">${i+1}</td>
+      <td>
+        <div class="ch-nome">${c.nome||'—'}</div>
+        <div class="ch-sub">${c.cargo||''}${c.codigo?' · '+c.codigo:''}</div>
+      </td>
+      <td class="ch-sub">${c._cli_nome ? c._cli_nome+' · ' : ''}${c._depto_nome||'—'}</td>
+      <td>
+        <div class="ch-btns">
+          <button class="ch-btn presente ${st==='PRESENTE'?'ativo':''}" onclick="chMarcar('${c.id}','PRESENTE')">✅ Presente</button>
+          <button class="ch-btn ausente ${st==='AUSENTE'?'ativo':''}" onclick="chMarcar('${c.id}','AUSENTE')">❌ Ausente</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+async function chMarcar(colabId, status) {
+  const c = CH_COLABS.find(x => x.id === colabId);
+  if (!c) return;
+  const atual = CH_STATUS[colabId]?.status || '';
+  const novoStatus = atual === status ? '' : status; // clique de novo = desmarcar
+
+  try {
+    await rpc('wc_chamada_confirmar', {
+      p_colmeia_id:    c._colmeia_id,
+      p_colab_id:      c.id,
+      p_data_admissao: c._data_admissao,
+      p_nome:          c.nome,
+      p_cargo:         c.cargo || '',
+      p_codigo:        c.codigo || '',
+      p_depto_cod:     c._depto_cod || '',
+      p_depto_nome:    c._depto_nome || '',
+      p_cli_nome:      c._cli_nome || '',
+      p_status:        novoStatus,
+    });
+    CH_STATUS[colabId] = { ...(CH_STATUS[colabId]||{}), status: novoStatus };
+    chRenderTabela();
+    chRenderKpis();
+  } catch(e) { toast(e.message, 'error'); }
+}
+</script>
+</body>
+</html>
