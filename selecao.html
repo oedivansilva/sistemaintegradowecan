@@ -2118,6 +2118,13 @@ function doPost(e) { return doGet(e); }</pre>
           </select>
         </div>
       </div>
+      <div class="form-group">
+        <label>Departamento vinculado</label>
+        <select id="cc-depto-id" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:8px 12px;font-size:13px;font-family:var(--font);outline:none">
+          <option value="">Nenhum / Não vinculado</option>
+        </select>
+        <small style="color:var(--muted);font-size:11px">Vincula este CC a um departamento para cruzamento de dados</small>
+      </div>
       <div class="modal-section-label">Status</div>
       <div style="display:flex;align-items:center;gap:12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin-bottom:14px">
         <span style="flex:1;font-size:13px;font-weight:600">Centro de custo ativo</span>
@@ -6210,8 +6217,20 @@ function abrirModalCC(c) {
   s('cc-bairro').value     = c?.bairro||'';
   s('cc-cidade').value     = c?.cidade||'';
   s('cc-uf').value         = c?.uf||'';
+  ccPopularDeptos(c?.cli_codigo||'', c?.depto_id||'');
   document.getElementById('modal-cc').classList.add('open');
 }
+
+function ccPopularDeptos(cliCodigo, deptoIdAtual) {
+  const sel = document.getElementById('cc-depto-id');
+  if (!sel) return;
+  const lista = cliCodigo
+    ? (DEPTOS||[]).filter(d => String(d.cli_codigo) === String(cliCodigo))
+    : (DEPTOS||[]);
+  sel.innerHTML = '<option value="">Nenhum / Não vinculado</option>' +
+    lista.map(d => `<option value="${d.id}" ${d.id===deptoIdAtual?'selected':''}>${d.descricao}</option>`).join('');
+}
+
 function fecharModalCC() { document.getElementById('modal-cc').classList.remove('open'); }
 
 function ccPreencherCliente(codigo) {
@@ -6229,6 +6248,7 @@ function ccPreencherCliente(codigo) {
   if (cli) {
     elNome.value       = cli.razao_social || '';
     elNome.style.color = 'var(--text)';
+    ccPopularDeptos(codigo.trim(), '');
 
     if (isNovo) {
       // Contar quantos CCs esse cliente já tem e gerar próximo número
@@ -6252,6 +6272,7 @@ async function salvarCC() {
   const cc = { id:g('cc-id')||undefined, cod:g('cc-cod').trim(), cliente:g('cc-cliente').trim(),
     cli_codigo:g('cc-cli-codigo').trim(), descricao:g('cc-descricao').trim(),
     tipo_operacao:g('cc-tipo-operacao'),
+    depto_id:g('cc-depto-id')||null,
     ativo:document.getElementById('cc-ativo').checked,
     cep:g('cc-cep').trim(), logradouro:g('cc-logradouro').trim(), numero:g('cc-numero').trim(),
     complemento:g('cc-complemento').trim(), bairro:g('cc-bairro').trim(),
